@@ -1,8 +1,9 @@
 {
   "name": "starpal",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "AGPL-3.0-or-later",
+  "author": "xiaoyu-hue <https://github.com/xiaoyu-hue>",
   "description": "STARPAL 星聚 — 让兴趣相遇，让热爱聚集。",
   "workspaces": [
     "web",
