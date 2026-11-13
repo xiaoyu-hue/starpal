@@ -3,7 +3,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 产品 | 星聚 STARPAL |
-| 版本 | v1.0 |
+| 版本 | v1.0.0 |
 | 文档状态 | 基线（Baseline） |
 | 关联文档 | [产品需求文档](./PRD.md) · [实施计划](./IMPLEMENTATION-PLAN.md) · [部署与配置指南](./DEPLOYMENT.md) |
 

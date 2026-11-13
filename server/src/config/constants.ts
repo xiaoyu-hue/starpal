@@ -1,5 +1,5 @@
 /** 应用级常量：限制阈值、状态枚举、排序权重集中于此，禁止散落业务代码。 */
-export const APP_VERSION = '0.1.0'
+export const APP_VERSION = '1.0.0'
 
 export const FEED_TABS = ['recommended', 'latest', 'popular'] as const
 export type FeedTab = (typeof FEED_TABS)[number]

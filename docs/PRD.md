@@ -3,7 +3,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 产品 | 星聚 STARPAL（通用兴趣社区平台） |
-| 版本 | v1.0 |
+| 版本 | v1.0.0 |
 | 文档状态 | 基线（Baseline） |
 | 文档类型 | 产品需求规格 |
 | 关联文档 | [系统架构设计](./ARCHITECTURE.md) · [实施计划](./IMPLEMENTATION-PLAN.md) · [部署与配置指南](./DEPLOYMENT.md) |

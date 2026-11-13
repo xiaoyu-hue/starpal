@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 版本 | v1.0 |
+| 版本 | v1.0.0 |
 | 文档状态 | 基线（Baseline） |
 | 关联文档 | [产品需求文档](./PRD.md) · [系统架构设计](./ARCHITECTURE.md) · [实施计划](./IMPLEMENTATION-PLAN.md) |
 
