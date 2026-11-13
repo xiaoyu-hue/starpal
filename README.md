@@ -8,7 +8,7 @@
 | 中文名 | 星聚 |
 | 英文名 | STARPAL |
 | 品牌标记 | SP |
-| 版本 | v1.0.2 |
+| 版本 | v1.0.3 |
 | 状态 | 已发布 / 架构基线 |
 | 形态 | 响应式 Web 应用（桌面 / 平板 / 移动端浏览器） |
 
@@ -249,7 +249,7 @@ npm run verify
 
 ## 许可与第三方
 
-**版权所有 © 2026 xiaoyu-hue**（GitHub: [@xiaoyu-hue](https://github.com/xiaoyu-hue)）
+**版权所有 © 2026 xiaoyu-hue**（GitHub: [@xiaoyu-hue](https://github.com/xiaoyu-hue)）。版权归属与许可对照见 [`COPYRIGHT`](./COPYRIGHT)。
 
 本项目采用**代码与文档分离授权**：
 
