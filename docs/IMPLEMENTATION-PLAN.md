@@ -386,7 +386,7 @@ flowchart LR
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
 | `M3-S1-T1` | 话题与帖子表 | `003_topics_posts.sql` 建立 `topics`、`posts` 及四类索引、检查约束 | `migrations/003_*.sql` | 索引与架构 §7.4 一致 |
-| `M3-S1-T2` | 图片表 | `004_images_interactions.sql` 中先建立 `post_images` | `migrations/004_*.sql` | 外键级联与排序字段正确 |
+| `M3-S1-T2` | 图片表 | `004_post_images.sql` 建立 `post_images` 与 `image_blobs` | `migrations/004_*.sql` | 外键级联与排序唯一约束正确 |
 | `M3-S1-T3` | 内置话题 | 写入九个分类（slug / 中文名 / 英文名 / 描述），带 `is_demo` 标记 | `seeds/topics.sql` | 查询得到九行且 slug 唯一 |
 | `M3-S1-T4` | 演示帖子 | 少量带「示例」标记的帖子，不伪装真实成员 | `seeds/demo-posts.sql` | 标注清晰，`AC-17` 前置 |
 
@@ -406,10 +406,10 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M3-S3-T1` | 存储接口 | 定义 `StorageAdapter` 与 `local-disk` 实现，注入点集中于 `app.ts` | `server/src/storage/adapter.ts`、`local-disk.ts` | 仅一个实现，无工厂 / 注册机制 |
+| `M3-S3-T1` | 存储接口 | 定义 `StorageAdapter` 与 `postgres-bytea` 实现（`ADR-014`），注入点集中于 `app.ts` | `server/src/storage/adapter.ts`、`postgres-bytea.ts` | 仅一个实现，无工厂 / 注册机制 |
 | `M3-S3-T2` | 上传中间件 | 显式请求体与文件大小上限、内存缓冲、不先落盘 | `modules/uploads/` | 超限被拒且不产生文件 |
 | `M3-S3-T3` | 管线校验 | 魔术字节判定真实类型、白名单、重新编码、剥离元数据、随机文件名 | `image-pipeline.ts` | 伪造扩展名 / MIME 被拒；EXIF 不保留（`AC-06`） |
-| `M3-S3-T4` | 元数据入库 | 事务写入 `post_images`，失败时清理已写文件并回滚 | `uploads` 服务 | 引用与文件数量一致 |
+| `M3-S3-T4` | 元数据入库 | 同一事务写入 `post_images` 与 `image_blobs`，失败整体回滚 | `uploads` 服务 | `post_images` 与 `image_blobs` 行数一致 |
 | `M3-S3-T5` | 受控读取 | 图片路由携带禁止类型嗅探响应头；目录位于 Web 根外且无执行权限 | `app.ts`、部署配置 | 响应头存在，目录不可执行 |
 | `M3-S3-T6` | 前端上传 | 选图、预览、进度、失败提示、排序、移除 | `web/src/features/post/` | 无横向溢出，图片按断点缩放 |
 | `M3-S3-T7` | 渲染优化 | 宽高比预留、懒加载、`alt` 文本 | 帖子卡片 / 详情 | 无布局抖动 |
@@ -451,7 +451,7 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M4-S1-T1` | 互动表 | `004_images_interactions.sql` 补齐 `likes`、`bookmarks`、`comments` 及唯一约束 | `migrations/004_*.sql` | `UNIQUE(user_id, post_id)` 生效 |
+| `M4-S1-T1` | 互动表 | `005_interactions.sql` 建立 `likes`、`bookmarks`、`comments` 及唯一约束 | `migrations/005_*.sql` | `UNIQUE(user_id, post_id)` 生效 |
 | `M4-S1-T2` | 通知表 | `005_messages_notifications.sql` 中先建立 `notifications` 及索引 | `migrations/005_*.sql` | 索引与架构 §7.4 一致 |
 | `M4-S1-T3` | 计数约束 | `posts` 冗余计数列默认值与检查约束 | `003` 迁移内约束复核 | 计数不为负 |
 
@@ -672,7 +672,7 @@ flowchart LR
 ### 5.2 干净环境验证流程
 
 ```text
-1. 准备空数据库与空 uploads/ 目录
+1. 准备空数据库
 2. 配置环境变量（.env.example 中的必填项）
 3. npm install（按各包）
 4. npm run migrate
@@ -739,7 +739,7 @@ flowchart LR
 | 运行环境变量值 | 数据库连接串、会话密钥、邀请码、上传目录与上限、端口、环境标识 | `DEPLOYMENT.md` |
 | 初始管理员凭据 | 由一次性脚本结合环境变量创建 | `DEPLOYMENT.md` |
 | 邀请码分发 | 由部署方自行分发，不写入仓库 | `DEPLOYMENT.md` |
-| 持久卷挂载 | `uploads/` 目录须位于持久存储 | `DEPLOYMENT.md` |
+| 图片存储 | 二进制存 `image_blobs`，无需持久卷与上传目录 | `DEPLOYMENT.md` §6 |
 | 反向代理与 TLS | 终止 TLS、转发至应用端口、静态资源策略 | `DEPLOYMENT.md` |
 | 备份计划与保留期 | 数据库逻辑备份 + 文件目录备份，同一时间点 | `DEPLOYMENT.md` |
 | 社区准则与隐私说明最终文案 | 由维护者在发布前审定 | `PRD.md §4.12 / §3.3` |
@@ -759,7 +759,7 @@ flowchart LR
 | 检索能力 | 数据库条件检索，未接入独立检索引擎 |
 | 统计能力 | 基础数值指标，无时序分析 |
 | 防刷边界 | 无联系方式的注册体系无法彻底阻断自动化注册，目标为提高自动化成本 |
-| 文件存储 | 本地目录依赖持久卷，环境重置可能导致图片丢失 |
+| 文件存储 | 图片占数据库免费额度；总量超 500 MB 需迁移对象存储 |
 | 部署 | 公开部署与域名绑定不在本计划内，须单独决策 |
 
 ---

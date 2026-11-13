@@ -23,7 +23,7 @@
 | Node.js | 22 LTS | 版本由 `.nvmrc` 与 `engines.node` 锁定；开发与部署环境保持一致 |
 | npm | 随 Node.js 提供 | 依赖版本由 lockfile 固定 |
 | PostgreSQL | 可达实例 | 需具备建表、建索引、创建视图权限；迁移由应用执行 |
-| 文件系统 | 可写目录 | 上传目录须位于 Web 根目录之外，并挂载持久卷 |
+| 文件系统 | 无需持久卷 | 图片二进制写入数据库（`ADR-014`）；运行期只读宿主文件系统 |
 | 反向代理 | 可选 | 用于终止 TLS、限制请求体大小、转发至应用端口 |
 | 浏览器 | 现代桌面 / 移动浏览器 | 响应式 Web，无需安装客户端 |
 
@@ -64,10 +64,9 @@ RATE_LIMIT_MAX=20
 LOGIN_FAIL_MAX=5
 SECURITY_EVENT_RETENTION_DAYS=30
 
-# 上传
-UPLOAD_DIR=./server/uploads
-MAX_UPLOAD_BYTES=5242880
-MAX_BODY_BYTES=6291456
+# 上传（图片存数据库，无上传目录；上限须低于平台函数请求体 4.5 MB）
+MAX_UPLOAD_BYTES=3145728
+MAX_BODY_BYTES=4194304
 PUBLIC_DIR=./server/public
 
 # 初始管理员（仅初始化脚本读取，不常驻配置）
@@ -93,9 +92,8 @@ ADMIN_PASSWORD=<由部署方设置>
 | `RATE_LIMIT_MAX` | 否 | `20` | 窗口内同一来源摘要允许的请求数 | 公开 |
 | `LOGIN_FAIL_MAX` | 否 | `5` | 登录失败次数上限，超过后临时限制 | 公开 |
 | `SECURITY_EVENT_RETENTION_DAYS` | 否 | `30` | 安全事件与过期会话的保留期（天） | 公开 |
-| `UPLOAD_DIR` | 是 | `./server/uploads` | 图片目录，须在 Web 根目录之外 | 公开 |
-| `MAX_UPLOAD_BYTES` | 否 | `5242880` | 单文件大小上限（字节） | 公开 |
-| `MAX_BODY_BYTES` | 否 | `6291456` | 请求体总量上限（字节），须大于单文件上限并计入多图余量 | 公开 |
+| `MAX_UPLOAD_BYTES` | 否 | `3145728` | 单文件大小上限（字节，3 MB）。**须低于平台函数请求体上限 4.5 MB**，超出时请求在平台层即被拒绝，应用校验不会执行 | 公开 |
+| `MAX_BODY_BYTES` | 否 | `4194304` | 请求体总量上限（字节，4 MB），须大于单文件上限并计入多图余量，且不超过平台 4.5 MB | 公开 |
 | `PUBLIC_DIR` | 否 | `./server/public` | 前端构建产物目录 | 公开 |
 | `ADMIN_USERNAME` | 初始化时 | 无 | 初始管理员用户名，仅由一次性脚本读取 | **敏感** |
 | `ADMIN_PASSWORD` | 初始化时 | 无 | 初始管理员密码，仅由一次性脚本读取 | **敏感** |
@@ -108,7 +106,7 @@ ADMIN_PASSWORD=<由部署方设置>
 2. 校验必填项存在且非空；
 3. 校验数值型变量为正整数、布尔与枚举取值合法；
 4. 校验 `MAX_BODY_BYTES` ≥ `MAX_UPLOAD_BYTES`；
-5. 校验上传目录可写、产物目录可读；
+5. 校验产物目录可读；
 6. 任一校验失败即终止启动并输出可定位的错误信息（不输出变量值）。
 
 ### 4.2 凭据管理约束
@@ -116,7 +114,7 @@ ADMIN_PASSWORD=<由部署方设置>
 | 约束 | 说明 |
 | --- | --- |
 | 不硬编码 | 密钥、口令、邀请码、连接串不得出现在源码、迁移、种子、测试夹具或文档中 |
-| 不入库 | `.env`、`uploads/`、`public/`、`node_modules/` 纳入 `.gitignore` |
+| 不入库 | `.env`、`public/`、`node_modules/` 纳入 `.gitignore` |
 | 最小可见 | 初始化脚本只在执行期读取管理员凭据，不打印、不回显、不写日志 |
 | 轮换 | 会话密钥轮换会使既有会话失效；邀请码轮换不影响已有账号 |
 | 摘要存储 | 速率限制与登录失败计数以不可逆摘要标识来源，不长期保留原始网络地址 |
@@ -183,19 +181,19 @@ npm run init:admin
 
 ```text
 server/
-├── uploads/      # 图片文件，运行期写入，纳入 .gitignore
 └── public/       # 前端构建产物，纳入 .gitignore
 ```
 
+> 不再有 `uploads/` 目录：图片二进制写入 `image_blobs.data`（`ADR-014`）。
+
 | 要求 | 说明 |
 | --- | --- |
-| 位置 | `UPLOAD_DIR` 须位于 Web 根目录之外，不由静态托管直接暴露 |
-| 权限 | 目录可写但**无执行权限**；文件以随机名与固定扩展名写入 |
-| 读取 | 图片经受控路由读取，响应携带禁止类型嗅探的安全头 |
-| 持久化 | 该目录须挂载持久卷；环境重建时须从备份恢复 |
-| 一致性 | `post_images.storage_path` 与磁盘文件一一对应；删除帖子 / 移除图片时同步清理 |
-
-> 未挂载持久卷时，环境重建会导致图片丢失；数据库引用仍在但文件缺失。此限制已登记于 [PRD §10](./PRD.md#10-已知限制与风险)。
+| 位置 | 不落盘，无需可写目录，也不依赖持久卷 |
+| 命名 | `storage_key` 为 32 位随机 hex，内容不可变，避免路径猜测与覆盖 |
+| 读取 | 经受控路由 `GET /api/images/:key` 读取，响应携带禁止类型嗅探与长缓存头 |
+| 持久化 | 随数据库备份与恢复；`pg_dump` 一并带走，无「库在文件丢」风险 |
+| 一致性 | `post_images` 与 `image_blobs` 一对一，删除级联清理，结构上不产生孤儿 |
+| 容量 | 占用数据库免费额度；图片总量超 500 MB 时按架构 §8.4 迁移至对象存储 |
 
 ---
 
@@ -287,12 +285,11 @@ server {
 ### 10.2 备份命令（示例）
 
 ```bash
-# 数据库逻辑备份
+# 逻辑备份：数据库结构与数据，含 image_blobs 中的图片二进制
 pg_dump "<DATABASE_URL>" > starpal-YYYYMMDD.dump
-
-# 图片目录归档
-tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 ```
+
+> 图片存于数据库，**无需单独归档上传目录**，一次 `pg_dump` 即覆盖全部业务数据。
 
 时间戳由执行环境生成，不在文档或脚本中硬编码。备份文件须存放于与实例分离的持久位置。
 
@@ -300,9 +297,8 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 
 1. 停止应用进程；
 2. 恢复数据库（新建空库或清理目标库后导入）；
-3. 恢复图片目录至 `UPLOAD_DIR`；
-4. 执行迁移至最新版本；
-5. 校验 `post_images` 引用与磁盘文件数量一致；
+3. 执行迁移至最新版本；
+4. 校验 `post_images` 与 `image_blobs` 行数一致；
 6. 启动应用并访问健康检查；
 7. 按 [实施计划 §5.1](./IMPLEMENTATION-PLAN.md#51-验收项与里程碑映射) 抽查关键验收项。
 
@@ -310,8 +306,8 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 
 | 检查 | 方法 |
 | --- | --- |
-| 引用存在性 | 逐条比对 `post_images.storage_path` 与目录文件 |
-| 孤儿文件 | 目录中未被任何引用指向的文件，由清理任务处理 |
+| 引用完整性 | `SELECT count(*) FROM post_images i LEFT JOIN image_blobs b ON b.image_id = i.id WHERE b.image_id IS NULL` 应为 0 |
+| 二进制大小 | `sum(byte_size)` 与 `sum(octet_length(data))` 偏差应在重编码误差范围内 |
 | 计数一致 | 抽样比对 `posts.like_count` / `comment_count` 与明细行数 |
 | 迁移一致 | `schema_migrations` 中的已应用版本与 `migrations/` 目录一致 |
 
@@ -349,7 +345,7 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 | 全部环境变量的真实值 | §4 |
 | 初始管理员凭据与执行 | §5.4 |
 | 邀请码设置与分发 | §4 |
-| 持久卷挂载与目录权限 | §6 |
+| 图片存储与读取路由 | §6 |
 | 反向代理与 TLS 证书 | §9 |
 | 备份计划、执行频率与保留期 | §10 |
 | 社区准则与隐私说明的最终文案 | [PRD §3.3 / §4.12](./PRD.md) |
@@ -368,7 +364,7 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 | 迁移失败 | 已执行迁移被改动、目标库残留结构 | 核对 `schema_migrations`；使用空库重试；不得手工改表 |
 | 重复执行迁移产生冲突 | 执行器幂等性异常 | 检查已应用版本记录；以新增补偿迁移修正 |
 | 上传被拒（413 / 415） | 请求体或文件超限、类型不在白名单 | 核对三层限制值；确认代理层与应用层一致；检查文件真实类型而非扩展名 |
-| 图片 404 | 文件未落盘、持久卷未挂载、引用路径不一致 | 比对 `post_images.storage_path` 与目录；恢复备份（§10.3） |
+| 图片 404 | `storage_key` 不存在、`image_blobs` 行缺失、缓存了已删除资源 | 核对 `post_images.storage_key` 是否存在于 `image_blobs`；确认响应头未错误设置 `no-store` |
 | 登录后立即失效 | Cookie 属性与协议不匹配 | 确认 `NODE_ENV`、`Secure`、`SameSite` 与 `X-Forwarded-Proto` 配置 |
 | 深层路由刷新 404 | SPA 回退路由未生效 | 确认静态托管与回退规则挂载顺序 |
 | 正常用户被限流 | 速率阈值过低或来源摘要粒度不当 | 核对 `RATE_LIMIT_*` 与转发头解析；检查蜜罐是否被辅助技术误填 |
@@ -385,7 +381,7 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 | 仓库无真实凭据、密钥、邀请码、口令明文 | 待检查 |
 | `SESSION_SECRET` 与 `INVITE_CODE` 为部署方设置的高熵值 | 待检查 |
 | 会话 Cookie 启用 `HttpOnly` / `SameSite` / 生产环境 `Secure` | 待检查 |
-| 上传目录位于 Web 根之外且无执行权限 | 待检查 |
+| 图片不落盘，读取路由携带 `X-Content-Type-Options: nosniff` | 待检查 |
 | 上传三层大小限制与代理层一致 | 待检查 |
 | 魔术字节校验与重新编码生效，元数据被剥离 | 待检查 |
 | 全部管理端点均挂载角色校验 | 待检查 |
@@ -454,7 +450,7 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 | `SESSION_SECRET` | 部署方生成的高熵随机值 | 不入库 |
 | `INVITE_CODE` | 部署方设置 | 不入库 |
 
-`server/src/config/env.ts` 以模块位置（向上三级）定位仓库根，不依赖 `.env` 是否存在、也不依赖工作目录；因此 npm workspace 将 cwd 切至包目录时，`PUBLIC_DIR` 与 `UPLOAD_DIR` 仍解析正确。
+`server/src/config/env.ts` 以模块位置（向上三级）定位仓库根，不依赖 `.env` 是否存在、也不依赖工作目录；因此 npm workspace 将 cwd 切至包目录时，`PUBLIC_DIR` 仍解析正确。
 
 > 若将 `NODE_ENV=production` 同时注入构建阶段，须配合 `--include=dev`，否则构建会因缺少 vite / tsc 而失败。
 
@@ -463,7 +459,7 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 | 限制 | 影响 | 处置 |
 | --- | --- | --- |
 | 空闲约 15 分钟后休眠，冷启动约 1 分钟 | 首次访问延迟 | 接受；外部定时探测属平台策略边缘做法，不保证长期有效 |
-| 文件系统为临时卷 | `server/uploads/` 在重启或休眠后丢失 | `M3` 图片上传落地时须接入对象存储（`StorageAdapter` 扩展点），不得写本地盘 |
+| 文件系统为临时卷 | 本地盘不可依赖 | 图片写入数据库（`ADR-014`），不受实例重建影响 |
 | 月度计算、存储与出网额度 | 超额后暂停计算 | 监控平台用量面板 |
 | 不提供 Shell、持久磁盘与常驻保证 | 无法手工执行迁移或运维 | 迁移由启动命令自动执行 |
 
@@ -564,7 +560,7 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 | 限制 | 影响 | 处置 |
 | --- | --- | --- |
 | 函数按请求冷启动 | 首次 / 久置后访问延迟 | 接受；Hobby 不休眠，远优于 Render 休眠模型 |
-| 文件系统临时 | 函数实例间不共享本地盘、重启清空 | `M3` 图片上传须接入对象存储（`StorageAdapter`），不得写本地盘 |
+| 文件系统临时 | 函数实例间不共享本地盘、重启清空 | 图片写入数据库（`ADR-014`），不受实例重建影响 |
 | 月度函数调用 / 计算额度 | 超额后限流 | 监控 Vercel Usage 面板；Hobby 额度对个人站点充裕 |
 | 单函数包体与执行时长上限 | 超大依赖或长任务受限 | 拆分逻辑；重任务异步化 |
 

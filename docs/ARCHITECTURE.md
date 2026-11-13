@@ -117,22 +117,21 @@ flowchart TB
         SPA["React SPA<br/>应用外壳 / 设计令牌 / 功能模块"]
     end
     subgraph Server["Express 单进程"]
-        STATIC["静态托管<br/>前端构建产物 + uploads 只读映射"]
+        STATIC["静态托管<br/>前端构建产物"]
         MW["中间件链<br/>请求标识 / 安全头 / 体限制 / 会话 / 限流 / 校验 / 错误"]
         ROUTES["API 路由层<br/>按业务模块挂载"]
         SVC["服务层<br/>业务规则 / 事务边界 / 权限复核"]
         REPO["仓储层<br/>参数化 SQL / 行映射"]
-        ADAPTER["存储适配器<br/>本地磁盘实现"]
+        ADAPTER["存储适配器<br/>PostgreSQL 实现"]
     end
     subgraph Data["数据层"]
-        PG[("PostgreSQL")]
-        FILES[("uploads/ 目录<br/>Web 根之外")]
+        PG[("PostgreSQL<br/>业务数据 + image_blobs")]
     end
     SPA -->|"静态资源"| STATIC
     SPA -->|"HTTP / JSON"| MW
     MW --> ROUTES --> SVC --> REPO --> PG
-    SVC --> ADAPTER --> FILES
-    STATIC -.->|"受控读取"| FILES
+    SVC --> ADAPTER --> PG
+    STATIC -.->|"受控读取"| PG
 ```
 
 **前后端分离的定义**：开发期前端由独立开发服务器提供，通过代理访问 `/api`；生产期前端编译为静态产物，由同一 Express 进程托管。二者在**代码树、构建流程、职责与契约**上始终分离；进程合并仅为降低部署复杂度，不意味着职责合并。
@@ -143,7 +142,7 @@ flowchart TB
 | --- | --- | --- | --- | --- |
 | 开发 | 独立开发服务器（热更新） | Express API 进程 | 本地 PostgreSQL | 前端通过代理访问 `/api` |
 | 测试 | 构建产物 | Express 单进程托管 | 独立测试库 | 每次测试前执行迁移与清理 |
-| 自托管 | 构建产物 | Express 单进程同时托管静态资源与 API | 同环境或可达实例 | 反向代理终止 TLS；`uploads/` 挂载持久卷 |
+| 自托管 | 构建产物 | Express 单进程同时托管静态资源与 API | 同环境或可达实例 | 反向代理终止 TLS；图片入库，无需挂载卷 |
 
 配置、迁移、备份与启动流程见 [DEPLOYMENT.md](./DEPLOYMENT.md)。
 
@@ -157,13 +156,14 @@ flowchart TB
 | `ADR-004` | Tailwind CSS + 设计令牌 + shadcn/Radix 组件源码 | 令牌唯一来源；组件源码可改；无障碍底座成熟 | 传统黑盒组件库 / 特效组件集 | 视觉令牌须自行维护，不套用默认主题 |
 | `ADR-005` | 服务端会话表 + `HttpOnly` Cookie | 可主动失效、登出可靠、便于限流 | 无状态不可撤销令牌 | 会话需持久化与定期清理 |
 | `ADR-006` | 只采集用户名与密码；邀请码经环境变量注入 | 采集最小化；低规模下邀请码成本最低 | 邮箱 / 手机验证 / 第三方验证码 | 无法彻底阻断自动化注册，需纵深防刷 |
-| `ADR-007` | 本地磁盘 + 存储适配器接口 | 零外部依赖，换对象存储只替换实现 | 直接写死文件系统调用 | 单实例依赖持久卷 |
+| `ADR-007` | 存储适配器接口（具体实现由 `ADR-014` 修订） | 零外部依赖，换对象存储只替换实现 | 直接写死文件系统调用 | 接口不变；`local-disk` 实现仅适用于有持久卷的单实例部署 |
 | `ADR-008` | 确定性排序，不引入机器学习 | 小规模数据下可解释、零成本 | 个性化推荐 / 行为画像 | 排序质量依赖人工权重配置 |
 | `ADR-009` | 私信 v1.0 为留言式，表结构一次建到位 | 避免实时链路复杂度，后续升级不改表 | 首版即上实时推送 | 消息需刷新可见 |
 | `ADR-010` | 软删除 + 只追加审核日志 + 用户主动彻底擦除 | 兼顾追溯与删除权 | 物理级联删除 | 查询须统一携带可见性条件 |
 | `ADR-011` | 不引入全局状态库、图表库、动效库 | 服务端状态由请求库管理，客户端状态极少 | Zustand / Recharts / Motion 等 | 复杂动效与图表能力受限 |
 | `ADR-012` | Node.js 22 LTS，`.nvmrc` 与 `engines.node` 锁定 | 依赖兼容稳定，开发与部署版本一致 | 升级至更高主版本 | 需 `>=24` 的依赖不予引入 |
 | `ADR-013` | 不引入 Redis、消息队列、插件系统 | 见 §2.3 非目标 | 多层缓存 / 事件驱动架构 | 扩展能力通过模块与适配器提供 |
+| `ADR-014` | 图片二进制存 PostgreSQL `BYTEA`（`postgres-bytea` 适配器实现） | 部署于 Vercel Serverless，无持久卷且请求体上限 4.5 MB；候选对象存储均需绑定支付方式或会因闲置暂停；本方案零新增依赖、事务内一致、随 `pg_dump` 一并备份 | 本地磁盘（Serverless 不可写、不持久）/ Vercel Blob（引入外部 SDK、备份与数据库分离、两处删除易不一致）/ Cloudflare R2（需绑定信用卡） | 图片占用数据库免费额度（Neon 免费层每项目 1 GB）；读图经函数返回，须携带长缓存头；总量超阈值时按 §8.4 迁移至对象存储 |
 
 ---
 
@@ -406,9 +406,8 @@ server/
 │   │   └── types.ts
 │   └── storage/
 │       ├── adapter.ts           # StorageAdapter 接口
-│       ├── local-disk.ts        # 本地磁盘实现
+│       ├── postgres-bytea.ts    # PostgreSQL BYTEA 实现（ADR-014）
 │       └── image-pipeline.ts    # 魔术字节校验 + 重新编码
-├── uploads/                    # 运行期目录，Web 根之外，纳入 .gitignore
 └── public/                     # 前端构建产物（生产期）
 ```
 
@@ -860,13 +859,26 @@ erDiagram
 | --- | --- | --- | --- |
 | `id` | `BIGSERIAL` | PK | — |
 | `post_id` | `BIGINT` | FK → `posts.id` ON DELETE CASCADE, NOT NULL | 所属帖子 |
-| `storage_path` | `TEXT` | NOT NULL | 相对路径，不含 Web 根 |
-| `original_name` | `TEXT` | NOT NULL | 仅用于展示，不参与落盘 |
-| `mime_type` | `VARCHAR(64)` | NOT NULL | 重编码后判定 |
-| `width` / `height` | `INT` | NOT NULL | 尺寸 |
-| `byte_size` | `INT` | NOT NULL | 字节数 |
-| `sort_order` | `INT` | NOT NULL, DEFAULT 0 | 顺序 |
+| `storage_key` | `VARCHAR(64)` | UNIQUE, NOT NULL, CHECK `^[a-f0-9]{32}$` | 随机标识，等价于随机文件名；二进制存于 `image_blobs` |
+| `original_name` | `TEXT` | NOT NULL | 仅用于展示与导出，不参与任何路径拼接 |
+| `mime_type` | `VARCHAR(64)` | NOT NULL, CHECK 白名单 | 重编码后的真实格式，不采信客户端声明 |
+| `width` / `height` | `INT` | NOT NULL, CHECK > 0 | 尺寸 |
+| `byte_size` | `INT` | NOT NULL, CHECK > 0 | 字节数 |
+| `sort_order` | `INT` | NOT NULL, DEFAULT 0 | 顺序；与 `post_id` 组成唯一约束 |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | 时间 |
+
+索引：`(post_id, sort_order)`；唯一约束 `(post_id, sort_order)`。停用后置位 `sort_order` 保证前进顺序稳定。
+
+#### `image_blobs`
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| `image_id` | `BIGINT` | PK, FK → `post_images.id` ON DELETE CASCADE | 与元数据一对一 |
+| `data` | `BYTEA` | NOT NULL | 重编码后的图片字节（见 `ADR-014`） |
+| `sha256` | `CHAR(64)` | NOT NULL | 内容摘要，用于去重与缓存键 |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | 时间 |
+
+索引：`(sha256)`。二进制与元数据分表存放：列表与详情查询永不触碰 `data` 列，避免全表扫描时读取大字段。
 
 #### `comments`
 
@@ -984,12 +996,15 @@ server/src/db/migrations/
 ├── 001_roles_users.sql
 ├── 002_profiles_sessions.sql
 ├── 003_topics_posts.sql
-├── 004_images_interactions.sql
-├── 005_messages_notifications.sql
-├── 006_achievements.sql
-├── 007_reports_moderation.sql
-└── 008_views.sql
+├── 004_post_images.sql
+├── 005_interactions.sql
+├── 006_messages_notifications.sql
+├── 007_achievements.sql
+├── 008_reports_moderation.sql
+└── 009_views.sql
 ```
+
+明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`。
 
 | 规则 | 内容 |
 | --- | --- |
@@ -997,7 +1012,7 @@ server/src/db/migrations/
 | 执行 | 迁移执行器按序应用，事务内执行，结果写入 `schema_migrations` |
 | 幂等 | 已应用版本不重复执行 |
 | 回滚 | 每个迁移配套说明回滚影响；已执行迁移不修改，回滚以新增补偿迁移实现 |
-| 种子 | 演示话题与示例帖单独置于 `seeds/`，与结构迁移分离，可选择性执行 |
+| 种子 | 演示帖子等**演示数据**单独置于 `seeds/`，与结构迁移分离，可选择性执行；**内置话题**属产品结构，随迁移写入 |
 | 环境 | 开发、测试、生产使用同一套迁移，不手工改表 |
 
 ### 7.6 软删除与数据保留
@@ -1012,13 +1027,16 @@ server/src/db/migrations/
 | 类别 | 内容 |
 | --- | --- |
 | 数据库备份 | 标准逻辑备份工具导出，定期执行，备份文件置于持久存储 |
-| 文件备份 | `uploads/` 目录随持久卷备份，与数据库备份保持同一时间点 |
+| 文件备份 | 图片存于 `image_blobs`，随数据库备份一并导出，无需独立归档 |
 | 用户导出 | `GET /api/export?format=md|json`，包含本人帖子、评论、图片引用与资料字段 |
 | 恢复 | 先恢复数据库，再恢复文件目录；校验 `post_images` 引用与文件一致性 |
 
 ---
 
 ## 8. 文件存储架构
+
+> 存储实现由 `ADR-014` 决定：图片二进制写入 PostgreSQL（`image_blobs.data BYTEA`），
+> 不使用本地磁盘，也不引入对象存储 SDK。适配器接口保持可替换，迁移路径见 §8.4。
 
 ### 8.1 处理管线
 
@@ -1029,18 +1047,16 @@ sequenceDiagram
     participant P as 图片管线
     participant S as posts 服务
     participant D as 数据库
-    participant F as 存储适配器
     C->>M: multipart 请求
-    M->>M: 请求体与文件大小限制
-    M->>P: 内存缓冲区
+    M->>M: 请求体与文件大小限制（≤ 平台 4.5 MB）
+    M->>P: 内存缓冲区（不落盘）
     P->>P: 魔术字节校验真实格式
     P->>P: 重新编码 / 剥离元数据 / 生成尺寸
-    P->>F: 写入新文件（随机名）
-    F-->>P: 存储引用（相对路径）
-    P->>S: 图片元数据
-    S->>D: 事务写入 post_images
-    S-->>C: 图片记录
-    Note over S,F: 任一步失败则清理已写文件并回滚
+    P->>S: 重编码后的字节与元数据
+    S->>D: 事务内写 post_images + image_blobs
+    D-->>S: 提交
+    S-->>C: 图片记录（storage_key / 尺寸 / 字节数）
+    Note over S,D: 同一事务；任一步失败整体回滚，不产生孤儿行
 ```
 
 ### 8.2 存储适配器
@@ -1048,7 +1064,7 @@ sequenceDiagram
 ```ts
 // server/src/storage/adapter.ts —— 接口定义（示意）
 export interface StorageRef {
-  path: string;          // 相对路径，不含 Web 根
+  key: string;        // 存储键；postgres-bytea 下为 32 位随机 hex，兼作缓存键
   mimeType: string;
   width: number;
   height: number;
@@ -1057,25 +1073,37 @@ export interface StorageRef {
 
 export interface StorageAdapter {
   put(buffer: Buffer, meta: { mimeType: string }): Promise<StorageRef>;
-  remove(ref: StorageRef): Promise<void>;
-  resolveUrl(ref: StorageRef): string;
+  get(key: string): Promise<Buffer | null>;
+  remove(key: string): Promise<void>;
 }
 ```
 
-- v1.0 仅提供 `local-disk.ts` 一个实现，注入点位于 `app.ts`，**不建立工厂或注册机制**。
-- 未来接入对象存储时新增一个实现并替换注入，业务模块与上传管线不变（见 §10）。
-- 目录须位于 Web 根目录之外、无执行权限；图片经受控路由读取并携带禁止类型嗅探的响应头。
+- 当前提供 `postgres-bytea.ts` 一个实现，注入点位于 `app.ts`，**不建立工厂或注册机制**。
+- `local-disk.ts` 不再提供：Serverless 运行环境无可写持久目录，实现即失效。
+- 读取经受控路由 `GET /api/images/:key` 返回，携带 `Cache-Control: public, max-age=31536000, immutable`
+  与 `X-Content-Type-Options: nosniff`；`storage_key` 随机且内容不可变，可长期缓存。
 
 ### 8.3 校验规则
 
 | 层级 | 校验 |
 | --- | --- |
-| 传输 | 请求体总量、单文件上限、字段数量 |
-| 中间件 | 显式 `fileSize` 上限（不依赖默认值）、内存缓冲，不先落盘 |
-| 管线 | 文件头魔术字节判定真实类型；类型白名单；重新编码生成新文件 |
-| 落盘 | 随机文件名、固定扩展名、无执行权限目录 |
-| 输出 | 数据库只存引用与元数据；响应携带安全头 |
-| 清理 | 删除帖子 / 移除图片时同步删除文件，事务失败时回滚已写文件 |
+| 传输 | 请求体总量、单文件上限、字段数量；单文件上限须低于平台请求体上限（4.5 MB） |
+| 中间件 | 显式 `fileSize` 上限（不依赖默认值）、内存缓冲，不落盘 |
+| 管线 | 文件头魔术字节判定真实类型；类型白名单；重新编码生成新文件并剥离 EXIF |
+| 入库 | 随机 `storage_key`；元数据与二进制在同一事务内写入 |
+| 输出 | 响应携带禁止类型嗅探头与长缓存头；`Content-Type` 取自重编码结果，不取自客户端 |
+| 清理 | 随 `post_images` 删除级联清理 `image_blobs`，结构上不可能产生孤儿 |
+
+### 8.4 迁移至对象存储的触发条件
+
+满足任一条件时，新增 `r2.ts` / `blob.ts` 实现并替换注入，业务模块与上传管线不变：
+
+- 图片总量超过 **500 MB**（Neon 免费层每项目 1 GB 的一半，留出业务数据余量）；
+- 读图请求占比导致数据库计算额度或出网流量触及免费层上限；
+- 部署方获得可绑定支付方式的对象存储账号（首选 Cloudflare R2：10 GB 存储、出口流量免费）。
+
+迁移步骤：新增实现 → 批量导出 `image_blobs` 至对象存储 → 回填 `storage_key` → 切换注入 →
+保留 `image_blobs` 一个版本周期后再清理。
 
 ---
 
@@ -1089,7 +1117,7 @@ export interface StorageAdapter {
 | 会话冒用 | 随机会话标识、`HttpOnly` / `SameSite` / `Secure`、过期与主动失效 | `session` 中间件 |
 | 越权访问 | 路由级角色中间件 + 服务层主体复核 | 全链路 |
 | 管理端点暴露 | 管理路由统一挂载角色校验；无公开管理员注册 | `admin` 路由 |
-| 恶意文件上传 | 魔术字节、白名单、大小三层、重编码、剥离元数据、目录无执行权限、禁止嗅探 | `uploads` 模块 |
+| 恶意文件上传 | 魔术字节、白名单、大小三层、重编码、剥离元数据、不落盘、禁止嗅探 | `uploads` 模块 |
 | 注入 | 参数化查询、输入模式校验、输出转义 | 仓储层、校验层 |
 | 信息泄露 | 错误码归一化，不返回堆栈 / SQL / 内部路径 | `error-handler` |
 | 内容违规 | 举报、处置、封禁、只追加审核日志 | `reports` / `moderation` |
@@ -1109,7 +1137,7 @@ export interface StorageAdapter {
 | 扩展点 | v1.0 边界 | 未来接入方式 | 不改动的部分 |
 | --- | --- | --- | --- |
 | 实时私信 | 留言式，刷新可见 | 新增推送模块，复用 `messages` 表与服务层，前端订阅新消息事件 | 数据模型、会话逻辑、消息 API |
-| 对象存储 | 本地磁盘 | 新增 `StorageAdapter` 实现并替换注入 | 上传管线、业务模块、图片 API |
+| PostgreSQL 单库 | 对象存储 | 新增 `StorageAdapter` 实现并替换注入（见 §8.4） | 上传管线、业务模块、图片 API |
 | 嵌套评论 | 单层 | 新增迁移为 `comments` 加 `parent_id`，扩展查询与展示组件 | 帖子、点赞、通知模块 |
 | 排序策略升级 | 确定性加权 | 新增 `ranking` 模块实现排序策略接口，替换信息流调用点 | `posts` 表、信息流 API 契约 |
 | 自托管人机验证 | 接入点预留、默认关闭 | 新增验证模块，于注册链路插入校验步骤 | 用户表、会话模块 |
@@ -1151,7 +1179,7 @@ export interface StorageAdapter {
 | 消息即时性成为明确需求 | 接入推送模块，不改表 |
 | 数据量使数据库条件检索变慢 | 引入独立检索实现，保持搜索 API 契约 |
 | 内容规模使人工权重排序失真 | 引入排序策略模块，保持信息流 API 契约 |
-| 文件规模超出本地磁盘 | 替换存储适配器实现 |
+| 图片总量超出数据库免费额度 | 替换存储适配器实现（见 §8.4） |
 
 ---
 
@@ -1178,7 +1206,7 @@ export interface StorageAdapter {
 | 可扩展 | 适配器接口、数据化规则、预留扩展点 | 需遵守变更流程，不能随意加抽象 |
 | 安全 | 服务端校验、纵深防刷、只追加日志 | 注册与上传链路步骤较多 |
 | 一致性 | 事务维护计数与明细、数据库约束 | 写路径略重，低规模下可接受 |
-| 可移植 | 标准格式导出、版本化迁移、本地文件目录 | 文件需随持久卷备份 |
+| 可移植 | 标准格式导出、版本化迁移、图片随库导出 | 图片取用依赖数据库可用 |
 | 性能 | 索引、游标分页、冗余计数 | 计数列需严格事务维护 |
 | 简洁 | 单进程、单库、无中间件集群 | 不具备水平扩展能力 |
 | 可收口 | 冻结清单、ADR、变更流程 | 新增需求需同步多份文档 |
@@ -1231,7 +1259,6 @@ export interface StorageAdapter {
 ├── web/                 # 前端（独立构建）
 ├── server/              # 后端（独立构建）
 │   ├── src/
-│   ├── uploads/         # 运行期文件（.gitignore）
 │   └── public/          # 生产期前端产物（.gitignore）
 └── scripts/             # 初始化、导出、校验脚本
 ```

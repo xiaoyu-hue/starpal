@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+### 新增（M3 内容域 · 进行中）
+
+- **存储决策落地（`ADR-014`）**：图片二进制改为存 PostgreSQL `image_blobs.data`，不再写本地磁盘。依据：部署于 Vercel Serverless，无可写持久目录，且函数请求体硬上限 4.5 MB；候选对象存储中 Cloudflare R2 需绑卡、Supabase Storage 免费层闲置 7 天即暂停。
+- 架构文档 §8 重写：适配器实现由 `local-disk` 改为 `postgres-bytea`，新增 §8.4「迁移至对象存储的触发条件」（图片总量 > 500 MB）。
+- PRD / 部署指南 / 实施计划同步：移除 `UPLOAD_DIR`；单图上限 `5 MB → 3 MB`、请求体上限 `6 MB → 4 MB`（须低于平台 4.5 MB，否则请求在平台层即被拒，应用校验不会执行）。
+- 迁移 `003_topics_posts.sql`：`topics`（slug 与名称格式检查）与 `posts`（状态、非空、非负计数、软删一致性约束 + 四类部分索引）；九个内置话题随迁移写入，满足 `FR-TOPIC-01`「初始化迁移后可直接查询」。
+- 迁移 `004_post_images.sql`：`post_images`（32 位随机 `storage_key`、MIME 白名单、同帖排序唯一）与 `image_blobs`（一对一、级联删除）。
+- 隔离环境（WASM Postgres）实测：两迁移可执行、九话题正确、九条约束负向用例全部被拒、二进制读写与级联删除正常。
+
 ## [1.0.3] - 2026-11-14
 
 ### 修复
