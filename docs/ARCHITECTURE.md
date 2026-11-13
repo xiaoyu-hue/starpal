@@ -376,15 +376,15 @@ server/
 │   ├── db/
 │   │   ├── pool.ts             # 连接池
 │   │   ├── migrate.ts          # 迁移执行器
-│   │   ├── migrations/         # 001_*.sql … 版本化、只追加
-│   │   └── seeds/              # 演示话题与示例帖
+│   │   └── migrations/         # 001_*.sql … 版本化、只追加（内置话题随 003 写入，不另设 seeds）
 │   ├── middleware/
 │   │   ├── request-id.ts
 │   │   ├── security-headers.ts
 │   │   ├── body-limit.ts
 │   │   ├── session.ts
 │   │   ├── rate-limit.ts
-│   │   ├── require-auth.ts
+│   │   ├── require-auth.ts     # 强制登录
+│   │   ├── optional-auth.ts    # 可选登录：匿名可读、登录者可见草稿 / 已移除内容
 │   │   ├── require-role.ts
 │   │   ├── validate.ts
 │   │   ├── access-log.ts
@@ -1012,7 +1012,7 @@ server/src/db/migrations/
 | 执行 | 迁移执行器按序应用，事务内执行，结果写入 `schema_migrations` |
 | 幂等 | 已应用版本不重复执行 |
 | 回滚 | 每个迁移配套说明回滚影响；已执行迁移不修改，回滚以新增补偿迁移实现 |
-| 种子 | 演示帖子等**演示数据**单独置于 `seeds/`，与结构迁移分离，可选择性执行；**内置话题**属产品结构，随迁移写入 |
+| 种子 | **内置话题**属产品结构，随迁移写入；**演示数据不播种**——生产库不写入任何示例内容，避免掩盖真实空态（`AC-17`），需要时由维护者手工插入并标注 `is_demo` |
 | 环境 | 开发、测试、生产使用同一套迁移，不手工改表 |
 
 ### 7.6 软删除与数据保留

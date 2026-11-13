@@ -16,8 +16,8 @@ import {
   MBTI_VALUES,
   ZODIAC_VALUES,
 } from '../../config/constants.js'
+import { countPostsOf, listUserPosts } from '../posts/index.js'
 import {
-  countUserPosts,
   eraseUser,
   findOwnProfileById,
   findPublicProfileByUsername,
@@ -44,7 +44,7 @@ export async function getPublicProfile(username: string): Promise<PublicProfile>
     avatarUrl: isDeleted ? null : row.avatar_url,
     biography: isDeleted ? null : row.biography,
     createdAt: row.created_at.toISOString(),
-    postCount: await countUserPosts(row.username),
+    postCount: await countPostsOf(row.id),
     optional: showOptional
       ? { zodiac: row.zodiac, mbti: row.mbti, ageBand: row.age_band }
       : null,
@@ -61,7 +61,7 @@ export async function getOwnProfile(userId: string): Promise<OwnProfile> {
     avatarUrl: row.avatar_url,
     biography: row.biography,
     createdAt: row.created_at.toISOString(),
-    postCount: await countUserPosts(row.username),
+    postCount: await countPostsOf(row.id),
     showOptional: row.show_optional,
     zodiac: row.zodiac,
     mbti: row.mbti,
@@ -69,9 +69,11 @@ export async function getOwnProfile(userId: string): Promise<OwnProfile> {
   }
 }
 
-/** 公开个人页帖子占位：M3 落地前恒为空页。 */
-export async function getPublicPosts(_username: string): Promise<UserPostsPage> {
-  return { items: [], nextCursor: null, hasMore: false }
+/** 公开个人页帖子：仅已发布内容，与信息流同一可见性口径。 */
+export async function getPublicPosts(username: string): Promise<UserPostsPage> {
+  const row = await findPublicProfileByUsername(username)
+  if (!row) throw new DomainError('NOT_FOUND', '用户不存在')
+  return listUserPosts(row.id, null)
 }
 
 /**
@@ -128,7 +130,7 @@ export async function updateOwnProfile(
     avatarUrl: row.avatar_url,
     biography: row.biography,
     createdAt: row.created_at.toISOString(),
-    postCount: await countUserPosts(row.username),
+    postCount: await countPostsOf(row.id),
     showOptional: row.show_optional,
     zodiac: row.zodiac,
     mbti: row.mbti,

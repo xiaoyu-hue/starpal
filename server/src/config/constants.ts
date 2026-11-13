@@ -14,6 +14,31 @@ export const FEED_WEIGHTS = {
 export const FEED_PAGE_SIZE = 20
 export const FEED_MAX_PAGE_SIZE = 50
 
+// ── M3-S2 帖子约束与排序参数 ─────────────────────────────────────────
+// 排序权重与衰减系数集中于此（PRD §4.2 明确要求不得散落业务代码）；
+// 调整本组常量只影响排序结果，不改变 API 契约。
+
+/** 标题上限与 posts.title VARCHAR(180) 的存储上限一致，避免应用层与库层判定分歧。 */
+export const POST_TITLE_MAX = 180
+export const POST_BODY_MIN = 1
+/** 正文上限：规格未冻结，按长文分享上限设定，防止单行拖垮列表查询与备份。 */
+export const POST_BODY_MAX = 20_000
+/** 摘要长度按字符（码点）计，超出以省略号截断；由服务端生成，不采信客户端。 */
+export const POST_EXCERPT_MAX = 140
+/** 相关帖子返回上限，仅同话题近期内容。 */
+export const POST_RELATED_LIMIT = 5
+
+/** 推荐流取数窗口：超出窗口的内容不再参与加权排序，避免陈年内容长期占据首屏。 */
+export const FEED_RECOMMENDED_WINDOW_DAYS = 30
+/** 热门流取数窗口：热门是「近期热门」，不是「历史总榜」。 */
+export const FEED_POPULAR_WINDOW_DAYS = 7
+/** 时间衰减半衰尺度（天）：freshness = exp(-ageDays / 该值)。 */
+export const FEED_FRESHNESS_DECAY_DAYS = 7
+/** 热度对数缩放：log10(max(净赞,1)) / 该值，将热度归一到 0..1 附近。 */
+export const FEED_HOT_LOG_SCALE = 3
+/** 热门排序权重：以净赞为主、时间衰减为辅（PRD §4.2「辅以时间衰减」）。 */
+export const FEED_POPULAR_WEIGHTS = { hot: 0.7, freshness: 0.3 } as const
+
 export const POST_STATUS = ['draft', 'published', 'removed', 'deleted'] as const
 export const USER_STATUS = ['active', 'suspended', 'deleted'] as const
 

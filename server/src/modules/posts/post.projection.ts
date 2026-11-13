@@ -1,0 +1,109 @@
+import type { PoolClient, QueryResultRow } from 'pg'
+import { pool } from '../../db/pool.js'
+
+/**
+ * 帖子查询投影与行映射：列表、详情、相关帖子共用同一投影，
+ * 保证「信息流卡片」与「详情页」字段口径一致，也避免图片单独查询造成 N+1。
+ */
+
+/** 作者、话题、图片键一次取齐；正文 `body` 由列表层按需裁剪，不做二次查询。 */
+export const PROJECTION = `
+  p.id,
+  p.title,
+  p.excerpt,
+  p.body,
+  p.status,
+  p.like_count,
+  p.comment_count,
+  p.created_at,
+  p.updated_at,
+  p.author_id,
+  p.topic_id,
+  t.slug     AS topic_slug,
+  t.name_zh  AS topic_name,
+  u.username,
+  u.display_name,
+  u.status   AS author_status,
+  up.avatar_url,
+  COALESCE((
+    SELECT json_agg(i.storage_key ORDER BY i.sort_order)
+      FROM post_images i WHERE i.post_id = p.id
+  ), '[]'::json) AS images
+`
+
+export const FROM_JOINS = `
+  FROM posts p
+  JOIN topics t ON t.id = p.topic_id
+  JOIN users u ON u.id = p.author_id
+  LEFT JOIN user_profiles up ON up.user_id = u.id
+`
+
+/** 可见性条件：已发布、未删除、话题未归档、作者未被停用；已注销作者的内容保留署名占位。 */
+export const VISIBLE = `
+  p.status = 'published'
+  AND p.deleted_at IS NULL
+  AND t.deleted_at IS NULL
+  AND u.status <> 'suspended'
+`
+
+export type PostRow = QueryResultRow & {
+  id: string
+  title: string
+  excerpt: string
+  body: string
+  status: string
+  like_count: number
+  comment_count: number
+  created_at: Date
+  updated_at: Date
+  author_id: string
+  topic_id: number
+  topic_slug: string
+  topic_name: string
+  username: string
+  display_name: string
+  author_status: string
+  avatar_url: string | null
+  images: string[]
+  /** 仅 popular / recommended 的 CTE 查询会返回；latest 为 undefined。 */
+  rank_score?: number
+}
+
+/** 作者已注销时统一替换为占位署名并隐去头像，与个人资料投影保持一致（ADR-010）。 */
+export function mapRow(row: PostRow) {
+  const deleted = row.author_status === 'deleted'
+  return {
+    id: Number(row.id),
+    title: row.title,
+    excerpt: row.excerpt,
+    body: row.body,
+    status: row.status,
+    likeCount: row.like_count,
+    commentCount: row.comment_count,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+    authorId: Number(row.author_id),
+    topicId: Number(row.topic_id),
+    author: {
+      username: row.username,
+      displayName: deleted ? '已注销用户' : row.display_name,
+      avatarUrl: deleted ? null : row.avatar_url,
+    },
+    topic: { slug: row.topic_slug, nameZh: row.topic_name },
+    images: row.images,
+    rankScore: row.rank_score,
+  }
+}
+
+/** 落库记录：含内部主键（authorId / topicId），服务层据此判权限，对外投影时剔除。 */
+export type PostRecord = ReturnType<typeof mapRow>
+
+/** 统一执行入口：允许传入事务连接，使写入与读回在同一事务内完成。 */
+export async function queryRows(
+  executor: PoolClient | typeof pool,
+  sql: string,
+  params: unknown[],
+): Promise<PostRecord[]> {
+  const result = await executor.query<PostRow>(sql, params)
+  return result.rows.map(mapRow)
+}

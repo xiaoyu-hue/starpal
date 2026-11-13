@@ -5,6 +5,7 @@ import { pool, withTransaction } from '../../db/pool.js'
 /** 个人资料数据访问。全部参数化查询；可选资料字段白名单构建，禁止拼接用户输入。 */
 
 export type ProfileRow = {
+  id: string
   username: string
   display_name: string
   status: string
@@ -26,7 +27,7 @@ export async function findPublicProfileByUsername(
   username: string,
 ): Promise<ProfileRow | null> {
   const result = await pool.query<ProfileRow>(
-    `SELECT u.username, u.display_name, u.status, p.avatar_url, p.biography,
+    `SELECT u.id, u.username, u.display_name, u.status, p.avatar_url, p.biography,
             p.zodiac, p.mbti, p.age_band, p.show_optional, u.created_at
        FROM users u
        LEFT JOIN user_profiles p ON p.user_id = u.id
@@ -39,7 +40,7 @@ export async function findPublicProfileByUsername(
 /** 本人视角资料：含可选字段（不论 show_optional），用于设置页回填。 */
 export async function findOwnProfileById(userId: string): Promise<ProfileRow | null> {
   const result = await pool.query<ProfileRow>(
-    `SELECT u.username, u.display_name, u.status, p.avatar_url, p.biography,
+    `SELECT u.id, u.username, u.display_name, u.status, p.avatar_url, p.biography,
             p.zodiac, p.mbti, p.age_band, p.show_optional, u.created_at
        FROM users u
        LEFT JOIN user_profiles p ON p.user_id = u.id
@@ -47,11 +48,6 @@ export async function findOwnProfileById(userId: string): Promise<ProfileRow | n
     [userId],
   )
   return result.rows[0] ?? null
-}
-
-/** 用户已发布帖子数；帖子表在 M3 落地，当前恒为 0（不伪造内容）。 */
-export async function countUserPosts(_userId: string): Promise<number> {
-  return 0
 }
 
 /** 资料更新：显示名落在 users 表，展示字段落在 user_profiles 表，同一事务内完成。 */
@@ -105,7 +101,7 @@ export async function updateProfile(
     }
 
     const row = await client.query<ProfileRow>(
-      `SELECT u.username, u.display_name, u.status, p.avatar_url, p.biography,
+      `SELECT u.id, u.username, u.display_name, u.status, p.avatar_url, p.biography,
               p.zodiac, p.mbti, p.age_band, p.show_optional, u.created_at
          FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id
         WHERE u.id = $1`,

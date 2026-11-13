@@ -13,6 +13,19 @@
 - 迁移 `004_post_images.sql`：`post_images`（32 位随机 `storage_key`、MIME 白名单、同帖排序唯一）与 `image_blobs`（一对一、级联删除）。
 - 隔离环境（WASM Postgres）实测：两迁移可执行、九话题正确、九条约束负向用例全部被拒、二进制读写与级联删除正常。
 
+### 新增（M3-S2 帖子 API）
+
+- 新建 `modules/posts`：routes / controller / service / schema / types 五件套，仓储按「写入与单条读取」`post.repository`、「列表与分页」`post.feed.repository` 拆分，共用 `post.projection` 投影，单文件均在体积预算内。
+- `POST /api/posts`：服务端校验标题（≤ 180）、正文（≤ 20000）、话题存在性，摘要由服务端按码点截断生成（`FR-POST-06`），事务内写入并读回。
+- `GET /api/posts`：三 Tab 键集分页——`latest` 按创建时间、`popular` 按「净赞为主 + 时间衰减」限 7 天窗、`recommended` 按 `0.4×话题亲和度 + 0.35×新鲜度 + 0.25×热度` 限 30 天窗；权重与衰减系数集中于 `config/constants`。
+- `GET /api/posts/:id`：可见性判定——`published` 公开、`draft` 仅作者、`removed` 仅管理员、`deleted` 一律不可见，不可见统一返回 `NOT_FOUND`，不通过状态差异泄露他人内容（`FR-POST-04`）。
+- `PATCH` / `DELETE /api/posts/:id`：作者或管理员；越权返回 `FORBIDDEN`，删除为软删除（`status` 与 `deleted_at` 同步置位）。
+- `GET /api/posts/:id/related`：同话题近期帖子，限量 5 条。
+- 新增 `middleware/optional-auth`：读端点匿名可读、登录者额外可见自身草稿与管理员可见的已移除内容。
+- `modules/feed` 退役，列表能力并入 `posts`——同一 URL 前缀由同一模块拥有，避免游标规则与可见性判定分处两地。
+- 个人页接入真实数据：`GET /api/users/:username/posts` 返回已发布帖子分页，`postCount` 改为与列表同口径的真实计数。
+- 生产库实测（测毕物理清理，`posts=0`）：三 Tab 排序互不相同且符合 PRD 定义；`limit=2` 两页拼接无重复无跳项；匿名/越权/软删除三种可见性符合预期；HTTP 参数校验与错误码逐项通过。
+
 ## [1.0.3] - 2026-11-14
 
 ### 修复

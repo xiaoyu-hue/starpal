@@ -30,9 +30,11 @@ export type OwnProfile = {
   ageBand: string | null
 }
 
-/** 公开个人页的帖子占位：帖子表在 M3 落地，当前恒为空（不伪造内容）。 */
+import type { PostListItem } from '../posts/index.js'
+
+/** 公开个人页的帖子列表：与信息流共用同一列表投影，避免两处字段漂移。 */
 export type UserPostsPage = {
-  items: never[]
+  items: PostListItem[]
   nextCursor: string | null
   hasMore: boolean
 }

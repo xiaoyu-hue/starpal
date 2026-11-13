@@ -25,7 +25,8 @@ export type FeedPost = {
   title: string
   excerpt: string
   topic: { slug: string; nameZh: string }
-  author: { username: string; avatarUrl: string | null }
+  /** displayName 由服务端统一下发（已注销作者为「已注销用户」），卡片署名以此为准。 */
+  author: { username: string; displayName: string; avatarUrl: string | null }
   likeCount: number
   commentCount: number
   images: string[]

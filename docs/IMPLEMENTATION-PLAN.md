@@ -373,6 +373,21 @@ flowchart LR
 
 **M2 里程碑状态：✅ 已完成**。说明：工作区 `.env` 残留风险仍由部署方处置（凭据不入仓，见 `VR-M2-12`）；`DoD-01` 的 lint/导入边界规则与 `seed`/`export:check` 脚本**已补齐并验证**（`VR-M2-25~26`），此前登记为欠账的项已全部结清；`M2-S5` 说明页面已实现并线上验证通过（`VR-M2-22~24`）。`AC-01/02/03/10/18` 与 `DoD-01`—`DoD-10` 全部满足，里程碑可进入 `M3`。
 
+#### M3 验证记录
+
+| 编号 | 验证项 | 结果 | 证据 |
+| --- | --- | --- | --- |
+| `VR-M3-01` | 内容数据模型（`M3-S1`） | 通过 | 迁移 `003`/`004` 在生产 Neon 执行成功，`schema_migrations` = 001..004；四张新表存在；`topics` 写入 9 行且 slug 唯一。隔离环境（WASM Postgres）实跑迁移，9 条检查约束的负向用例（非法 slug / 空标题 / 非法状态 / 负计数 / 删除状态不一致 / 非法 mime / 非法 storage_key / 重复 sort_order）全部被拒；`BYTEA` 读写与级联删除正常 |
+| `VR-M3-02` | 图片存储方案（`ADR-014`） | 通过 | 架构 §8 按 `postgres-bytea` 重写并新增 §8.4 迁移触发条件（图片总量 > 500 MB）；PRD / 部署指南 / 实施计划移除 `UPLOAD_DIR`，单图上限 5 MB → 3 MB、请求体 6 MB → 4 MB——须低于 Vercel 函数请求体 4.5 MB 的平台硬上限，否则应用校验不会执行 |
+| `VR-M3-03` | 三 Tab 排序可解释性（`M3-S2-T5`） | 通过 | 生产库造数实测（测毕全部物理清理）：`latest` = B,C,A（时间倒序）；`popular` = C,B（A 超出 7 天窗口被排除）；`recommended` = B,C,A（加权综合分）。三 Tab 结果不同且符合 PRD §4.2 定义 |
+| `VR-M3-04` | 游标分页与去重（`FR-FEED-04/05`） | 通过 | `latest` 以 `limit=2` 连续取两页，拼接得 (2,3,1)，无重复、无跳项；`hasMore` 首页 `true`、次页 `false` |
+| `VR-M3-05` | 可见性与越权（`M3-S2-T3/T4`） | 通过 | 匿名读详情 `isAuthor=false`；非作者编辑返回 `FORBIDDEN`；软删除后详情返回 `NOT_FOUND` 且不再出现在信息流；`removed` 仅管理员可见，其余按不存在处理 |
+| `VR-M3-06` | HTTP 层校验与包络 | 通过 | `tab` 缺省默认 `latest`；`tab` 非法 / `limit` 越界 / `limit` 非数字 / `cursor` 非法 / `topic` 非法（含超长）均 400 且带字段级约束；`/posts/abc` 与不存在 ID 均 404；未登录 `POST` / `PATCH` / `DELETE` 均 401 |
+| `VR-M3-07` | 演示数据策略（`AC-17` 前置） | 通过 | 生产库不播种任何演示内容；验证用临时账号与帖子在 `finally` 中物理删除，复核残留 `posts=0`、`users` 恢复为原有 2 个 |
+| `VR-M3-08` | 质量门 | 通过 | `npm run verify` 全绿（typecheck + build + size + lint），`lint` 硬规则 0 违规，源文件均在体积预算内 |
+
+**M3 进度**：`M3-S1`（数据模型）、`M3-S2`（帖子 API）✅ 完成；`M3-S3`（图片上传）、`M3-S4`（话题域）、`M3-S5`（前端内容域）待做。帖子列表能力已并入 `modules/posts`，原 `modules/feed` 退役——同一 URL 前缀由同一模块拥有，避免游标规则与可见性判定分处两地。
+
 ---
 
 ### M3 · 帖子、图片上传、话题与详情页
@@ -381,26 +396,26 @@ flowchart LR
 
 **前置条件**：`M2` 完成；会话与角色守卫可用。
 
-#### `M3-S1` 内容数据模型
+#### `M3-S1` 内容数据模型（✅ 已完成）
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
 | `M3-S1-T1` | 话题与帖子表 | `003_topics_posts.sql` 建立 `topics`、`posts` 及四类索引、检查约束 | `migrations/003_*.sql` | 索引与架构 §7.4 一致 |
 | `M3-S1-T2` | 图片表 | `004_post_images.sql` 建立 `post_images` 与 `image_blobs` | `migrations/004_*.sql` | 外键级联与排序唯一约束正确 |
-| `M3-S1-T3` | 内置话题 | 写入九个分类（slug / 中文名 / 英文名 / 描述），带 `is_demo` 标记 | `seeds/topics.sql` | 查询得到九行且 slug 唯一 |
-| `M3-S1-T4` | 演示帖子 | 少量带「示例」标记的帖子，不伪装真实成员 | `seeds/demo-posts.sql` | 标注清晰，`AC-17` 前置 |
+| `M3-S1-T3` | 内置话题 | 九个分类（slug / 中文名 / 英文名 / 描述）随 `003` 结构迁移写入，属产品内置分类而非演示数据（`is_demo=false`、`created_by=NULL`） | `migrations/003_*.sql` | 查询得到九行且 slug 唯一 |
+| `M3-S1-T4` | 演示帖子 | **决定不播种**：生产库不写入任何示例内容，避免演示数据掩盖真实空态（`AC-17`）；需要本地验收时按需手工插入并显式标注 `is_demo` | — | 生产 `posts` 表无演示行 |
 
-#### `M3-S2` 帖子 API
+#### `M3-S2` 帖子 API（✅ 已完成）
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M3-S2-T1` | 帖子六件套 | 建立 `modules/posts/` 的 routes / controller / service / repository / schema / types | `server/src/modules/posts/` | 层间无越界调用 |
+| `M3-S2-T1` | 帖子六件套 | 建立 `modules/posts/` 的 routes / controller / service / repository / schema / types（仓储按写入与列表拆为 `post.repository` / `post.feed.repository`，投影共用 `post.projection`） | `server/src/modules/posts/` | 层间无越界调用；单文件 ≤ 300 行 |
 | `M3-S2-T2` | 创建 | 标题 / 正文 / 话题校验，服务端生成 `excerpt`，事务写入 | 同上 | `AC-04` 有记录 |
 | `M3-S2-T3` | 详情与可见性 | `GET /api/posts/:id` 校验状态与删除标记 | 同上 | 已移除 / 已删除帖子不可公开访问 |
 | `M3-S2-T4` | 编辑与删除 | 作者 / 管理员判定在服务层，软删除 | 同上 | 越权请求被拒 |
-| `M3-S2-T5` | 信息流 | `GET /api/posts` 实现三 Tab 排序、游标分页、按 ID 去重 | `shared/pagination.ts`、posts 仓储 | 权重集中配置，翻页无重复 |
+| `M3-S2-T5` | 信息流 | `GET /api/posts` 实现三 Tab 排序、游标分页、按 ID 去重 | `shared/pagination.ts`、posts 仓储 | 权重集中配置，翻页无重复（见 `VR-M3-03/04`） |
 | `M3-S2-T6` | 相关帖子 | 同话题近期帖子，限量返回 | posts 仓储 | 结果仅含同话题 |
-| `M3-S2-T7` | 路由挂载 | 在 `app.ts` 注册 `/api/posts` 并挂载守卫 | `server/src/app.ts` | 端点清单与架构 §6.2 一致 |
+| `M3-S2-T7` | 路由挂载 | 在 `routes.ts` 注册 `/api/posts`；读端点挂 `optionalAuth`（匿名可读、登录者可见草稿），写端点挂 `requireAuth` | `server/src/routes.ts`、`middleware/optional-auth.ts` | 端点清单与架构 §6.2 一致 |
 
 #### `M3-S3` 图片上传管线
 

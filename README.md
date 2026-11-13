@@ -90,12 +90,13 @@
 
 ## 当前实现状态
 
-`M1`（可运行空壳）与 `M2`（账户与资料）均已实现，并随 **`v1.0.0`** 正式发布：
+`M1`（可运行空壳）与 `M2`（账户与资料）均已实现并随 **`v1.0.0`** 正式发布；`M3`（内容域）进行中：
 
 - **M1**：前端工程骨架、设计系统、响应式应用外壳与导航、信息流外壳（含加载 / 错误 / 空三态）、后端骨架、PostgreSQL 连接与迁移机制、Express 单进程静态托管、说明页后端单源。
 - **M2**：注册 / 登录 / 登出与服务端会话（`M2-S1` / `M2-S2`）、受保护路由与角色守卫（`M2-S3`）、个人资料与设置（公开个人页、资料编辑、主题切换、账号注销与彻底擦除，`M2-S4`）、隐私 / 社区准则 / 关于三说明页（`M2-S5`）、以及 DoD-01 质量门（模块导入边界 lint、`seed`、`export:check`）。
+- **M3（进行中）**：内容数据模型（话题 / 帖子 / 图片元数据与二进制，`M3-S1`）与**帖子 API**（`M3-S2`）已完成——创建 / 详情 / 编辑 / 软删除、信息流三 Tab 键集分页、相关帖子、可见性与越权判定均可用。图片上传（`M3-S3`）、话题域页面（`M3-S4`）与前端内容域（`M3-S5`）待做，因此站点上尚无可用的发帖界面。
 
-发帖、图片上传、点赞评论、话题分类、私信、后台管理等仍按 `M3`—`M7` 里程碑交付。未实现的导航目的地以明确标注状态的占位页呈现，不提供点击无效果的伪交互控件；信息流无真实内容时返回服务端真实空结果，不填充演示数据。
+图片上传、点赞评论、私信、后台管理等仍按 `M3`—`M7` 里程碑交付。未实现的导航目的地以明确标注状态的占位页呈现，不提供点击无效果的伪交互控件；信息流无真实内容时返回服务端真实空结果，不填充演示数据。
 
 `M1` / `M2` 已具备部署到托管平台免费层的生产就绪性：构建命令、启动命令、环境变量契约与免费层限制见 [部署与配置指南 §17 / §18](./docs/DEPLOYMENT.md)。生产迁移使用 `npm run migrate:prod`（执行编译产物，不依赖 `tsx`），本地开发仍使用 `npm run migrate`。
 
@@ -119,7 +120,7 @@ npm run verify           # 类型检查 + 构建 + 体积检查
 node scripts/build-standalone.mjs   # 生成 web/dist/starpal-preview.html
 ```
 
-> 健康检查：`GET /api/health`；社区准则：`GET /api/meta/guidelines`；隐私：`GET /api/meta/privacy`；关于：`GET /api/meta/about`；信息流：`GET /api/posts?tab=latest`。`seed` / `init:admin` / `export:check` 已在 DoD-01 落地。
+> 健康检查：`GET /api/health`；社区准则：`GET /api/meta/guidelines`；隐私：`GET /api/meta/privacy`；关于：`GET /api/meta/about`；信息流：`GET /api/posts?tab=latest|popular|recommended`；帖子：`POST /api/posts`、`GET|PATCH|DELETE /api/posts/:id`、`GET /api/posts/:id/related`。`seed` / `init:admin` / `export:check` 已在 DoD-01 落地。
 
 ---
 
