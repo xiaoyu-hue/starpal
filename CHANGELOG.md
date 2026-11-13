@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-14
+
+### 许可
+
+- 自有代码采用 **AGPL-3.0-or-later**，新增 `LICENSE`（GNU AGPL v3 官方全文）。
+- 文档采用 **CC BY-NC-SA 4.0**，新增 `LICENSE-docs`（含许可摘要、条款与官方链接）。
+- 新增 `THIRD-PARTY-NOTICES.md`，登记第三方直接依赖及其许可证（全部 MIT / ISC / Apache-2.0 / BSD-2-Clause / BSD-3-Clause / 0BSD / MPL-2.0 / CC-BY-4.0，与 AGPL-3.0 兼容）。
+- 根、`server/`、`web/` 三个 `package.json` 增加 `license` 字段；重写 README「许可与第三方」段。
+- 版本号 `1.0.0 → 1.0.1`（属文档/管理类改动，按语义化版本规则走修订号）。
+
 ## [1.0.0] - 2026-11-14
 
 > 首个正式版本，对应 PRD / 架构 / 实施计划 / 部署指南 v1.0 基线（**架构基线**）。包含 `M1` 与 `M2` 的全部交付内容，并经 DoD-01 质量门（类型检查 + 构建 + 体积 + lint）校验通过。
