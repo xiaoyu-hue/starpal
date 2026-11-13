@@ -44,3 +44,72 @@ export type HealthInfo = {
   version: string
   serverTime: string | null
 }
+
+/** 认证域的公开用户投影，与 server/src/modules/auth/auth.service.ts 的 PublicUser 一致。 */
+export type PublicUser = {
+  id: string
+  username: string
+  displayName: string
+  role: string
+  avatarUrl: string | null
+  createdAt: string
+}
+
+export type LoginPayload = {
+  username: string
+  password: string
+}
+
+export type RegisterPayload = {
+  username: string
+  password: string
+  displayName?: string
+  inviteCode: string
+  /** 蜜罐字段：真人不可见，随请求体提交；命中后由服务端静默丢弃。 */
+  website?: string
+}
+
+/** 他人视角的公开资料投影，与 server/src/modules/users/user.types.ts 一致。 */
+export type PublicProfile = {
+  username: string
+  displayName: string
+  avatarUrl: string | null
+  biography: string | null
+  createdAt: string
+  postCount: number
+  optional:
+    | { zodiac: string | null; mbti: string | null; ageBand: string | null }
+    | null
+}
+
+/** 本人视角资料：含可选字段真实值与公开开关，与 PublicProfile 分离。 */
+export type OwnProfile = {
+  username: string
+  displayName: string
+  avatarUrl: string | null
+  biography: string | null
+  createdAt: string
+  postCount: number
+  showOptional: boolean
+  zodiac: string | null
+  mbti: string | null
+  ageBand: string | null
+}
+
+/** 资料编辑请求体：仅提交需要变更的字段（支持逐项清空为 null）。 */
+export type ProfileUpdatePayload = Partial<{
+  displayName: string
+  avatarUrl: string | null
+  biography: string | null
+  zodiac: string | null
+  mbti: string | null
+  ageBand: string | null
+  showOptional: boolean
+}>
+
+/** 公开个人页帖子占位：M3 落地前恒为空。 */
+export type UserPostsPage = {
+  items: never[]
+  nextCursor: string | null
+  hasMore: boolean
+}

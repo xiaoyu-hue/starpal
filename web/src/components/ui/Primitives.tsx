@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import { useState, type HTMLAttributes, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
 /** 内容卡片：实色、高可读，不套玻璃。 */
@@ -36,12 +36,30 @@ export function Badge({ children, variant = 'neutral', className }: BadgeProps) 
 }
 
 type AvatarProps = {
+  /** 显示名（或用户名），用于无图时取首字。 */
   name: string
+  /** 头像图片地址；为空或加载失败时回退到首字圆形占位。 */
+  src?: string | null
   size?: number
   className?: string
 }
 
-export function Avatar({ name, size = 40, className }: AvatarProps) {
+export function Avatar({ name, src, size = 40, className }: AvatarProps) {
+  const [broken, setBroken] = useState(false)
+  const showImage = Boolean(src) && !broken
+  if (showImage) {
+    return (
+      <img
+        src={src as string}
+        alt=""
+        width={size}
+        height={size}
+        className={cn('shrink-0 rounded-full object-cover', className)}
+        style={{ width: size, height: size }}
+        onError={() => setBroken(true)}
+      />
+    )
+  }
   return (
     <span
       className={cn(

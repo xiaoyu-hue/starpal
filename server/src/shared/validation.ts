@@ -1,0 +1,106 @@
+import { DomainError, type ErrorDetail } from './errors.js'
+
+/**
+ * 请求模式校验原语（架构 §5.7 模式层）。
+ * 客户端校验仅用于体验，不得作为安全边界；所有准入判断必须经由此处。
+ * 校验失败统一抛 VALIDATION_FAILED，附带字段级约束说明，由错误中间件归一化。
+ */
+
+type StringRule = {
+  field: string
+  min: number
+  max: number
+  pattern?: RegExp
+  patternHint?: string
+  /** 是否对首尾空白做归一化；用户名等标识符不允许空白。 */
+  trim?: boolean
+  /** 是否允许字符串内部含空白（密码允许，用户名不允许）。 */
+  allowInnerWhitespace?: boolean
+}
+
+function invalid(details: ErrorDetail[]): never {
+  throw new DomainError('VALIDATION_FAILED', '请求参数不合法', details)
+}
+
+/** 校验字符串字段：类型、长度、字符集、首尾空白。返回归一化后的值。 */
+export function requireString(value: unknown, rule: StringRule): string {
+  if (typeof value !== 'string') {
+    invalid([{ field: rule.field, constraint: '必须为字符串' }])
+  }
+  const raw = value as string
+  const text = rule.trim ? raw.trim() : raw
+  if (text.length < rule.min || text.length > rule.max) {
+    invalid([{ field: rule.field, constraint: `长度须在 ${rule.min}..${rule.max} 之间` }])
+  }
+  if (!rule.allowInnerWhitespace && /\s/.test(text)) {
+    invalid([{ field: rule.field, constraint: '不得包含空白字符' }])
+  }
+  if (/^\s|\s$/.test(text)) {
+    invalid([{ field: rule.field, constraint: '不得含首尾空白' }])
+  }
+  if (rule.pattern && !rule.pattern.test(text)) {
+    invalid([{ field: rule.field, constraint: rule.patternHint ?? `须匹配 ${rule.pattern.source}` }])
+  }
+  return text
+}
+
+/** 请求体必须是普通对象（非数组、非 null）。 */
+export function requireObject(value: unknown): Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    invalid([{ field: 'body', constraint: '请求体必须为 JSON 对象' }])
+  }
+  return value as Record<string, unknown>
+}
+
+/**
+ * 校验可选字符串字段：蜜罐等辅助字段。
+ * 蜜罐被填写时不报错、不区分提示，只返回命中标记，交由服务层静默丢弃。
+ */
+export function honeypotFilled(body: Record<string, unknown>, field: string): boolean {
+  const value = body[field]
+  return typeof value === 'string' && value.trim() !== ''
+}
+
+/** 枚举校验。 */
+export function requireEnum<T extends string>(
+  value: unknown,
+  field: string,
+  allowed: readonly T[],
+): T {
+  if (typeof value !== 'string' || !allowed.includes(value as T)) {
+    invalid([{ field, constraint: `取值须为 ${allowed.join(' | ')}` }])
+  }
+  return value as T
+}
+
+/** 布尔校验：仅接受 JSON 布尔，不接受 'true' 字符串等弱类型。 */
+export function requireBoolean(value: unknown, field: string): boolean {
+  if (typeof value !== 'boolean') {
+    invalid([{ field, constraint: '必须为布尔值' }])
+  }
+  return value as boolean
+}
+
+/**
+ * 头像链接校验：仅接受 http(s) 绝对地址，长度受限。
+ * 不发起网络请求、不探测可达性——可达性由前端与 M3 图片管线负责。
+ */
+export function requireHttpUrl(value: unknown, field: string, max: number): string {
+  if (typeof value !== 'string') {
+    invalid([{ field, constraint: '必须为字符串' }])
+  }
+  const text = value as string
+  if (text.length > max) {
+    invalid([{ field, constraint: `长度须不超过 ${max}` }])
+  }
+  let parsed: URL
+  try {
+    parsed = new URL(text)
+  } catch {
+    invalid([{ field, constraint: '须为合法的 URL' }])
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    invalid([{ field, constraint: '仅支持 http / https 链接' }])
+  }
+  return text
+}

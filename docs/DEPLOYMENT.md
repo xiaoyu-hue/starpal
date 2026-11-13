@@ -499,19 +499,19 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 | 组件 | 服务 | 说明 |
 | --- | --- | --- |
 | 前端静态产物 | Vercel 静态托管（CDN） | `server/public/` 由构建阶段生成，作为 `outputDirectory` 由边缘网络直接分发 |
-| 后端 API | Vercel Serverless Functions（Node） | `api/index.ts` 导出的 Express 实例，仅处理 `/api`；函数运行时版本由 `engines.node` 锁定为 22 |
+| 后端 API | Vercel Serverless Functions（Node） | `api/index.ts` 内动态装配 `createApiApp()` 的 Express 实例，仅处理 `/api`；函数运行时版本由 `engines.node` 锁定为 22 |
 | 数据库 | Neon PostgreSQL（Free） | 外部连接串，不使用 Vercel 自带存储 |
 | 域名 | 外部域名与 DNS 服务商 | 通过 CNAME 指向 Vercel 分配的地址 |
 
-> 与 Render 单进程模型不同：Vercel 下 Express 不再常驻监听，也不再托管静态文件。静态由 CDN 负责，API 由无服务器函数负责，二者通过 `vercel.json` 的 rewrites 分流（非 `/api` 路径回退到 `index.html`）。代码层面对应：`server/src/api-app.ts` 提供「仅 API」的 Express 装配，`api/index.ts` 为其 serverless 入口；原 `createApp()` 仍保留用于本地与 Render 式单进程。
+> 与 Render 单进程模型不同：Vercel 下 Express 不再常驻监听，也不再托管静态文件。静态由 CDN 负责，API 由无服务器函数负责，二者通过 `vercel.json` 的 rewrites 分流：`/api/:path*` 显式转发到 `/api` 函数，其余路径回退到 `index.html`（见 §18.12）。代码层面对应：`server/src/api-app.ts` 提供「仅 API」的 Express 装配，`api/index.ts` 为其 serverless 入口；原 `createApp()` 仍保留用于本地与 Render 式单进程。
 
 ### 18.2 仓库新增文件
 
 | 文件 | 作用 |
 | --- | --- |
-| `api/index.ts` | Vercel 函数入口，默认导出 `createApiApp()` 实例 |
+| `api/index.ts` | Vercel 函数入口（对应唯一函数路径 `/api`），默认导出 handler；handler 内动态 `import()` 装配 `createApiApp()` 并惰性跑迁移，顶层零运行时依赖（见 §18.10）。多段 `/api/*/*` 由显式 rewrite 送入本函数（见 §18.12） |
 | `server/src/api-app.ts` | 仅挂载 `/api` 的 Express 装配（不含静态与 SPA 回退） |
-| `vercel.json` | 构建命令、输出目录、SPA 回退重写规则 |
+| `vercel.json` | `/api/:path* → /api` 显式转发、SPA 回退重写规则、`functions.includeFiles`（打入 `server/dist/**`）；构建/输出目录在 Vercel 项目设置里显式配置 |
 
 ### 18.3 项目配置契约
 
@@ -548,7 +548,16 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 
 ### 18.6 数据库迁移
 
-Neon 为外部托管、随项目一次性建好；首次部署前已执行迁移（表 `roles` / `users` / `schema_migrations` 已存在且幂等）。后续新增表结构只通过新增迁移文件，并在本地或 CI 执行 `npm run migrate:prod`，不依赖 Vercel 构建期。
+`api/index.ts` 在**函数冷启动、首个请求前**惰性调用 `runMigrations()`（幂等，靠 `schema_migrations` 账本去重），因此**构建期不依赖数据库**，迁移在运行时首次访问时自动建表。本仓库已对真实 Neon 执行过迁移，表 `roles` / `users` / `schema_migrations` 已存在。
+
+> 关键坑：`migrate.ts` 运行时用 `readdirSync` + `readFileSync` 读取 `server/dist/db/migrations/*.sql`，Vercel 的 nft 文件追踪**不会**自动包含这种动态读取的文件，会导致函数包漏掉 SQL、运行时报 ENOENT。已在 `vercel.json` 用
+> `functions["api/index.ts"].includeFiles: "server/dist/**"` 将整个编译产物目录显式打入（函数以动态 `import()` 引用 `server/dist` 下的模块，nft 同样不会自动追踪），验证通过。
+
+> 迁移目录定位：`migrate.ts` 不再写死 `import.meta.url` 的相邻目录。函数被打包后 `import.meta.url` 指向打包产物而非原模块，迁移 SQL 会读不到。现按多候选路径探测（模块相邻目录 → `process.cwd()/server/dist/db/migrations` → `process.cwd()/dist/db/migrations`），返回第一个真实存在的目录，兼容本地单进程与 Vercel lambda（lambda 内 `cwd=/var/task`，迁移位于 `/var/task/server/dist/db/migrations`）。
+
+> 另一关键坑：项目级 `buildCommand` / `installCommand` / `outputDirectory` 必须**显式在 Vercel 项目设置里填写**（不能只靠 `vercel.json` 的 `framework: "none"` 那套）。若这些字段在 Vercel 项目里是 `null`，构建会变成 0ms 空构建 → 部署 `ERROR`。当前三项已在项目设置显式写入。
+
+后续新增表结构只通过新增迁移文件并推送 `main`；冷启动会自动应用，无需手动跑。
 
 ### 18.7 免费层限制与处置
 
@@ -566,6 +575,230 @@ Neon 为外部托管、随项目一次性建好；首次部署前已执行迁移
 | 项 | 结果 |
 | --- | --- |
 | `npm run build` | 通过；`server/public/index.html` 与 `assets/` 产出，服务端 `tsc` 零报错 |
-| `esbuild` 打包 `api/index.ts`（`--packages=external`） | 通过；跨目录 `.js`→`.ts` 引用与 Express 装配解析正常 |
-| `GET /api/health`（本地单进程等价） | 200，`database: up` |
+| `esbuild` 打包当时的函数入口（早期 catch-all，ESM）本地执行 + 真实 Neon | 通过；`GET /api/health` 200、`GET /api/nope` 404 结构化包络 |
+| **线上** `GET https://starpal.cc.cd/api/health` | **200**，`{"data":{"status":"ok","database":"up",...}}` |
+| **线上** `GET https://starpal.cc.cd/api/nope` | **404** 结构化错误包络 |
+| **线上** `GET https://starpal.cc.cd/` | **200** |
 | 静态 `index.html` / assets、SPA 深层路由 | 均 200（由 CDN + rewrites 提供） |
+| **线上** 多段 `/api/*/*`（路由修复后） | 由 Express 正常返回 200 / 401 / 404，账户闭环 12 项全通过（见 §18.12） |
+
+### 18.10 Serverless 函数入口的四条硬约束（踩坑记录）
+
+首次上线后 `/api/*` 持续报 `FUNCTION_INVOCATION_FAILED`，最终用一个「顶层零依赖」的诊断函数打到线上、把运行时环境打印出来才定位清楚（Node v22 / ESM / `cwd=/var/task` / `server/dist` 可见 / 动态 `import()` 可用）。据此固化的四条约束：
+
+1. **入口与转发必须成对**：函数入口收敛为 `api/index.ts`（只对应 `/api`），并在 `vercel.json` 加 `/api/:path* → /api` 显式转发，由平台把任意层级的 API 请求送入函数。**不要**只依赖 `api/[...slug].ts` 的 catch-all 命名：实测多段 `/api/*/*` 仍会被平台文件系统判定拦截并返回原生 404（详见 §18.12）。
+2. **顶层零运行时依赖**：函数文件顶层不得有任何 `import`（`import type` 除外）、不得依赖 `import.meta.url`、不得调用 `createRequire` 之类的打包垫片。Vercel 以 nft 保留原生模块、无需垫片；任何顶层抛错都会被平台渲染成黑盒 `FUNCTION_INVOCATION_FAILED`，且绕过 `try/catch`。Express 及其 CJS 依赖由平台原生提供。所有工作放进 handler 内的动态 `import()` 并整体包进 `try/catch`，失败时返回结构化 500（含 stack）而非黑盒错误。
+3. **rewrite 正则要排除裸 `/api`，且顺序不能反**：用 `/((?!api).*)`，不要用 `/((?!api/).*)`（后者只排除 `api/`，裸 `/api` 会被当成普通路径重写到 `index.html`）。更具体的 `/api/:path*` 必须排在 SPA 回退之前，rewrites 按序匹配。
+4. **编译产物路径**：函数引用的是 `server/dist/**`（编译后 JS），不是 `server/src/**`（源码 `.ts`）。`server/src/foo.js` 在磁盘上不存在，静态 import 会直接让函数加载失败。
+
+> 本地用 esbuild 复现时曾遇到 `Dynamic require of "tty" is not supported`（ESM 输出下 Express 依赖链的 CJS 动态 `require`），一度误判为线上根因并加了 `createRequire` 垫片——**该问题只属于本地单文件打包，Vercel nft 模式不存在**。诊断证明移除垫片、顶层零依赖后线上立即恢复。
+
+### 18.9 实际部署实例信息（Vercel）
+
+本仓库在 Vercel 上的真实配置（供对照与排障）：
+
+| 项 | 值 |
+| --- | --- |
+| 项目名 | `starpal` |
+| 项目 ID | `prj_q2qC2UnY2xHvfC8Zsj47dhaBoiaM` |
+| 所属团队 | `team_QE8gosnNcsAnwgIhsMPNR365`（`xiaoyu-hue's projects`） |
+| Git 连接 | GitHub `xiaoyu-hue/starpal`，生产分支 `main`，`createDeployments=enabled` |
+| 生产域名 | `https://starpal.vercel.app` |
+| 运行时 | Node `22.x` |
+| 函数区域 | `sin1`（新加坡，贴近 Neon `ap-southeast-1`） |
+| 构建 | `installCommand=npm ci --include=dev`、`buildCommand=npm run build`、`outputDirectory=server/public`（**三项均在 Vercel 项目设置显式写入**，非仅靠 vercel.json） |
+| 函数入口 | `api/index.ts`（对应 `/api`；顶层零运行时依赖 + handler 内动态 `import()` + 全量 `try/catch`） |
+| 函数打包 | `vercel.json` 的 `functions["api/index.ts"].includeFiles: "server/dist/**"` 将整个编译产物打入函数包 |
+| API 转发 | `rewrites: /api/:path* → /api`（置于 SPA 回退之前，覆盖任意层级 `/api/*/*`，见 §18.12） |
+| SPA 回退 | `rewrites: /((?!api).*) → /index.html`（排除裸 `/api`） |
+| 环境变量 | `DATABASE_URL` / `SESSION_SECRET` / `INVITE_CODE`（均加密，仅平台可见；修改后需重新部署才能生效） |
+| 自定义域名 | `starpal.cc.cd` 已在 Vercel 登记；DNSHE 需加 CNAME：`starpal` → `cname.vercel-dns.com` |
+| 部署触发 | 推送 `main` 自动构建（GitHub → Vercel webhook） |
+
+> 注：本项目通过 Serverless Function（`api/index.ts`，冷启动惰性迁移）承载 `/api`，由 `vercel.json` 的 `/api/:path* → /api` 显式转发把任意层级 API 请求送入函数；静态资源由 `server/public` 经 CDN 与 `/((?!api).*) → /index.html` 提供。函数入口的四条硬约束见 §18.10，多段路径故障与修复见 §18.12。
+
+> 自定义域名状态：`starpal.cc.cd` 已在 Vercel 登记并完成 DNS 验证（`verified=true`、`configVerifiedAt`/`nsVerifiedAt` 均非空、`cdnEnabled=true`）。DNSHE 侧已添加 CNAME 记录，线上 `https://starpal.cc.cd/` 与单段 `/api/*` 实测通过；多段 `/api/*/*` 曾返回平台原生 404，修复与复测见 §18.12。
+
+### 18.11 M2 账户闭环部署契约
+
+`M2-S1`（数据基座）与 `M2-S2`（注册 / 登录 / 登出 / 当前会话）落地后的部署要点：
+
+| 项 | 说明 |
+| --- | --- |
+| 新增依赖 | `hash-wasm@4.13.0`（纯 WebAssembly 的 Argon2id），**零原生编译模块**。`npm ci --include=dev` 已复验通过。 |
+| 为何不用 argon2 / bcrypt 原生模块 | Vercel 官方知识库明确说明需 `node-gyp` 编译的原生依赖在函数环境不保证可用；本项目 M1 阶段已因打包差异多次踩坑，故改用 WASM 实现，兼顾 OWASP 首选算法与部署稳定性。 |
+| 密码哈希参数 | Argon2id，64 MiB / 3 轮 / 并行度 1，PHC 编码串自带参数，日后提高强度无需洗库（下次登录按需重哈希）。 |
+| 新增表 | `002_profiles_sessions.sql` 建立 `user_profiles`、`sessions`、`security_events` 及四个索引；由函数冷启动惰性迁移幂等应用，账本至 `002`。 |
+| 会话Cookie | `starpal_session`，`HttpOnly` + `SameSite=Lax` + `Max-Age=SESSION_TTL_HOURS`；`Secure` 由 `x-forwarded-proto` 判定（Vercel 边缘终止 TLS，`req.secure` 不可靠，见 §18.10）。 |
+| 限流存储 | `security_events` 表，绝不使用进程内存计数——Serverless 多实例下内存计数各自为政。来源以 `HMAC-SHA256(SESSION_SECRET, IP+UA)` 不可逆摘要标识，不保留原始地址。 |
+| 环境变量 | 复用既有 `INVITE_CODE`、`SESSION_SECRET`、`SESSION_TTL_HOURS`、`RATE_LIMIT_*`、`LOGIN_FAIL_MAX`、`SECURITY_EVENT_RETENTION_DAYS`；**无新增变量**，代码不硬编码任何凭据。 |
+| 锁文件 | `package-lock.json` 全部依赖地址统一为 `https://registry.npmjs.org/`（官方 HTTPS），避免依赖构建环境专用明文镜像。 |
+
+本地验证记录（真实 Neon，非模拟）：
+
+| 场景 | 结果 |
+| --- | --- |
+| 未登录 `GET /api/auth/me` | 401 `AUTH_REQUIRED` |
+| 合法注册 | 200，返回公开投影；DB 中 `password_hash` 为 `$argon2id$` 前缀，无明文（`AC-01` / `AC-03`） |
+| 错误邀请码 / 重复用户名 | 400 `INVITE_INVALID` / 409 `CONFLICT` |
+| 错误密码登录 | 401 `INVALID_CREDENTIALS`（与账户不存在同提示） |
+| 正确登录 | 200，`Set-Cookie` 属性正确 |
+| 携 Cookie 访问 `/me` | 200 |
+| 登出 → 同 Cookie 再访问 `/me` | 401（`AC-02`） |
+| `GET /api/health` | 200，`database: up` |
+
+> 测试数据已在验证后从生产库清理（`users` 归零、安全事件清空），未污染真实数据。
+> **线上复测（多段路由修复后，部署 `dpl_HmGizJetRKGUhoxCJonrJ7N5tR8a`）**：同一套 12 项场景在 `https://starpal.cc.cd` 全部通过——未登录 `/me`、错误邀请码、合法注册、重复用户名、蜜罐、错误密码、正确登录 + `Set-Cookie`、携 Cookie `/me`、登出、登出后 `/me`、健康检查、库中 `$argon2id$` 前缀。测试账号与本次安全事件按验证起始时间窗精确清理，生产库 `users` / `sessions` 归零，迁移账本仍为 `001` / `002`。
+> `AC-01`、`AC-02`、`AC-03` 已有本地与线上验证记录；`AC-10`、`AC-18` 属 `M2-S3`—`S5`，尚未验证。
+
+### 18.12 多段 API 路径的平台 404（路由修复）
+
+`M2` 上线后复测发现：`/api/health`、`/api/posts`、`/api/nope` 正常（单段），但 `/api/auth/me`、`/api/auth/login`、`/api/meta/guidelines` 返回 Vercel 平台原生 `The page could not be found / NOT_FOUND`——**不是**业务层的结构化 404，说明请求根本没进 Express。这是 `M1` 部署阶段就埋下、当时只测单段路径未暴露的问题，与 `M2` 业务代码无关。
+
+**根因**：Vercel 路由判定中「文件系统优先于 rewrites」（官方文档原文：`The source property should NOT be a file because precedence is given to the filesystem prior to rewrites being applied.`）。`api/[...slug].ts` 生成的函数路由没有覆盖多段 `/api/*/*`，这类请求在文件系统阶段既找不到静态文件、也匹配不到函数；而 SPA 回退 `/((?!api).*)` 因负向前瞻排除了所有 `api` 开头的路径，也不会接管；于是平台直接返回原生 404。
+
+**修复**：把函数入口收敛为 `api/index.ts`（对应唯一函数路径 `/api`），并在 `vercel.json` 增加一条更具体的显式转发，放在 SPA 回退之前：
+
+```json
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/((?!api).*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "api/index.ts": { "includeFiles": "server/dist/**" }
+  }
+}
+```
+
+`:path*` 是官方支持的通配写法（官方文档 `/proxy/:match*` 示例，覆盖任意子目录）。转发是平台内部路由映射，函数仍收到原始请求路径，Express 按完整路径匹配路由。
+
+**一次可判定实验**：部署后用 4 个路径一次定性，两种结果互不混淆——
+
+| 路径 | 若保留原始路径（预期） | 若被改写成 `/api` |
+| --- | --- | --- |
+| `GET /api/health` | 200 `database: up` | 业务层 404 包络 |
+| `GET /api/auth/me` | 401 `AUTH_REQUIRED` | 业务层 404 包络 |
+| `GET /api/meta/guidelines` | 200 指南数据 | 业务层 404 包络 |
+| `GET /api/posts` | 400 `VALIDATION_FAILED` 或 200 空页 | 业务层 404 包络 |
+
+若出现右列结果，说明转发把 `req.url` 改成了 `/api`，回滚方式：恢复 `api/[...slug].ts` 与旧 `vercel.json` 重新推送（只改两个文件，不涉及数据库，可逆）。
+
+**已知边界**：SPA 回退 `/((?!api).*)` 会把 `/apiary`、`/apis` 这类以 `api` 开头但并非 API 的路径也排除在回退之外，返回 404。本项目前端无此类路由，暂不处理；若将来新增，应把正则收紧为 `/((?!api(?:/|$)).*)`。
+
+**线上复测结果**（部署 `dpl_HmGizJetRKGUhoxCJonrJ7N5tR8a`，提交 `9573dca059aa`）：
+
+| 路径 | 实测 |
+| --- | --- |
+| `GET https://starpal.cc.cd/` | 200，前端 HTML |
+| `GET /api/health` | 200，`database: up` |
+| `GET /api/auth/me` | 401 `AUTH_REQUIRED`（业务层，非平台 404） |
+| `GET /api/meta/guidelines` | 200，社区准则数据 |
+| `GET /api/posts` | 400 `VALIDATION_FAILED` |
+| `GET /api/nope` | 404 结构化错误包络（`NOT_FOUND`，业务层） |
+
+结论：转发**保留了原始请求路径**，Express 按完整路径匹配，修复成立。账户闭环线上 12 项端到端验证全部通过（见 §18.11）；测试账号与本次安全事件已按时间窗精确清理，生产库 `users` 归零、`sessions` 归零、迁移账本仍为 `001` / `002`。
+
+### 18.13 前端认证域（M2-S2-T6）
+
+`/login`、`/register` 由占位页替换为真实页面，实施计划中 `M2-S2` 的最后一项任务落地。
+
+| 项 | 说明 |
+| --- | --- |
+| 新增文件 | `web/src/features/auth/`：`api.ts`（四接口封装）、`AuthProvider.tsx`（当前会话三态）、`AuthForm.tsx`（登录 / 注册共用表单）、`AuthPage.tsx`、`index.ts` |
+| 传输层 | `web/src/lib/api-client.ts` 新增 `apiPost()`，GET / POST 共用同一套响应解包与错误归一化；无请求体的 POST 不带 `Content-Type`，与后端 `body-limit` 修复对齐 |
+| 会话状态 | `AuthProvider` 首屏请求 `GET /api/auth/me` 决定顶栏呈现（加载中 / 已登录 / 未登录）；登录、登出后直接更新，权限判定仍以后端为准 |
+| 表单可访问性 | `label htmlFor` + `id`、`required` / `aria-required`、`aria-invalid` / `aria-describedby`、错误区 `role="alert"`、成功提示 `role="status"`（polite）；修改输入时立即清除错误态；`autocomplete` 区分 `username` / `current-password` 与 `new-password` |
+| 蜜罐 | `website` 字段移出视野 + `aria-hidden` + `tabIndex=-1`，读屏与键盘不可达；命中后服务端返回形状一致的假用户 |
+| 注册流程 | 服务端注册不发放会话凭证，成功后跳 `/login` 并带 `role="status"` 提示，需显式登录一次（取舍：避免隐式登录；如改为「注册即登录」须另加一轮） |
+| 凭据 | 前端不硬编码邀请码、密钥或口令；邀请码由用户输入，仅经 HTTPS 提交 |
+| 本地校验 | `npm run verify`（类型检查、前后端构建、文件体积）通过；认证页面生成独立分包 `AuthPage-*.js` |
+
+**线上验证结果**（部署 `dpl_FmgJR5Bxhpt7JJeFGybDD4Uv6XVD`，提交 `d082b8802699`）：真实 Chromium 在 `https://starpal.cc.cd` 执行 15 项检查全部通过——注册页渲染、四个语义标签、`autocomplete` 区分、蜜罐对读屏 / 键盘隐藏、空表单本地校验、修改输入即清除错误态、错误邀请码提示、注册后跳登录页、`role="status"` 成功提示、登录页 `autocomplete`、错误密码统一提示、登录后顶栏切换、退出后恢复访客入口、刷新后仍为未登录、无未捕获脚本错误；浅色注册页 / 深色登录页 / 390px 移动端截图核验无错位与横向溢出。测试账号与本次安全事件按时间窗精确清理，生产库 `users` / `sessions` 归零、账本仍为 `001` / `002`。逐项记录见 `IMPLEMENTATION-PLAN.md` 的「M2 验证记录」。
+
+> 已知体验边界：移动端顶栏仅显示「注册」（「登录」按钮沿用既有的小屏隐藏规则），手机用户需经注册页的「去登录」链接进入登录页；可在后续迭代补一个移动端登录入口。
+
+
+### 18.14 受保护路由与角色基座（M2-S3）
+
+对应 `M2-S3-T1`—`T4`。这一阶段不新增业务功能，只建立**服务端强制门禁**与初始管理员创建能力。
+
+**代码契约**
+
+| 项 | 说明 |
+| --- | --- |
+| `require-auth.ts` | 路由级认证守卫：`readSessionId` → `currentUser` → 把 `AuthPrincipal`（id / username / displayName / role）挂到 `req.principal`；失败由集中错误处理输出 `401 AUTH_REQUIRED` |
+| `require-role.ts` | 工厂函数 `requireRole(...allowed)`；未先挂 `requireAuth` 时**直接拒绝**而非静默放行，避免「忘了挂守卫」被误当成「允许匿名」；角色不符输出 `403 FORBIDDEN` |
+| 每请求查库 | 守卫每次重新读 `sessions` 与 `users`，账户停用 / 删除 / 角色变更后立即生效，不缓存主体；本地实测同一 Cookie 在角色提升后下一次请求即返回 200 |
+| `modules/admin/` | `adminRouter` 一次性 `use(requireAuth, requireRole(ROLE_ADMIN))`；当前仅 `GET /api/admin/whoami` 回显调用者自身身份，作为 `AC-11` 前置验证锚点与 `M6` 后台的挂载骨架。此后新增管理端点自动受保护，不会漏挂 |
+| 错误码与依赖 | 复用既有 `AUTH_REQUIRED` / `FORBIDDEN`；未新增表、未新增依赖、未新增错误码 |
+| 前端守卫 | `web/src/app/guards.tsx` 的 `RequireAuth` 仅做体验层跳转：`/settings` 未登录跳 `/login` 并带 `notice` + `from`，登录成功后回跳；`safeReturnTo` 只接受站内绝对路径，阻断 `//host`、反斜杠与协议注入造成的开放重定向。权限判定仍以后端为准 |
+| 分包保护 | 守卫放在 `app/` 并从 `AuthProvider` 具体文件导入，避免静态引入 `features/auth/index.ts` 把已懒加载的 `AuthPage` 打进主包；构建产物仍生成 `AuthPage-*.js` 独立分包 |
+
+**初始管理员脚本（T3）**：`scripts/init-admin.mjs`，根命令 `npm run init:admin`。
+
+| 行为 | 说明 |
+| --- | --- |
+| 凭据来源 | 只读环境变量 `ADMIN_USERNAME` / `ADMIN_PASSWORD` / 可选 `ADMIN_DISPLAY_NAME`；`DATABASE_URL` 复用现有配置；`.env.example` 仅保留变量名占位 |
+| 哈希 | 复用 `server/dist/modules/auth/password.js` 的 `hashPassword` 与 `config/constants.js` 的准入常量，不重复实现 Argon2id 参数；脚本检测编译产物缺失或过期并提示先 `npm run build` |
+| 幂等 | 同名账号已存在时**不改密码、不改角色、不提权**，直接退出，避免误伤已有账号 |
+| `--reset` | 仅显式传参时才重置密码，并同时 `DELETE FROM sessions WHERE user_id = ...` 撤销该账号全部会话；不改角色 |
+| 输出 | 只打印用户名与结果；不打印密码、哈希或堆栈（错误路径也只打印消息文本） |
+| 事务 | 表存在性检查、写入 `users` + `user_profiles` 在同一事务内；失败回滚 |
+
+**手把手：创建你自己的管理员**（凭据不经过对话、不入仓库）
+
+> 前提：本机已装 Node.js 22（项目 `engines.node` 要求），并持有 Neon 的连接串。以下步骤在你自己的电脑上完成，**不要把密码发到聊天窗口**。
+
+1. 在项目根目录新建文件 `.env.local`。它已被 `.gitignore` 第 3 行 `.env.*` 排除，不会被提交。
+2. 在文件里写三行（`DATABASE_URL` 换成你的 Neon 连接串，另两项自己设定）：
+
+   ```
+   DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+   ADMIN_USERNAME=<你的管理员用户名>
+   ADMIN_PASSWORD=<至少12位的高熵密码>
+   ```
+
+   `<...>` 是占位说明，请替换成你自己的值，**尖括号本身不要保留**。
+
+3. 执行下面这条命令。密码留在文件里，**不要**写成 `ADMIN_PASSWORD=xxx npm run init:admin`——那样会留在 shell 历史与进程列表里：
+
+   ```bash
+   node --env-file=.env.local scripts/init-admin.mjs
+   ```
+
+4. 看到 `[init:admin] 已创建管理员 ...` 即完成。之后把 `.env.local` 存进密码管理器或删除；**仓库里始终没有明文凭据**。
+5. 重复执行一次会看到「账号已存在，未做任何修改」，不会把账号改坏。
+
+> 如果你不想自己敲命令，也可以让我代跑，但那样需要把密码发到对话里。**我不推荐**：管理员是最高权限账号，凭据一旦出现在聊天记录或日志里很难彻底收回。更稳妥的是你按上面 5 步自己做，我只负责把脚本与文档准备好。
+
+**唯一管理员的风险与恢复办法**：项目不收集邮箱 / 手机，也没有第二个管理员，因此忘记密码后没有任何自助找回途径。若确需重置，用同一环境文件执行：
+
+```bash
+node --env-file=.env.local scripts/init-admin.mjs --reset
+```
+
+这会重置密码并让该账号的全部现有会话立即失效（旧 Cookie 不再具备管理员权限）。`--reset` 是破坏性操作，**默认关闭**；脚本不会打印新旧密码。
+
+**已知边界与缺陷（如实登记）**
+
+- `/api/admin/whoami` 是验证锚点，不是 `M6` 的业务功能；它只回显调用者自身身份，不查询任何业务数据。前端目前没有管理页面，因此**没有前端角色守卫组件**——服务端角色守卫已就位，`M6` 有真实管理页时再补体验层守卫。
+- 前端守卫目前只挂了 `/settings` 一个占位页（语义上属于「我的设置」）。从守卫跳到登录页后若先点「去注册」，`from` 会丢失，注册后再登录会回首页而非原目标；属体验边界，未处理。
+- 已登录但首屏会话读取尚未结束时，守卫先显示骨架屏而不是立刻跳走，避免把已登录用户误判成访客。
+- 本地运行 `pg@8.23.1` 会出现 `SECURITY WARNING: The SSL modes 'prefer', 'require' ...` 警告；这是驱动对未来版本语义变更的提示，不是错误，线上行为不受影响。
+- **工作区残留风险**：`AC-18` 按「远程 `main` 仓库快照」口径扫描通过（见下），但本地工作区的 `.env` 仍含数据库连接串、会话密钥与邀请码明文。它已被 `.gitignore` 排除且未入仓，属本机文件；建议存进密码管理器后删除，或至少不要随项目目录一起分享。**未擅自删除，需部署方明确同意**。`/tmp/starpal-*` 若干临时凭证文件同理，安全收尾时一并处理。
+
+**验证记录**：本地 `npm run verify` 通过（类型检查、前后端构建、94 个源文件体积预算）；初始管理员脚本在真实 Neon 上 12/12 通过；本地 HTTP 服务守卫 9/9 通过。**线上正式域名 20/20 通过**（部署 `dpl_BHj22nX47agTLPYrR8c9jcvv2hyd`，提交 `8eb5042aab47`）：首页、`/api/health`、`/api/auth/me`、`/api/meta/guidelines` 无回归；访客 401、普通用户 403、客户端声明 `role=admin` 仍 403、角色提升后同一 Cookie 即时 200、降回即 403、探针不泄露内部字段；真实 Chromium 验证未登录访问 `/settings` 跳登录页并显示提示、登录后回跳 `/settings`、伪造前端 admin 状态后管理端点仍 403、顶栏已登录态、无未捕获脚本错误。所有临时账号与本次安全事件按时间窗精确清理，生产库 `users=0`、`sessions=0`、账本仍为 `001` / `002`。逐项记录见 `IMPLEMENTATION-PLAN.md` 的 M2 验证记录。
+
+**AC-18 扫描**（命令 `python3 /tmp/m2s3_ac18_scan.py`；脚本位于会话沙箱、未入仓，口径与模式见下，可据同等逻辑固化为仓库检查脚本，登记为欠账）：以 GitHub `zipball/main` 下载**远程真实仓库快照**扫描，不依赖本地 git 索引（本仓库长期通过 Git Data API 推送，本地索引曾滞后到只扫出 8 个文件，据此得出的结论不可靠，已纠正）。
+
+| 轮次 | 远程快照文本文件 | 命中 | 说明 |
+| --- | --- | --- | --- |
+| 推送前基线 | 118 | 0 | 旧仓库 |
+| 推送后首次复扫 | 124 | 1 | 教程示例 `ADMIN_PASSWORD=至少12位的高熵密码`（中文示例值）被「真实赋值」正则误判；非真实凭据，已改为 `<...>` 占位符并在上文说明 |
+| 最终复扫（提交 `7c7e241b4285` 后） | 124 | 0 | 仓库无令牌 / 口令 / 连接串 / 邀请码 / 私钥明文，**`AC-18` 通过** |
+
+**最终结论**：`AC-18` 通过。命令 `python3 /tmp/m2s3_ac18_scan.py` 在提交 `7c7e241b4285` 后对远程 `main` 快照实际执行，口径 A 扫描 124 个文本文件 / 8 类模式，命中 0 处（输出：两口径分别为 124 / 0 命中与本地 3 处 `.env` 命中）。
+
+> 8 类模式：Vercel Token、GitHub Token、私钥、含口令的 PostgreSQL 连接串、邀请码明文、`SESSION_SECRET` / `ADMIN_PASSWORD` / `INVITE_CODE` 真实赋值。`<...>` 占位符与纯变量名不计入。本地工作区口径命中 3 处，全部来自被 `.gitignore` 排除且未入仓的 `.env`，单独登记为工作区残留风险，不计入仓库结论。

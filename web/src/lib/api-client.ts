@@ -28,29 +28,26 @@ type RequestOptions = {
   params?: Record<string, string | number | undefined>
 }
 
-/** 统一请求层：拼接 /api、携带同源凭据、解包包络、归一化错误。 */
-export async function apiGet<T>(
-  path: string,
-  options: RequestOptions = {},
-): Promise<ApiEnvelope<T>> {
-  // 离线预览（file://）没有后端服务，返回明确的领域错误而非网络异常。
-  if (window.location.protocol === 'file:') {
+/** 离线预览（file://）没有后端服务，返回明确的领域错误而非网络异常。 */
+function assertOnline(): void {
+  if (typeof window !== 'undefined' && window.location.protocol === 'file:') {
     throw new ApiError('OFFLINE_PREVIEW', '离线预览未连接后端服务', 0, 'none')
   }
+}
 
+function buildUrl(path: string, params?: RequestOptions['params']): URL {
   const url = new URL(`/api/${path.replace(/^\//, '')}`, window.location.origin)
-  for (const [key, value] of Object.entries(options.params ?? {})) {
+  for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined && value !== '') url.searchParams.set(key, String(value))
   }
+  return url
+}
 
+/** 统一的解包与错误归一化，GET / POST 共用，保证错误形状一致。 */
+async function send<T>(url: URL, init: RequestInit): Promise<ApiEnvelope<T>> {
   let response: Response
   try {
-    response = await fetch(url, {
-      method: 'GET',
-      credentials: 'same-origin',
-      signal: options.signal,
-      headers: { Accept: 'application/json' },
-    })
+    response = await fetch(url, { credentials: 'same-origin', ...init })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
     throw new ApiError('NETWORK_ERROR', '无法连接到服务，请检查网络后重试', 0, 'none')
@@ -76,4 +73,50 @@ export async function apiGet<T>(
   }
 
   return payload as ApiEnvelope<T>
+}
+
+/** 读取资源：拼接 /api、携带同源凭据、解包包络、归一化错误。 */
+export async function apiGet<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<ApiEnvelope<T>> {
+  assertOnline()
+  return send<T>(buildUrl(path, options.params), {
+    method: 'GET',
+    signal: options.signal,
+    headers: { Accept: 'application/json' },
+  })
+}
+
+/** 写入资源：仅在确实有请求体时才带 JSON 头，避免登出等无体 POST 被判 415。 */
+export async function apiPost<T>(path: string, body?: unknown): Promise<ApiEnvelope<T>> {
+  assertOnline()
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  return send<T>(buildUrl(path), {
+    method: 'POST',
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+}
+
+/** 局部更新资源：PATCH 语义，仅在确有请求体时带 JSON 头。 */
+export async function apiPatch<T>(path: string, body?: unknown): Promise<ApiEnvelope<T>> {
+  assertOnline()
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  return send<T>(buildUrl(path), {
+    method: 'PATCH',
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+}
+
+/** 删除资源：DELETE 语义，不携带请求体。 */
+export async function apiDelete<T>(path: string): Promise<ApiEnvelope<T>> {
+  assertOnline()
+  return send<T>(buildUrl(path), {
+    method: 'DELETE',
+    headers: { Accept: 'application/json' },
+  })
 }

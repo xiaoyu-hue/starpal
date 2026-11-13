@@ -8,6 +8,7 @@ import {
 import { AppShell } from './shell/AppShell'
 import { FeedSkeleton } from '../features/feed/components/FeedSkeleton'
 import { PlaceholderPage } from '../features/placeholder'
+import { RequireAuth } from './guards'
 
 // 路由级懒加载边界：首页与设计系统预览页独立分包。
 const HomePage = lazy(() =>
@@ -15,6 +16,15 @@ const HomePage = lazy(() =>
 )
 const PreviewPage = lazy(() =>
   import('../features/_preview/PreviewPage').then((m) => ({ default: m.PreviewPage })),
+)
+const AuthPage = lazy(() =>
+  import('../features/auth/AuthPage').then((m) => ({ default: m.AuthPage })),
+)
+const ProfilePage = lazy(() =>
+  import('../features/profile').then((m) => ({ default: m.ProfilePage })),
+)
+const SettingsPage = lazy(() =>
+  import('../features/profile').then((m) => ({ default: m.SettingsPage })),
 )
 
 function ShellRoute() {
@@ -50,11 +60,18 @@ const routes: RouteObject[] = [
       { path: 'posts/new', element: placeholder('发布内容', 'M3', '发帖与图片上传将在 M3 里程碑交付。') },
       { path: 'notifications', element: placeholder('通知', 'M5', '通知中心将在 M5 里程碑交付。') },
       { path: 'messages', element: placeholder('私信', 'M5', '留言式私信将在 M5 里程碑交付。') },
-      { path: 'settings', element: placeholder('我的 / 设置', 'M2', '资料编辑与主题设置将在 M2 里程碑交付。') },
-      { path: 'u/:username', element: placeholder('个人主页', 'M2', '公开个人页将在 M2 里程碑交付。') },
+      {
+        path: 'settings',
+        element: (
+          <RequireAuth>
+            <SettingsPage />
+          </RequireAuth>
+        ),
+      },
+      { path: 'u/:username', element: <ProfilePage /> },
       { path: 'search', element: placeholder('搜索', 'M7', '全站检索将在 M7 里程碑交付。') },
-      { path: 'login', element: placeholder('登录', 'M2', '登录与会话将在 M2 里程碑交付。') },
-      { path: 'register', element: placeholder('注册', 'M2', '注册与邀请码校验将在 M2 里程碑交付。') },
+      { path: 'login', element: <Suspended><AuthPage mode="login" /></Suspended> },
+      { path: 'register', element: <Suspended><AuthPage mode="register" /></Suspended> },
       { path: 'achievements', element: placeholder('成就时间线', 'M5', '成就与每周热门将在 M5 里程碑交付。') },
       { path: 'guidelines', element: placeholder('社区准则', 'M2', '完整准则页面将在 M2 里程碑交付。') },
       { path: 'privacy', element: placeholder('隐私说明', 'M2', '隐私说明与账号注销将在 M2 里程碑交付。') },

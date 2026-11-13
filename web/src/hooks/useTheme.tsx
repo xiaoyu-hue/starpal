@@ -9,12 +9,21 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-/** 主题 Provider：手动选择优先，刷新后由本地存储恢复。 */
+/** 主题 Provider：手动选择优先，刷新后由本地存储恢复；跟随系统时实时响应系统偏好。 */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => readTheme())
 
   useEffect(() => {
     applyTheme(theme)
+  }, [theme])
+
+  // 跟随系统：监听系统配色变化，仅在用户选择为 system 时实时刷新。
+  useEffect(() => {
+    if (theme !== 'system') return
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => applyTheme('system')
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
   }, [theme])
 
   const setTheme = useCallback((next: Theme) => setThemeState(next), [])

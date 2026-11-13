@@ -2,17 +2,20 @@ import { Bell, Menu, Moon, Search, Sun } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 import { StarpalMark } from '../../components/brand/StarpalLogo'
 import { buttonClass } from '../../components/ui/Button'
+import { Avatar } from '../../components/ui/Primitives'
 import { GlassPanel } from '../../components/layout/GlassPanel'
 import { useTheme } from '../../hooks/useTheme'
+import { useAuth } from '../../features/auth/AuthProvider'
 import { DESKTOP_KEYS, DESTINATIONS } from './nav-items'
 
 type TopBarProps = {
   onOpenMenu: () => void
 }
 
-/** 顶栏：品牌、搜索入口、六个目的地（桌面）、通知、主题切换、访客入口。 */
+/** 顶栏：品牌、搜索入口、六个目的地（桌面）、通知、主题切换、当前会话入口。 */
 export function TopBar({ onOpenMenu }: TopBarProps) {
   const { theme, toggleTheme } = useTheme()
+  const { user, loading, logout } = useAuth()
   const create = DESTINATIONS.create!
   const CreateIcon = create.icon
 
@@ -71,12 +74,33 @@ export function TopBar({ onOpenMenu }: TopBarProps) {
         <Link to={create.path} className={buttonClass('primary', 'sm', 'hidden lg:inline-flex')}>
           <CreateIcon size={15} /> 发布
         </Link>
-        <Link to="/login" className={buttonClass('secondary', 'sm', 'hidden sm:inline-flex')}>
-          登录
-        </Link>
-        <Link to="/register" className={buttonClass('primary', 'sm')}>
-          注册
-        </Link>
+        {loading ? (
+          <span className="sp-skeleton h-8 w-24 rounded-sm" aria-hidden="true" />
+        ) : user ? (
+          <>
+            <span className="hidden items-center gap-2 sm:inline-flex">
+              <Avatar name={user.displayName} src={user.avatarUrl} size={24} />
+              <span className="max-w-[8rem] truncate text-sm text-ink">{user.displayName}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              aria-label={`退出登录，当前账号 ${user.displayName}`}
+              className={buttonClass('secondary', 'sm')}
+            >
+              退出
+            </button>
+          </>
+        ) : (
+          <>
+            <Link to="/login" className={buttonClass('secondary', 'sm', 'hidden sm:inline-flex')}>
+              登录
+            </Link>
+            <Link to="/register" className={buttonClass('primary', 'sm')}>
+              注册
+            </Link>
+          </>
+        )}
       </div>
     </GlassPanel>
     </header>
