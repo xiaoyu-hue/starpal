@@ -93,7 +93,9 @@
 
 **当前版本不含业务功能**：注册登录、发帖、图片上传、点赞评论、私信、后台管理等按 `M2`—`M7` 里程碑交付。未实现的导航目的地以明确标注状态的占位页呈现，不提供点击无效果的伪交互控件；信息流无真实内容时返回服务端真实空结果，不填充演示数据。
 
-`M1` 已具备部署到托管平台免费层的生产就绪性：构建命令、启动命令、环境变量契约与免费层限制见 [部署与配置指南 §17](./docs/DEPLOYMENT.md)。生产迁移使用 `npm run migrate:prod`（执行编译产物，不依赖 `tsx`），本地开发仍使用 `npm run migrate`。
+`M1` 已具备部署到托管平台免费层的生产就绪性：构建命令、启动命令、环境变量契约与免费层限制见 [部署与配置指南 §17 / §18](./docs/DEPLOYMENT.md)。生产迁移使用 `npm run migrate:prod`（执行编译产物，不依赖 `tsx`），本地开发仍使用 `npm run migrate`。
+
+**托管平台选择**：原计划 Render + Neon，但 Render 免费层自 2026 年起强制绑卡，本项目部署方无信用卡，已弃用 Render，改选 **Vercel + Neon**（免卡、支持自定义域名 `starpal.cc.cd`、自动 HTTPS）。后端相应从常驻 Express 进程改造为 Vercel Serverless Function（见 §18），前端静态产物仍由构建生成于 `server/public/`。
 
 ```bash
 nvm use

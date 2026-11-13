@@ -414,7 +414,9 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 
 ---
 
-## 17. 托管平台部署（Render + Neon 免费层）
+## 17. 托管平台部署（Render + Neon 免费层 · 已弃用）
+
+> ⚠️ **状态变更**：Render 在 2026 年起对**免费层（$0/month）也强制要求绑定信用卡**（首笔 $1 临时冻结验证、不扣款）。本项目部署方无可用信用卡，故 Render 路径已弃用。本节配置契约保留作为参考——若后续具备信用卡，仍可沿用。改用方案见 [§18 Vercel + Neon](#18-托管平台部署vercel--neon-免费层)。
 
 本节记录将 `v0.1.0` 部署到公共托管平台的配置契约。平台免费政策可能变动，配置值以平台控制台当期展示为准。
 
@@ -485,3 +487,85 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 | 启动日志 `publicDir` | 指向 `<仓库根>/server/public`（正确） |
 | `GET /api/health` | 200，`database: up` |
 | `GET /`、静态 JS / CSS、SPA 深层路由 | 均 200 |
+
+---
+
+## 18. 托管平台部署（Vercel + Neon 免费层）
+
+> 适用前提：**无信用卡**。Vercel Hobby 免费层免卡、支持自定义域名、自动 HTTPS，外部数据库使用 Neon Free（见 §17.1 对 Neon 的说明）。替代被绑卡阻断的 Render 方案（§17）。
+
+### 18.1 组件分工
+
+| 组件 | 服务 | 说明 |
+| --- | --- | --- |
+| 前端静态产物 | Vercel 静态托管（CDN） | `server/public/` 由构建阶段生成，作为 `outputDirectory` 由边缘网络直接分发 |
+| 后端 API | Vercel Serverless Functions（Node） | `api/index.ts` 导出的 Express 实例，仅处理 `/api`；函数运行时版本由 `engines.node` 锁定为 22 |
+| 数据库 | Neon PostgreSQL（Free） | 外部连接串，不使用 Vercel 自带存储 |
+| 域名 | 外部域名与 DNS 服务商 | 通过 CNAME 指向 Vercel 分配的地址 |
+
+> 与 Render 单进程模型不同：Vercel 下 Express 不再常驻监听，也不再托管静态文件。静态由 CDN 负责，API 由无服务器函数负责，二者通过 `vercel.json` 的 rewrites 分流（非 `/api` 路径回退到 `index.html`）。代码层面对应：`server/src/api-app.ts` 提供「仅 API」的 Express 装配，`api/index.ts` 为其 serverless 入口；原 `createApp()` 仍保留用于本地与 Render 式单进程。
+
+### 18.2 仓库新增文件
+
+| 文件 | 作用 |
+| --- | --- |
+| `api/index.ts` | Vercel 函数入口，默认导出 `createApiApp()` 实例 |
+| `server/src/api-app.ts` | 仅挂载 `/api` 的 Express 装配（不含静态与 SPA 回退） |
+| `vercel.json` | 构建命令、输出目录、SPA 回退重写规则 |
+
+### 18.3 项目配置契约
+
+| 项 | 值 |
+| --- | --- |
+| Framework Preset | `Other` 或留空（`vercel.json` 已显式声明 `framework: "none"`） |
+| Root Directory | 仓库根（`/`） |
+| Install Command | `npm ci --include=dev` |
+| Build Command | `npm run build`（前端 → `server/public/`；后端 → `server/dist/`） |
+| Output Directory | `server/public` |
+| Node 版本 | 22（由根 `package.json` 的 `engines.node` 锁定，控制台不需单独设 `NODE_VERSION`） |
+| 函数区域 | 建议 `Singapore (sin1)`，贴近 Neon 新加坡实例以降低延迟 |
+
+**构建期注意**：`NODE_ENV` 在 Vercel 生产部署中由平台自动注入为 `production`；当 `NODE_ENV=production` 时 npm 默认跳过 `devDependencies`，故 `installCommand` 须带 `--include=dev`，否则 vite / typescript 缺失导致构建失败（与 §17.2 同一根因）。
+
+### 18.4 环境变量
+
+| 变量 | 来源 | 说明 |
+| --- | --- | --- |
+| `DATABASE_URL` | Neon 项目连接串（pooled） | 完整复制并保留 `?sslmode=require`；**含口令，只在 Vercel 控制台填写，不入库、不聊天** |
+| `SESSION_SECRET` | 高熵随机值 | 不入库 |
+| `INVITE_CODE` | 部署方设置 | 不入库 |
+| `NODE_ENV` | 平台自动注入 `production` | 通常无需手工设置 |
+
+> `NODE_VERSION` 在 Vercel 不需要：函数运行时由 `engines.node` 决定。`PORT` 不适用（函数模型无监听端口）。
+
+### 18.5 自定义域名（starpal.cc.cd）
+
+1. 先完成部署、验证 Vercel 分配的 `*.vercel.app` 地址可访问，再绑域名。
+2. 项目 `Settings → Domains` 添加 `starpal.cc.cd`。
+3. 在 DNSHE 控制台添加一条 `CNAME`：主机名 `starpal.cc.cd`（或子域 `@`），指向 Vercel 给出的目标地址（形如 `cname.vercel-dns.com`，以控制台展示为准）。
+4. Vercel 自动签发并续期 TLS 证书；返回后确认 `Verify` 通过、HTTP 自动跳 HTTPS。
+5. Hobby 免费层包含自定义域名额度，不额外计费。
+
+### 18.6 数据库迁移
+
+Neon 为外部托管、随项目一次性建好；首次部署前已执行迁移（表 `roles` / `users` / `schema_migrations` 已存在且幂等）。后续新增表结构只通过新增迁移文件，并在本地或 CI 执行 `npm run migrate:prod`，不依赖 Vercel 构建期。
+
+### 18.7 免费层限制与处置
+
+| 限制 | 影响 | 处置 |
+| --- | --- | --- |
+| 函数按请求冷启动 | 首次 / 久置后访问延迟 | 接受；Hobby 不休眠，远优于 Render 休眠模型 |
+| 文件系统临时 | 函数实例间不共享本地盘、重启清空 | `M3` 图片上传须接入对象存储（`StorageAdapter`），不得写本地盘 |
+| 月度函数调用 / 计算额度 | 超额后限流 | 监控 Vercel Usage 面板；Hobby 额度对个人站点充裕 |
+| 单函数包体与执行时长上限 | 超大依赖或长任务受限 | 拆分逻辑；重任务异步化 |
+
+### 18.8 部署验证记录
+
+本地以 Vercel 同款命令与产物结构实测：
+
+| 项 | 结果 |
+| --- | --- |
+| `npm run build` | 通过；`server/public/index.html` 与 `assets/` 产出，服务端 `tsc` 零报错 |
+| `esbuild` 打包 `api/index.ts`（`--packages=external`） | 通过；跨目录 `.js`→`.ts` 引用与 Express 装配解析正常 |
+| `GET /api/health`（本地单进程等价） | 200，`database: up` |
+| 静态 `index.html` / assets、SPA 深层路由 | 均 200（由 CDN + rewrites 提供） |

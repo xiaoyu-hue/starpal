@@ -29,6 +29,9 @@
 - 新增 `scripts/dev.mjs`，以 Node 内置能力并行启动前后端开发进程，不引入额外依赖。
 - 新增 `scripts/copy-migrations.mjs` 与 `migrate:prod` 脚本，使编译产物可独立执行数据库迁移。
 - 新增 `docs/DEPLOYMENT.md` §17 托管平台部署契约（Render + Neon 免费层），含构建 / 启动命令、环境变量、免费层限制与自定义域名流程。
+- 新增 `docs/DEPLOYMENT.md` §18 Vercel + Neon 免费层部署契约（无信用卡方案）；因 Render 自 2026 年起免费层强制绑卡，本项目改用 Vercel。
+- 新增 `server/src/api-app.ts`（仅 API 的 Express 装配）与 `api/index.ts`（Vercel Serverless Function 入口），将后端从常驻 Express 进程改造为 Vercel 无服务器函数；新增 `vercel.json`（构建命令、输出目录 `server/public`、SPA 回退重写）。
+- 更新 `README.md` 与 `docs/DEPLOYMENT.md` 说明托管平台由 Render 切换为 Vercel 及对应架构变化。
 
 ### Fixed
 
