@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <title>星聚 STARPAL</title>
+  <style>
+    .bg { fill: #FAF9F7; }
+    .star { fill: #5B57D6; }
+    .small { fill: #5B57D6; opacity: .55; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #10131C; }
+      .star { fill: #A5A1F5; }
+      .small { fill: #A5A1F5; opacity: .6; }
+    }
+  </style>
+  <rect class="bg" width="48" height="48" rx="10" />
+  <path class="star" d="M24 7 L27.3 20.7 L41 24 L27.3 27.3 L24 41 L20.7 27.3 L7 24 L20.7 20.7 Z" />
+  <path class="small" d="M24 7 L27.3 20.7 L41 24 L27.3 27.3 L24 41 L20.7 27.3 L7 24 L20.7 20.7 Z" transform="translate(9 9) scale(.28) translate(-24 -24)" />
+  <path class="small" d="M24 7 L27.3 20.7 L41 24 L27.3 27.3 L24 41 L20.7 27.3 L7 24 L20.7 20.7 Z" transform="translate(39 10) scale(.22) translate(-24 -24)" />
+  <path class="small" d="M24 7 L27.3 20.7 L41 24 L27.3 27.3 L24 41 L20.7 27.3 L7 24 L20.7 20.7 Z" transform="translate(38 38) scale(.26) translate(-24 -24)" />
+  <path class="small" d="M24 7 L27.3 20.7 L41 24 L27.3 27.3 L24 41 L20.7 27.3 L7 24 L20.7 20.7 Z" transform="translate(10 38) scale(.2) translate(-24 -24)" />
+</svg>

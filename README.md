@@ -87,29 +87,58 @@
 
 ---
 
+## 当前实现状态
+
+`M1`（可运行空壳）已实现：前端工程骨架、设计系统、响应式应用外壳与导航、信息流外壳（含加载 / 错误 / 空三态）、后端骨架、PostgreSQL 连接与迁移机制、Express 单进程静态托管。
+
+**当前版本不含业务功能**：注册登录、发帖、图片上传、点赞评论、私信、后台管理等按 `M2`—`M7` 里程碑交付。未实现的导航目的地以明确标注状态的占位页呈现，不提供点击无效果的伪交互控件；信息流无真实内容时返回服务端真实空结果，不填充演示数据。
+
+```bash
+nvm use
+npm install
+cp .env.example .env     # 填入本地开发值；.env 已被 gitignore 排除
+npm run migrate          # 在空库执行 001 迁移（幂等）
+npm run dev              # 并行启动后端 API 与前端开发服务器
+npm run build            # 前端产物输出至 server/public，后端编译
+npm run start            # Express 单进程托管前端与 API
+npm run check:size       # 检查单文件体积预算
+npm run verify           # 类型检查 + 构建 + 体积检查
+```
+
+快速查看视觉（不连接后端、可双击打开）：
+
+```bash
+node scripts/build-standalone.mjs   # 生成 web/dist/starpal-preview.html
+```
+
+> `seed` / `init:admin` / `export:check` 对应后续里程碑，当前尚未实现。健康检查：`GET /api/health`；社区准则：`GET /api/meta/guidelines`；信息流：`GET /api/posts?tab=latest`。
+
+---
+
 ## 快速开始
 
 ```bash
 # 1. 使用锁定的 Node 版本
 nvm use
 
-# 2. 安装依赖（前端与后端各自执行）
+# 2. 安装依赖（根目录 npm workspaces 一次安装）
 npm install
 
 # 3. 配置环境变量（参考 docs/DEPLOYMENT.md，仅使用占位值）
 #    .env.example 提供变量名清单
 
-# 4. 初始化数据库
+# 4. 初始化数据库（M1 仅执行 001 迁移）
 npm run migrate
-npm run seed          # 可选：写入带「示例」标记的演示内容
-npm run init:admin    # 一次性创建初始管理员
 
-# 5. 开发模式
+# 5. 开发模式：并行启动后端 API（:3000）与前端开发服务器
 npm run dev
 
 # 6. 构建与单进程启动
 npm run build
 npm run start
+
+# 7. 静态检查
+npm run verify
 ```
 
 健康检查：`GET /api/health`。开发模式下前端通过代理访问 `/api`；生产模式下前端静态产物与 API 由同一进程提供。

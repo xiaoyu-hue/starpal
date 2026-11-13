@@ -1,0 +1,25 @@
+{
+  "name": "starpal",
+  "private": true,
+  "version": "0.1.0",
+  "description": "STARPAL 星聚 — 让兴趣相遇，让热爱聚集。",
+  "workspaces": [
+    "web",
+    "server"
+  ],
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "npm run dev --workspace web",
+    "dev:server": "npm run dev --workspace server",
+    "build": "npm run build --workspace web && npm run build --workspace server",
+    "start": "npm run start --workspace server",
+    "migrate": "npm run migrate --workspace server",
+    "typecheck": "npm run typecheck --workspace web && npm run typecheck --workspace server",
+    "preview": "npm run preview --workspace web",
+    "check:size": "node scripts/check-file-size.mjs",
+    "verify": "npm run typecheck && npm run build && npm run check:size"
+  }
+}
