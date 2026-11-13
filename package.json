@@ -17,6 +17,7 @@
     "build": "npm run build --workspace web && npm run build --workspace server",
     "start": "npm run start --workspace server",
     "migrate": "npm run migrate --workspace server",
+    "migrate:prod": "npm run migrate:prod --workspace server",
     "typecheck": "npm run typecheck --workspace web && npm run typecheck --workspace server",
     "preview": "npm run preview --workspace web",
     "check:size": "node scripts/check-file-size.mjs",

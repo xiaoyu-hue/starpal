@@ -1,21 +1,15 @@
 import { config as loadDotenv } from 'dotenv'
-import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 /**
- * 定位仓库根：从工作目录逐级向上查找 .env。
- * npm workspace 会把 cwd 切换到包目录，直接以 cwd 拼相对路径会解析错位。
- * 找不到 .env 时回退到 cwd，兼容仅通过真实环境变量注入的生产部署。
+ * 定位仓库根：以本模块位置为基准向上三级（config → src|dist → server → 仓库根）。
+ * 源码期与编译期目录层级一致，且不依赖工作目录或 .env 是否存在。
+ * 生产环境由平台注入环境变量（无 .env 文件），npm workspace 又会把 cwd 切到包目录，
+ * 仅凭 cwd 或 .env 定位会得到 server/server/public 这类错误路径，导致静态资源 404。
  */
 function findRepoRoot(): string {
-  let dir = process.cwd()
-  for (let depth = 0; depth < 6; depth += 1) {
-    if (existsSync(join(dir, '.env'))) return dir
-    const parent = dirname(dir)
-    if (parent === dir) break
-    dir = parent
-  }
-  return process.cwd()
+  return resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 }
 
 const REPO_ROOT = findRepoRoot()

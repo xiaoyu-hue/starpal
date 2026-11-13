@@ -411,3 +411,77 @@ tar -czf uploads-YYYYMMDD.tar.gz -C <UPLOAD_DIR> .
 ```
 
 任何涉及表结构的升级只通过新增迁移完成；任何涉及接口契约的升级须同步更新 [ARCHITECTURE.md §6.2](./ARCHITECTURE.md#62-端点清单v10-冻结) 与前端类型定义。
+
+---
+
+## 17. 托管平台部署（Render + Neon 免费层）
+
+本节记录将 `v0.1.0` 部署到公共托管平台的配置契约。平台免费政策可能变动，配置值以平台控制台当期展示为准。
+
+### 17.1 组件分工
+
+| 组件 | 服务 | 说明 |
+| --- | --- | --- |
+| Web 服务 | Render Web Service（Free） | 单进程 Express，同时托管 API 与前端静态产物 |
+| 数据库 | Neon PostgreSQL（Free） | 以外部连接串提供，不使用平台自带免费 Postgres |
+| 域名 | 外部域名与 DNS 服务商 | 通过 CNAME 指向平台分配的子域名 |
+
+> Render 免费 Postgres 在创建 30 天后过期并删除数据，不适用于长期部署；Neon Free 为永久免费层，超出月度计算额度时暂停计算但不删除数据。
+
+### 17.2 服务配置契约
+
+| 项 | 值 |
+| --- | --- |
+| 运行时 | Node.js 22（由 `.nvmrc` 与 `engines.node` 锁定） |
+| 构建命令 | `npm ci --include=dev && npm run build` |
+| 启动命令 | `npm run migrate:prod && npm start` |
+| 健康检查路径 | `/api/health` |
+| 实例档位 | Free（须在控制台显式选择，避免误建付费实例） |
+
+**构建命令**：`server/public/` 被 `.gitignore` 排除且不入库，必须在部署阶段现场生成；`vite` 与 `typescript` 位于 `devDependencies`，当 `NODE_ENV=production` 注入时 npm 默认跳过开发依赖，故以 `--include=dev` 强制安装。`npm run build` 依次执行前端构建与后端编译，`scripts/copy-migrations.mjs` 将 `*.sql` 复制进 `server/dist/db/migrations/`，使编译后的迁移执行器可独立运行。
+
+**启动命令**：免费层不提供 Shell 与一次性任务，数据库迁移必须由启动命令触发。`migrate:prod` 执行编译产物 `node dist/db/migrate.js`，不依赖 `tsx`；迁移执行器以 `schema_migrations` 版本号幂等控制，重复执行安全。
+
+### 17.3 环境变量
+
+| 变量 | 来源 | 说明 |
+| --- | --- | --- |
+| `NODE_ENV` | 控制台固定值 `production` | 仅在运行时需要 |
+| `PORT` | 平台注入 | 代码已兼容注入值，无需手工设置 |
+| `DATABASE_URL` | Neon 项目连接串 | 完整复制并保留 SSL 参数；**含口令，只在控制台填写** |
+| `SESSION_SECRET` | 部署方生成的高熵随机值 | 不入库 |
+| `INVITE_CODE` | 部署方设置 | 不入库 |
+
+`server/src/config/env.ts` 以模块位置（向上三级）定位仓库根，不依赖 `.env` 是否存在、也不依赖工作目录；因此 npm workspace 将 cwd 切至包目录时，`PUBLIC_DIR` 与 `UPLOAD_DIR` 仍解析正确。
+
+> 若将 `NODE_ENV=production` 同时注入构建阶段，须配合 `--include=dev`，否则构建会因缺少 vite / tsc 而失败。
+
+### 17.4 免费层限制
+
+| 限制 | 影响 | 处置 |
+| --- | --- | --- |
+| 空闲约 15 分钟后休眠，冷启动约 1 分钟 | 首次访问延迟 | 接受；外部定时探测属平台策略边缘做法，不保证长期有效 |
+| 文件系统为临时卷 | `server/uploads/` 在重启或休眠后丢失 | `M3` 图片上传落地时须接入对象存储（`StorageAdapter` 扩展点），不得写本地盘 |
+| 月度计算、存储与出网额度 | 超额后暂停计算 | 监控平台用量面板 |
+| 不提供 Shell、持久磁盘与常驻保证 | 无法手工执行迁移或运维 | 迁移由启动命令自动执行 |
+
+### 17.5 自定义域名
+
+1. 先完成部署并验证平台分配的 `*.onrender.com` 地址可访问，再绑定域名。
+2. 在服务 `Settings → Custom Domains` 添加域名。
+3. 在 DNS 服务商处添加一条 `CNAME`，指向该服务的 `*.onrender.com` 子域名；删除该域名下任何 `AAAA` 记录（平台使用 IPv4）。
+4. 回控制台执行 `Verify`；平台自动签发并续期 TLS 证书，HTTP 自动跳转 HTTPS。
+5. 免费工作区包含 2 个自定义域名额度，超出部分按平台定价计费。
+
+### 17.6 部署验证记录
+
+以模拟生产环境实测（不提供 `.env`、工作目录切至 `server/`、仅注入环境变量）：
+
+| 项 | 结果 |
+| --- | --- |
+| `npm run verify`（类型检查 + 构建 + 体积检查） | 通过，74 个源文件在预算内 |
+| 编译产物含 `dist/db/migrations/001_roles_users.sql` | 通过 |
+| `node dist/db/migrate.js` 在无 `tsx` 环境执行 | 退出码 0，输出「无待应用迁移」 |
+| 启动日志 `publicDir` | 指向 `<仓库根>/server/public`（正确） |
+| `GET /api/health` | 200，`database: up` |
+| `GET /`、静态 JS / CSS、SPA 深层路由 | 均 200 |
