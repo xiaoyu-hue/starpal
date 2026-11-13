@@ -339,7 +339,7 @@ flowchart LR
 
 **风险与回退**：会话与权限是全部后续模块的基座，须在 `M3` 前冻结；若需更换会话方案，影响面限于 `session.ts` 与 `sessions` 表。
 
-**M2 验证记录（实际执行结果，截至 `M2-S2`）**
+**M2 验证记录（实际执行结果，覆盖 `M2-S1`—`M2-S4`）**
 
 | 编号 | 检查项 | 结论 | 依据 |
 | --- | --- | --- | --- |
@@ -356,8 +356,16 @@ flowchart LR
 | `VR-M2-11` | 初始管理员脚本幂等与凭据安全 | 通过（本地） | 真实 Neon 12 项：创建 admin、Argon2id 哈希、`user_profiles` 同步、输出不含密码 / 哈希、重复执行不改哈希、`--reset` 换哈希并清空会话且不改角色、缺变量明确报错 |
 | `VR-M2-12` | `AC-18` 全仓库明文凭据扫描 | 通过（仓库口径） | 以 GitHub `zipball/main` 下载远程真实仓库快照（不依赖滞后的本地 git 索引）；推送前基线 118 个文本文件 0 命中；推送后首次复扫 124 个文本文件命中 1 处，为部署教程中文示例值被正则误判，已改为 `<...>` 占位符；最终复扫（提交 `7c7e241b4285` 后）124 个文本文件 0 命中 → `AC-18` 通过。本地 `.env` 命中 3 处已被 `.gitignore` 排除且未入仓，登记为工作区残留风险 |
 | `VR-M2-13` | 线上受保护路由与前端守卫闭环 | 通过 | 部署 `dpl_BHj22nX47agTLPYrR8c9jcvv2hyd`：HTTP 12 项 + 真实 Chromium 7 项 + 清理 1 项，合计 20/20；含访客 401 / 普通用户 403 / 管理员 200、角色变更即时生效、客户端声明角色无效、伪造前端 admin 状态仍 403、`/settings` 守卫跳转与回跳、顶栏已登录态、无脚本错误；测试账号与安全事件已精确清理 |
+| `VR-M2-14` | 公开投影隐私（`M2-S4-T1`） | 通过 | 生产 `GET /api/users/:username` 返回 `data.profile`，仅含 `username/displayName/avatarUrl/biography/createdAt/postCount/optional`；断言不含 `password_hash/role/status/session` 等私有键；`status='suspended'` 账户返回 404 不可枚举 |
+| `VR-M2-15` | 资料编辑（`M2-S4-T2` / `AC-10`） | 通过 | 生产 `PATCH /api/users/me` 更新显示名 / 头像 / 简介 / 星座 / MBTI / 年龄段 / `showOptional`，公开投影即时反映；非法枚举值 `VALIDATION_FAILED`、非 http(s) 头像 `400`；仅本人可改（`requireAuth` 守卫） |
+| `VR-M2-16` | 可选资料门控（`M2-S4-T3`） | 通过 | `showOptional=false` 时公开投影 `optional:null`（简介仍可见）；`true` 时 `optional` 含 `zodiac/mbti/ageBand`；不采集生日，仅以年龄段呈现 |
+| `VR-M2-17` | 公开个人页与设置页入口（`M2-S4-T4/T5`） | 通过 | 生产 `GET /` 与深层路由 `/u/:username` 均 200 且回退 SPA（含 `<div id="root">`）；`/settings` 由 `RequireAuth` 守卫；主题扩展 `light/dark/system`，`system` 经 `matchMedia` 监听即时切换并在刷新后保持 |
+| `VR-M2-18` | 账号软删除（`M2-S4-T6` / `ADR-010`） | 通过 | 生产 `DELETE /api/users/me` 后状态置 `deleted`、显示名改为「已注销用户」、资料与头像清空、会话撤销；原会话 Cookie 随后请求 `401`；公开投影正确署名「已注销用户」 |
+| `VR-M2-19` | 彻底擦除（`M2-S4-T6`） | 通过 | 生产 `POST /api/users/me/erase` 在软删除基础上随机化用户名（原用户名 404 不可枚举）、记入 `account_erase` 安全事件、撤销全部会话；显示名仍署「已注销用户」 |
+| `VR-M2-20` | 生产部署与线上全量验证 | 通过 | Vercel 部署 `dpl_BcrdQmkfwWfS3DseNjVPMUk1omtu`：`READY` / `target=production` / `PROMOTED`，`gitSource.sha=89bf4b6ec…`，域名 `starpal.cc.cd` 与 `starpal.vercel.app` 均 `verified`；对生产 API 实跑 26 项检查全过，测试账户 0 残留 |
+| `VR-M2-21` | 生产库无测试数据残留（`M2-S4` 轮次） | 通过 | 每轮验证后按 `username LIKE 'm2s4_online_%'` 精确清理；清理后计数 `0`，账本 `001/002` 未改动，无测试帖子 / 会话遗留 |
 
-**仍未验证 / 未满足（如实登记）**：`AC-10`（资料编辑）尚未执行；`AC-18` 已通过（`VR-M2-12` 有最终复扫记录），工作区 `.env` 残留风险仍待部署方处置；`M2-S4`—`S5` 未实现；`DoD-01` 的 lint 与导入边界规则及 `seed` / `export:check` 脚本仍欠账（`init:admin` 已交付）。故 `M2` 完成判据尚未全部满足，里程碑保持「进行中」，不得进入 `M3`。
+**仍未验证 / 未满足（如实登记）**：`AC-18` 已通过（`VR-M2-12` 有最终复扫记录），工作区 `.env` 残留风险仍待部署方处置（凭据不入仓）；`M2-S5` 说明页面（隐私 / 准则 / 关于）尚未实现，`/privacy`、`/guidelines`、`/about` 仍以占位页待办；`DoD-01` 的 lint 与导入边界规则及 `seed` / `export:check` 脚本仍欠账（`init:admin` 已交付）。`M2` 完成判据中 `AC-01/02/03/10/18` 现已齐全；待 `M2-S5` 与 `DoD-01` 欠账结清后，里程碑方可进入 `M3`。
 
 ---
 

@@ -44,6 +44,14 @@
 - 新增 `scripts/init-admin.mjs` 与根命令 `init:admin`：从环境变量读取凭据、复用编译产物中的 Argon2id 哈希与准入常量，幂等创建初始管理员（同名已存在则不改密码、不改角色），显式 `--reset` 才重置密码并撤销该账号全部会话；不打印密码、哈希或堆栈。`.env.example` 补 `ADMIN_DISPLAY_NAME` 与「不要把密码写命令行」提示。
 - 新增前端路由守卫 `web/src/app/guards.tsx`（`RequireAuth`）：`/settings` 未登录跳登录页并带提示与原目标，登录成功后按站内路径白名单回跳，权限判定仍以后端为准；守卫放在 `app/` 并从具体文件导入，避免破坏认证页的懒加载分包。
 - 线上受保护路由与前端守卫闭环 20/20 验证通过（部署 `dpl_BHj22nX47agTLPYrR8c9jcvv2hyd`）：访客 401 / 普通用户 403 / 管理员 200、角色变更即时生效、客户端声明角色无效、伪造前端 admin 状态仍无法越权、`/settings` 守卫跳转与回跳；测试账号与本次安全事件按时间窗精确清理，生产库 `users` / `sessions` 归零。
+- 新增 `M2-S4` 个人资料后端域 `server/src/modules/users/`：`GET /api/users/:username` 公开投影（仅 `username/displayName/avatarUrl/biography/createdAt/postCount/optional`，剔除 `password_hash/role/status/session`；`status='suspended'` 返回 404 不可枚举）、`GET /api/users/:username/posts` 占位（帖子在 `M3` 落地）、`/api/users/me` 组（`GET` 当前资料、`PATCH` 资料编辑、`DELETE` 软删除、`POST /erase` 彻底擦除），全部经 `requireAuth` 守卫。
+- 新增隐私投影常量与软删除署名（`config/constants.ts`）：`BIOGRAPHY_MAX=300`、`AVATAR_URL_MAX=2048`、星座 / MBTI / 年龄段枚举、`DELETED_DISPLAY_NAME='已注销用户'`；`ADR-010` 软删除——注销后显示名署「已注销用户」、可选资料与头像清空、会话撤销、用户名随机化（擦除时）并记入 `account_erase` 安全事件。
+- 新增校验原语 `requireBoolean` / `requireHttpUrl`（仅 http/https、长度受限）于 `shared/validation.ts`，用于资料编辑的入参校验。
+- 新增可选资料字段（`user_profiles`）：`avatar_url / biography / zodiac / mbti / age_band / show_optional`，与账户核心分离；`show_optional` 默认 `false`，未公开时他方页面 `optional:null`、不采集生日。
+- 新增前端资料域 `web/src/features/profile/`：`ProfilePage`（公开个人页：头像、显示名、`@用户名`、简介、注册日期、可选资料徽标、帖子空态与页脚说明链接）、`SettingsPage` + `SettingsSections`（资料编辑、主题选择 light/dark/system、关于与检查更新、账号注销与彻底擦除二次确认）、`queries.ts`（`usePublicProfileQuery` / `useUserPostsQuery` / `useOwnProfileQuery`）、`api.ts`（`fetchPublicProfile` / `fetchOwnProfile` / `updateOwnProfile` / `deleteOwnAccount` / `eraseOwnAccount`）。
+- 新增 `apiPatch()` / `apiDelete()` 于 `web/src/lib/api-client.ts`；`Avatar` 支持 `src` 头像链接并带首字母兜底；主题扩展为 `light/dark/system`，`system` 经 `matchMedia` 监听即时切换且刷新后保持；类型层回填 `avatarUrl` 与资料相关接口。
+- 路由层接入资料域：懒加载 `ProfilePage`（`/u/:username`）与 `SettingsPage`（`/settings`，`RequireAuth` 包裹），替代原占位页；`/privacy`、`/guidelines`、`/about` 仍为待办占位（`M2-S5`）。
+- 生产部署 `dpl_BcrdQmkfwWfS3DseNjVPMUk1omtu`：`READY` / `target=production` / `PROMOTED`，`gitSource.sha=89bf4b6ec145b0f7286ee5a085cfdf18e739a413`，域名 `starpal.cc.cd` 与 `starpal.vercel.app` 均 `verified`；对生产 API 实跑 M2-S4 在线验证 26 项全过，测试账号 0 残留。
 
 ### Fixed
 
@@ -67,7 +75,7 @@
 | 里程碑 | 计划内容 |
 | --- | --- |
 | `M1` | 已实现 `M1-S1`—`M1-S5`；`AC-13`（移动端布局）与 `AC-14`（视觉一致）已有验证记录，其余验收项按里程碑推进 |
-| `M2` | 已完成 `M2-S1` 数据基座、`M2-S2` 注册登录（含前端认证域）、`M2-S3` 守卫与初始管理员；待实现 `M2-S4` 个人资料、`M2-S5` 说明页面，以及 `AC-10` 与 `DoD-01` 欠账 |
+| `M2` | 已完成 `M2-S1` 数据基座、`M2-S2` 注册登录（含前端认证域）、`M2-S3` 守卫与初始管理员、`M2-S4` 个人资料（公开投影隐私、资料编辑 `AC-10`、可选资料、公开个人页、设置页、账号软删除与彻底擦除）；待实现 `M2-S5` 说明页面（隐私 / 准则 / 关于），以及 `DoD-01` 的 lint / 导入边界 / `seed` / `export:check` 欠账 |
 | `M3` | 帖子、图片上传、话题分类、详情页 |
 | `M4` | 点赞、收藏、评论、通知 |
 | `M5` | 私信、成就、搜索、数据导出 |
