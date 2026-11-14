@@ -1,6 +1,7 @@
 import { imageUrl } from '../../config/content-constants'
 import { cn } from '../../lib/cn'
 import type { PostImage } from '../../types/api'
+import { ImageLightbox, useLightbox } from './ImageLightbox'
 
 /**
  * 图片宽高比收敛到 4:3 — 1.91:1 之间。
@@ -23,44 +24,71 @@ type PostImagesProps = {
   className?: string
 }
 
-/** 详情页正文后的图片区：单图整宽、多图两列网格；全部懒加载。 */
+/**
+ * 详情页正文后的图片区：单图整宽、多图两列网格；全部懒加载。
+ *
+ * 每张图都可点开看原图：网格里正方形的缩略图是裁切后的结果，
+ * 竖图与长图在缩略态只能看到中段，必须有一条能看到完整画面的通路。
+ */
 export function PostImages({ images, title, className }: PostImagesProps) {
+  const lightbox = useLightbox()
   if (images.length === 0) return null
 
-  if (images.length === 1) {
-    const image = images[0]
-    return (
-      <div className={cn('mt-5 overflow-hidden rounded-md border border-line', className)}>
-        <img
-          src={imageUrl(image.key)}
-          alt={`${title} 配图`}
-          width={image.width}
-          height={image.height}
-          loading="lazy"
-          decoding="async"
-          className="max-h-[560px] w-full object-cover"
-          style={{ aspectRatio: String(clampRatio(image.width, image.height)) }}
-        />
-      </div>
-    )
-  }
-
   return (
-    <div className={cn('mt-5 grid grid-cols-2 gap-2', className)}>
-      {images.map((image, index) => (
-        <div key={image.id} className="overflow-hidden rounded-md border border-line">
-          <img
-            src={imageUrl(image.key)}
-            alt={`${title} 配图 ${index + 1}`}
-            width={image.width}
-            height={image.height}
-            loading="lazy"
-            decoding="async"
-            className="aspect-square w-full object-cover"
-          />
+    <>
+      {images.length === 1 ? (
+        <div className={cn('mt-5 overflow-hidden rounded-md border border-line', className)}>
+          <button
+            type="button"
+            onClick={() => lightbox.openAt(0)}
+            aria-label={`查看大图：${title} 配图`}
+            className="block w-full cursor-zoom-in"
+          >
+            <img
+              src={imageUrl(images[0]!.key)}
+              alt={`${title} 配图`}
+              width={images[0]!.width}
+              height={images[0]!.height}
+              loading="lazy"
+              decoding="async"
+              className="max-h-[560px] w-full object-cover"
+              style={{ aspectRatio: String(clampRatio(images[0]!.width, images[0]!.height)) }}
+            />
+          </button>
         </div>
-      ))}
-    </div>
+      ) : (
+        <div className={cn('mt-5 grid grid-cols-2 gap-2', className)}>
+          {images.map((image, index) => (
+            <div key={image.id} className="overflow-hidden rounded-md border border-line">
+              <button
+                type="button"
+                onClick={() => lightbox.openAt(index)}
+                aria-label={`查看大图：${title} 配图 ${index + 1}`}
+                className="block w-full cursor-zoom-in"
+              >
+                <img
+                  src={imageUrl(image.key)}
+                  alt={`${title} 配图 ${index + 1}`}
+                  width={image.width}
+                  height={image.height}
+                  loading="lazy"
+                  decoding="async"
+                  className="aspect-square w-full object-cover"
+                />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ImageLightbox
+        images={images}
+        title={title}
+        index={lightbox.index}
+        onIndexChange={lightbox.setIndex}
+        onClose={lightbox.close}
+      />
+    </>
   )
 }
 
