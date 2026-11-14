@@ -270,12 +270,12 @@ flowchart LR
 | `VR-M1-16` | 仓库无真实凭据 | 通过 | `.env` 未被跟踪；无 token 明文；密钥值仅存在于被排除的 `.env` |
 | `VR-M1-17` | 非目标清单未引入 | 通过 | 未引入 Redis、消息队列、插件系统、全局状态库、图表库、动效库 |
 
-**未验证 / 未满足项（如实登记）**
+**未验证 / 未满足项（如实登记，M1 阶段）**
 
-- `DoD-01` 中的 **lint 与导入边界规则**尚未建立（当前仅类型检查与体积检查），列为待办。
+- `DoD-01` 中的 **lint 与导入边界规则**已在本仓库后续阶段（M2 `VR-M2-25`）建立，M1 当时仅类型检查与体积检查。
 - `AC-13` / `AC-14` 已在 `M1` 范围内验证；按映射表，`M7` 阶段仍须执行全站回归复验。
-- 注册、登录、发帖、图片、互动、后台等业务验收项（`AC-01`—`AC-12`、`AC-15`—`AC-18`）**未验证**，归属后续里程碑。
-- `seed` / `init:admin` / `export:check` 脚本尚未实现。
+- 注册、登录、发帖、图片、互动、后台等业务验收项（`AC-01`—`AC-12`、`AC-15`—`AC-18`）**未验证**，归属后续里程碑（M2 已完成 `AC-01/02/03/10/18`）。
+- `seed` / `init:admin` / `export:check` 脚本：`init:admin` 已于 M2-S3 交付，`seed` / `export:check` 已于 M2 `VR-M2-26` 补齐并验证。
 
 ---
 
@@ -367,8 +367,11 @@ flowchart LR
 | `VR-M2-22` | 说明页后端单源与接口（`M2-S5`） | 通过 | 生产 `GET /api/meta/guidelines`、`/api/meta/privacy`、`/api/meta/about` 均 200；`guidelines` 4 条含「不收集手机号」；`privacy` 6 节含「我们采集的信息 / 我们不采集的信息 / 信息存储位置 / 注销与删除」且正文提及 Neon / Argon2id / 已注销用户 / 彻底擦除；`about` 返回 `version=0.1.0`、`launchDate=2026-11-12`、`siteName=星聚 STARPAL` |
 | `VR-M2-23` | 三说明页渲染与文案一致性（`M2-S5`） | 通过 | 真实 Chromium 加载生产 SPA：隐私页含全部 6 节标题与「Neon / 已注销用户 / 彻底擦除 / 0.1.0」；准则页逐条渲染 4 条准则 + 「申诉与审核」+ 版本；关于页显示「星聚 STARPAL / 当前版本 0.1.0 / 建站于 2026-11-12 / 暂无更新通道」；准则页文本与 `/api/meta/guidelines` 接口逐字一致 |
 | `VR-M2-24` | 说明页不泄露私有字段（`M2-S5`） | 通过 | `meta` 三接口响应经正则复核，不含 `password_hash/role/status/session` 等用户私有字段；页面仅展示站点级只读文案，不触达任何账户数据 |
+| `VR-M2-25` | `DoD-01` lint 与导入边界规则 | 通过 | 新增 `scripts/lint.mjs`（零依赖，贴合 `scripts/*.mjs` 质量门约定）：硬规则①模块导入边界（`server/src/modules/*` 与 `web/src/features/*` 不得穿透其他模块内部，仅可经 `index` barrel）②web 设计令牌字面量（不得硬编码 `#hex/rgb/hsl`，排除 `tailwind.config.ts`、`tokens.css`、`theme.ts`）③导入扩展名一致性（`server` 须 `.js`、`web` 不得带扩展名）；软规则为导入排序（仅告警）。实跑 `npm run lint` 硬规则 0 违规；并修复两处真实越界（`modules/users` 经 `modules/auth/index.js` 引用 `clearSessionCookie`；`features/profile` 三文件改经 `features/auth` barrel 引用 `AuthProvider`），`theme.ts` 主题色改从 CSS 变量读取 |
+| `VR-M2-26` | `seed` / `export:check` 脚本 | 通过 | 新增 `scripts/seed.mjs`（幂等示例账号播种，识别 M3 内容表）与 `scripts/export-check.mjs`（导出隐私边界校验 + 自测）；实跑验证：对生产 Neon 成功创建并随后清理示例账号（`username LIKE 'starpal_demo'`，0 残留）；`export:check` 自测样例确认「合法导出通过、含他用户 `password_hash` 越界导出被拦截」；`package.json` 已增 `lint/seed/export:check` 并将 `lint` 接入 `verify` |
+| `VR-M2-27` | `M2` 全量完成与最终部署 | 通过 | Vercel 部署 `dpl_E49ZZBFsHzzwGMFX4hUZzp5oHAEr`：`READY` / `target=production` / `PROMOTED`，`gitSource.sha=cce2285e62…`，域名 `starpal.cc.cd` 与 `starpal.vercel.app` 均 `verified`；`npm run verify`（typecheck + build + size + lint）全过；`AC-01/02/03/10/18` 与 `DoD-01`—`DoD-10` 现已齐备，`M2` 里程碑完成判据全部满足 |
 
-**仍未验证 / 未满足（如实登记）**：`AC-18` 已通过（`VR-M2-12` 有最终复扫记录），工作区 `.env` 残留风险仍待部署方处置（凭据不入仓）；`M2-S5` 说明页面（隐私 / 准则 / 关于）**已实现并线上验证通过**（`VR-M2-22~24`），三个路由已由占位页替换为真实页面；`DoD-01` 的 lint 与导入边界规则及 `seed` / `export:check` 脚本仍欠账（`init:admin` 已交付）。`M2` 完成判据中 `AC-01/02/03/10/18` 现已齐全；待 `DoD-01` 欠账结清后，里程碑方可进入 `M3`。
+**M2 里程碑状态：✅ 已完成**。说明：工作区 `.env` 残留风险仍由部署方处置（凭据不入仓，见 `VR-M2-12`）；`DoD-01` 的 lint/导入边界规则与 `seed`/`export:check` 脚本**已补齐并验证**（`VR-M2-25~26`），此前登记为欠账的项已全部结清；`M2-S5` 说明页面已实现并线上验证通过（`VR-M2-22~24`）。`AC-01/02/03/10/18` 与 `DoD-01`—`DoD-10` 全部满足，里程碑可进入 `M3`。
 
 ---
 
