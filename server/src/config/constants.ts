@@ -42,6 +42,17 @@ export const IMAGE_MAX_PIXELS = 40_000_000
 /** 单帖图片数量上限，与前端上传位一致。 */
 export const POST_IMAGES_MAX = 9
 
+/**
+ * 互动域（`M4`）。
+ * 评论上限与 `005_interactions.sql` 的 `comments_body_length` 约束同源：
+ * 服务层先给出可读报错，数据库约束兜住绕过服务层的写入。
+ */
+export const COMMENT_BODY_MAX = 1000
+/** 评论列表默认页大小；与信息流一致的游标分页口径。 */
+export const COMMENT_PAGE_SIZE = 20
+/** 评论列表分页上限，防止单次拉取过多。 */
+export const COMMENT_MAX_PAGE_SIZE = 50
+
 /** 推荐流取数窗口：超出窗口的内容不再参与加权排序，避免陈年内容长期占据首屏。 */
 export const FEED_RECOMMENDED_WINDOW_DAYS = 30
 /** 热门流取数窗口：热门是「近期热门」，不是「历史总榜」。 */

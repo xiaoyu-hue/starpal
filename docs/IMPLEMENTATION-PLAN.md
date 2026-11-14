@@ -477,9 +477,9 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M4-S1-T1` | 互动表 | `005_interactions.sql` 建立 `likes`、`bookmarks`、`comments` 及唯一约束 | `migrations/005_*.sql` | `UNIQUE(user_id, post_id)` 生效 |
-| `M4-S1-T2` | 通知表 | `005_messages_notifications.sql` 中先建立 `notifications` 及索引 | `migrations/005_*.sql` | 索引与架构 §7.4 一致 |
-| `M4-S1-T3` | 计数约束 | `posts` 冗余计数列默认值与检查约束 | `003` 迁移内约束复核 | 计数不为负 |
+| `M4-S1-T1` | 互动表 | ✅ `005_interactions.sql` 建立 `likes`、`bookmarks`（复合主键 `(user_id, post_id)` 兼作唯一约束）、`comments`（单层、状态机、软删除一致性、正文 1–1000 字符） | `migrations/005_*.sql` | `UNIQUE(user_id, post_id)` 生效 |
+| `M4-S1-T2` | 通知表 | ✅ 并入 `005_interactions.sql`：`notifications` 含类型白名单、`target_type`/`target_id` 成对约束，`(user_id, created_at DESC, id DESC)` 与未读部分索引 | `migrations/005_*.sql` | 索引与架构 §7.4 一致 |
+| `M4-S1-T3` | 计数约束 | ✅ `003` 已建 `like_count` / `comment_count` / `bookmark_count` 与 `posts_counts_nonnegative`，本阶段复核确认无需改动 | `003` 迁移内约束复核 | 计数不为负 |
 
 #### `M4-S2` 点赞与收藏
 
@@ -506,6 +506,12 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | `M4-S4-T1` | 通知 API | 列表、批量已读 | `modules/notifications/` | 已读状态持久化 |
 | `M4-S4-T2` | 通知中心 | 顶栏铃铛、未读计数、列表页 | `web/src/features/notification/` | 三态完整，移动端可达 |
+
+#### M4 验证记录
+
+| 编号 | 验证项 | 结果 | 证据 |
+| --- | --- | --- | --- |
+| `VR-M4-01` | 互动数据模型（`M4-S1`） | 通过 | 隔离环境（WASM PostgreSQL）依次执行 `001`–`005` 全部成功；四张表与五个索引存在。约束负向用例全部被拒：重复点赞 / 重复收藏触发主键冲突、纯空白评论、1001 字符评论、非法状态、`deleted` 缺 `deleted_at`、负 `like_count`、非法通知类型、`target_type` 与 `target_id` 不成对；正向用例 1000 字符评论可写入。级联行为：删帖后点赞 / 收藏 / 评论清空；触发者物理删除后通知保留且 `actor_id` 置 `NULL`；接收者删除后通知级联删除。合计 34 项断言全通过 |
 
 **M4 交付物**：点赞 / 收藏 / 评论 API 与前端、计数事务、通知中心。
 

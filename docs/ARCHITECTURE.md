@@ -904,7 +904,7 @@ erDiagram
 | `post_id` | `BIGINT` | FK → `posts.id` ON DELETE CASCADE, NOT NULL | 帖子 |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | 时间 |
 
-两表均以 `UNIQUE (user_id, post_id)` 防重复；`likes` 另建 `(post_id)` 索引，`bookmarks` 另建 `(user_id, created_at DESC)` 索引。
+两表的主键即 `(user_id, post_id)` 复合主键：互动记录本身没有独立身份，复合主键同时承担唯一性约束，省去一个无用的代理键与一处额外索引，且「不可重复」由主键强制，不依赖调用方先查后插。`likes` 另建 `(post_id)` 索引（主键前缀是 `user_id`，按帖子取点赞者与计数需要独立索引），`bookmarks` 另建 `(user_id, created_at DESC)` 索引。
 
 #### `conversations`
 
