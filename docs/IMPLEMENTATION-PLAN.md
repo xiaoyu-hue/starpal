@@ -486,10 +486,10 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M4-S2-T1` | 点赞服务 | 写入 / 删除 `likes` 与更新计数在同一事务；重复请求不产生重复行 | `modules/likes/` | `AC-07` 有记录，并发重复请求幂等 |
-| `M4-S2-T2` | 收藏服务 | 同上，作用于 `bookmarks`；提供收藏列表 | `modules/bookmarks/` | 刷新后计数与数据库一致 |
-| `M4-S2-T3` | 端点挂载 | `PUT` / `DELETE` 语义端点注册并挂载认证守卫 | `app.ts` | 未登录请求被拒 |
-| `M4-S2-T4` | 乐观更新 | 前端先更新、服务端校对、失败回滚并提示 | `web/src/features/feed/`、`post/` | 断网场景计数恢复，不出现假计数 |
+| `M4-S2-T1` | ✅ 点赞服务 | 写入 / 删除 `likes` 与更新计数在同一事务；重复请求不产生重复行 | `modules/interactions/` | `AC-07` 有记录，并发重复请求幂等 |
+| `M4-S2-T2` | ✅ 收藏服务 | 同上，作用于 `bookmarks`；提供收藏列表 | `modules/interactions/` | 刷新后计数与数据库一致；收藏列表 `GET /api/me/bookmarks` 随个人页「收藏」标签交付 |
+| `M4-S2-T3` | ✅ 端点挂载 | `PUT` / `DELETE` 语义端点注册并挂载认证守卫 | `app.ts` | 未登录请求被拒 |
+| `M4-S2-T4` | ✅ 乐观更新 | 前端先更新、服务端校对、失败回滚并提示 | `web/src/features/posts/components/PostInteractions.tsx` | 断网场景计数回滚，不出现假计数；成功以服务端返回计数校正 |
 
 #### `M4-S3` 评论
 
@@ -515,6 +515,9 @@ flowchart LR
 | `VR-M4-01` | 互动数据模型（`M4-S1`） | 通过 | 隔离环境（WASM PostgreSQL）依次执行 `001`–`005` 全部成功；四张表与五个索引存在。约束负向用例全部被拒：重复点赞 / 重复收藏触发主键冲突、纯空白评论、1001 字符评论、非法状态、`deleted` 缺 `deleted_at`、负 `like_count`、非法通知类型、`target_type` 与 `target_id` 不成对；正向用例 1000 字符评论可写入。级联行为：删帖后点赞 / 收藏 / 评论清空；触发者物理删除后通知保留且 `actor_id` 置 `NULL`；接收者删除后通知级联删除。合计 34 项断言全通过 |
 
 | `VR-M4-02` | 评论长度口径与 Unicode 校验 | 通过 | 新增可重复测试设施（`server/tests`，`node:test` + `tsx` + PGlite 内存库，`npm test` 一条命令跑完，已并入 `npm run verify`）。30 项断言全通过，其中先写的失败用例暴露两个真实缺陷并已修复：① `requireString` 用 `String.length`（UTF-16 码元）计数，10 个 emoji 被算成 20 字符，与 PostgreSQL `char_length`（码点）分裂——改为 `countChars()` 后 10 个 emoji 可正常通过，ZWJ 家庭 emoji 按 7 码点计；② 孤立代理项（`\uD800`）能通过校验，进入 pg 参数编码阶段抛错变成 500——改为在长度判定前用孤立代理正则拦截，返回 `VALIDATION_FAILED`。数据库侧另修：`btrim(body)` 挡不住纯换行 / 制表符评论，改为显式空白集合，四组纯空白样本均被拒。 |
+
+| `VR-M4-03` | 点赞 / 收藏接口与计数事务（`M4-S2`） | 通过 | 真实 PostgreSQL 16 + 真实 Express + 真实 HTTP，21 项断言全过：点赞 0→1、重复点赞仍 1、第二用户 →2、取消 →1、重复取消仍 1；收藏计数独立且不影响点赞；登录读者 `isLiked=true`、匿名读者 `isLiked=false` 而计数保留；未登录 `401`、不存在帖子 `404`、非法 id `404`；**20 个并发首次点赞全部 200 且最终计数为 1**（唯一约束压住重复插入，未出现先查后插的双计数）；删帖后点赞 `404`。另在隔离库以 `runToggle` 直测 8 项：幂等、计数不为负（`GREATEST` 兜底）、收藏独立、不存在帖不产生孤儿明细 |
+| `VR-M4-04` | 互动按钮的真实浏览器行为 | 通过 | Chromium 390 px 视口，登录态打开详情页：初始 `aria-pressed=false`、显示「0 点赞」；点击后立即 `aria-pressed=true`、显示「1 点赞」，收藏同步为 1；刷新后仍为已点赞 / 已收藏（状态来自服务端而非本地）；匿名点击跳转 `/login`；控制台 0 错误。截图见 `preview/ui-interactions-detail.png` |
 
 **M4 交付物**：点赞 / 收藏 / 评论 API 与前端、计数事务、通知中心。
 
