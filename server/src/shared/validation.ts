@@ -22,6 +22,19 @@ function invalid(details: ErrorDetail[]): never {
   throw new DomainError('VALIDATION_FAILED', '请求参数不合法', details)
 }
 
+/** 孤立代理项：UTF-16 里未配对的 \uD800-\uDFFF，无法编码为合法 UTF-8。 */
+const LONE_SURROGATE =
+  /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+
+/**
+ * 按 Unicode 码点计数，与 PostgreSQL `char_length` 同口径。
+ * 不得使用 `String.length`：那是 UTF-16 码元数，一个 emoji 会算 2，
+ * 导致「服务层判定超限、数据库却接受」或反过来的口径分裂。
+ */
+export function countChars(text: string): number {
+  return Array.from(text).length
+}
+
 /** 校验字符串字段：类型、长度、字符集、首尾空白。返回归一化后的值。 */
 export function requireString(value: unknown, rule: StringRule): string {
   if (typeof value !== 'string') {
@@ -29,7 +42,12 @@ export function requireString(value: unknown, rule: StringRule): string {
   }
   const raw = value as string
   const text = rule.trim ? raw.trim() : raw
-  if (text.length < rule.min || text.length > rule.max) {
+  // 必须在长度判定之前拦截：孤立代理项一旦进入 SQL 参数，pg 编码阶段抛错会变成 500。
+  if (LONE_SURROGATE.test(text)) {
+    invalid([{ field: rule.field, constraint: '包含非法 Unicode 字符' }])
+  }
+  const length = countChars(text)
+  if (length < rule.min || length > rule.max) {
     invalid([{ field: rule.field, constraint: `长度须在 ${rule.min}..${rule.max} 之间` }])
   }
   if (!rule.allowInnerWhitespace && /\s/.test(text)) {

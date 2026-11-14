@@ -44,10 +44,15 @@ export const POST_IMAGES_MAX = 9
 
 /**
  * 互动域（`M4`）。
- * 评论上限与 `005_interactions.sql` 的 `comments_body_length` 约束同源：
+ * 评论上限与 `006_comment_length.sql` 的 `comments_body_length` 约束同源：
  * 服务层先给出可读报错，数据库约束兜住绕过服务层的写入。
+ *
+ * 取值依据：Discourse 默认 32000（论坛长帖语义）、Reddit 评论 10000（英文长评文化）、
+ * 微博正文 2000、小红书正文 1000。本项目帖子正文支持 20000，定位偏「有内容的表达」，
+ * 故取 2000 —— 与中文社区长评上限一致，同时是正文上限的十分之一，避免评论区变文章区。
+ * 长度按 **Unicode 码点** 计（emoji 算 1），与 PostgreSQL `char_length` 同口径。
  */
-export const COMMENT_BODY_MAX = 1000
+export const COMMENT_BODY_MAX = 2000
 /** 评论列表默认页大小；与信息流一致的游标分页口径。 */
 export const COMMENT_PAGE_SIZE = 20
 /** 评论列表分页上限，防止单次拉取过多。 */
