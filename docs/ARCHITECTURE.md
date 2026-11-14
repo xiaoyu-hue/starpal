@@ -900,6 +900,8 @@ erDiagram
 
 **空白口径**：数据库约束用 `btrim(body, E' \t\n\r\f\v')` 而非 `btrim(body)`，因为后者只裁普通空格，纯换行的评论可绕过非空判定。全角空格等 Unicode 空白由服务层 `trim()` 归一化。
 
+**移除语义**：作者自删记 `deleted` 并写 `deleted_at`；管理员移除他人记 `removed` 且 `deleted_at` 为 `NULL`——`comments_deleted_consistent` 约束要求「有删除时间」与「状态为 deleted」严格等价，两种语义不可混写。两种状态都从公开列表消失并同事务扣减 `posts.comment_count`；管理员列表额外可见 `removed` 项并标灰，普通读者按不存在处理，与帖子「已移除仅管理员可见」同一口径。
+
 #### `likes` / `bookmarks`
 
 | 字段 | 类型 | 约束 | 说明 |

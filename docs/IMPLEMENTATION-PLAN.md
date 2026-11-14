@@ -495,11 +495,11 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M4-S3-T1` | 评论 API | 发表、按时间游标列表、作者 / 管理员移除 | `modules/comments/` | `AC-08` 有记录 |
-| `M4-S3-T2` | 计数事务 | 发表 / 移除与 `posts.comment_count` 同事务 | 同上 | 明细与计数一致 |
-| `M4-S3-T3` | 内容校验 | 长度、非空、转义在服务层 | `comments.schema.ts` | 空 / 超长 / 含标记被正确处理 |
-| `M4-S3-T4` | 评论区前端 | 发表框、列表、排序（赞数 + 时间）、删除入口 | `web/src/features/comment/` | 单层结构，无无功能回复入口 |
-| `M4-S3-T5` | 通知触发 | 评论事件生成通知（服务层显式调用） | `modules/notifications/` | 通知计数与列表一致 |
+| `M4-S3-T1` | ✅ 评论 API | 发表（`POST /api/posts/:id/comments`）、时间倒序游标列表（`GET` 同路径，`optionalAuth`）、作者 / 管理员移除（`DELETE /api/comments/:id`） | `modules/comments/` | `AC-08` 有记录 |
+| `M4-S3-T2` | ✅ 计数事务 | 发表 / 移除与 `posts.comment_count` 同事务；计数更新带 `status='published'` 条件，帖子在检查与写入之间被删时整笔回滚；扣减用 `GREATEST(-1, 0)` | 同上 | 明细与计数一致 |
+| `M4-S3-T3` | ✅ 内容校验 | 长度 1–2000 按码点、纯空白、孤立代理项在服务层拦截；正文以纯文本存储、前端文本节点渲染，不引入 HTML | `comment.schema.ts` | 空 / 超长 / 含标记被正确处理 |
+| `M4-S3-T4` | ✅ 评论区前端 | 发表框（码点计数、超限禁用）、时间倒序列表、加载更多、作者 / 管理员删除入口；未登录显示登录引导 | `web/src/features/posts/components/CommentSection.tsx`、`CommentEntry.tsx` | 单层结构，无无功能回复入口 |
+| `M4-S3-T5` | ✅ 通知触发 | 评论与通知同事务写入；`author_id <> 评论者` 过滤自通知；`target_type='comment'`、`target_id=评论主键` | `comment.repository.ts` | 通知计数与列表一致（通知读取 API 属 `M4-S4`） |
 
 #### `M4-S4` 通知域
 
@@ -518,6 +518,10 @@ flowchart LR
 
 | `VR-M4-03` | 点赞 / 收藏接口与计数事务（`M4-S2`） | 通过 | 真实 PostgreSQL 16 + 真实 Express + 真实 HTTP，21 项断言全过：点赞 0→1、重复点赞仍 1、第二用户 →2、取消 →1、重复取消仍 1；收藏计数独立且不影响点赞；登录读者 `isLiked=true`、匿名读者 `isLiked=false` 而计数保留；未登录 `401`、不存在帖子 `404`、非法 id `404`；**20 个并发首次点赞全部 200 且最终计数为 1**（唯一约束压住重复插入，未出现先查后插的双计数）；删帖后点赞 `404`。另在隔离库以 `runToggle` 直测 8 项：幂等、计数不为负（`GREATEST` 兜底）、收藏独立、不存在帖不产生孤儿明细 |
 | `VR-M4-04` | 互动按钮的真实浏览器行为 | 通过 | Chromium 390 px 视口，登录态打开详情页：初始 `aria-pressed=false`、显示「0 点赞」；点击后立即 `aria-pressed=true`、显示「1 点赞」，收藏同步为 1；刷新后仍为已点赞 / 已收藏（状态来自服务端而非本地）；匿名点击跳转 `/login`；控制台 0 错误。截图见 `preview/ui-interactions-detail.png` |
+
+| `VR-M4-05` | 评论接口、计数与权限（`M4-S3`） | 通过 | 真实 PostgreSQL + 真实 Express + 真实 HTTP，19 项断言全过：匿名可读列表、未登录发表 401、发表后 `commentCount` 同步、作者看他人评论 `isAuthor/canRemove` 均为 false、通知写入接收者为帖子作者且触发者为评论者、纯空白 400、2001 字符 400、2000 字符可发表、作者删除后计数回落、重复删除 404、非作者删除 403、不存在帖子 404、非法 limit 400、游标翻页不重复不遗漏且最新在上 |
+| `VR-M4-06` | 管理员移除与可见性 | 通过 | 将测试账号临时提权为 admin 后：移除他人评论返回 200，入库 `status='removed'` 且 `deleted_at` 为 NULL（满足 `comments_deleted_consistent`）；管理员列表能看到该项并标 `removed` / `canRemove=true`，普通读者列表为空；`commentCount` 扣减为 0。另在隔离库直测 9 项：自评论不产生通知、`deleted` 带 `deleted_at`、重复移除返回 null 且计数不为负、帖子不存在时事务整体回滚不留孤儿评论 |
+| `VR-M4-07` | 评论区真实浏览器行为 | 通过 | Chromium 390 px：登录态详情页评论区显示标题计数、输入框、`0 / 2000` 计数器；输入后点发送，新评论出现在列表首位、计数器回零；删除按钮弹出确认框，确认后条目消失、计数回落；匿名视角显示「登录后可以参与讨论。」且不渲染输入框；控制台 0 错误。截图 `preview/ui-comments-390.png`、`ui-comments-after-post-390.png`、`ui-comments-anon-390.png` |
 
 **M4 交付物**：点赞 / 收藏 / 评论 API 与前端、计数事务、通知中心。
 
