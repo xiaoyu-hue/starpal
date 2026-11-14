@@ -22,8 +22,13 @@ describe('互动域迁移与约束', () => {
   })
 
   it('迁移文件按版本连续且全部可执行', () => {
-    const versions = migrationFiles().map((name) => name.slice(0, 3))
-    assert.deepEqual(versions, ['001', '002', '003', '004', '005', '006'])
+    // 不硬编码完整版本列表：新增迁移不该让这条断言变成「改测试」的动作。
+    // 真正要守住的是三条不变量——从 001 起、无缺口、无重复；排序后应与自然序号逐位相等。
+    const versions = migrationFiles().map((name) => name.slice(0, 3)).sort()
+    assert.ok(versions.length > 0, '未发现任何迁移文件')
+    assert.equal(new Set(versions).size, versions.length, '迁移版本号存在重复')
+    const sequential = versions.map((_, index) => String(index + 1).padStart(3, '0'))
+    assert.deepEqual(versions, sequential, '迁移版本号须从 001 起连续，不得跳号')
   })
 
   it('四张互动表与关键索引均已建立', async () => {
