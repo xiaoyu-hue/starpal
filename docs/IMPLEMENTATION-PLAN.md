@@ -477,8 +477,9 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M4-S1-T1` | 互动表 | ✅ `005_interactions.sql` 建立 `likes`、`bookmarks`（复合主键 `(user_id, post_id)` 兼作唯一约束）、`comments`（单层、状态机、软删除一致性、正文 1–1000 字符） | `migrations/005_*.sql` | `UNIQUE(user_id, post_id)` 生效 |
+| `M4-S1-T1` | 互动表 | ✅ `005_interactions.sql` 建立 `likes`、`bookmarks`（复合主键 `(user_id, post_id)` 兼作唯一约束）、`comments`（单层、状态机、软删除一致性） | `migrations/005_*.sql` | `UNIQUE(user_id, post_id)` 生效 |
 | `M4-S1-T2` | 通知表 | ✅ 并入 `005_interactions.sql`：`notifications` 含类型白名单、`target_type`/`target_id` 成对约束，`(user_id, created_at DESC, id DESC)` 与未读部分索引 | `migrations/005_*.sql` | 索引与架构 §7.4 一致 |
+| `M4-S1-T4` | 评论长度口径 | ✅ `006_comment_length.sql` 将上限由 1000 放宽至 **2000 字符**（按 Unicode 码点计），并改用 `btrim(body, E' \t\n\r\f\v')` 兜底非空——`btrim(body)` 只裁空格，纯换行可绕过 | `migrations/006_*.sql` | 2000 通过、2001 被拒、2000 个 emoji 通过 |
 | `M4-S1-T3` | 计数约束 | ✅ `003` 已建 `like_count` / `comment_count` / `bookmark_count` 与 `posts_counts_nonnegative`，本阶段复核确认无需改动 | `003` 迁移内约束复核 | 计数不为负 |
 
 #### `M4-S2` 点赞与收藏
@@ -512,6 +513,8 @@ flowchart LR
 | 编号 | 验证项 | 结果 | 证据 |
 | --- | --- | --- | --- |
 | `VR-M4-01` | 互动数据模型（`M4-S1`） | 通过 | 隔离环境（WASM PostgreSQL）依次执行 `001`–`005` 全部成功；四张表与五个索引存在。约束负向用例全部被拒：重复点赞 / 重复收藏触发主键冲突、纯空白评论、1001 字符评论、非法状态、`deleted` 缺 `deleted_at`、负 `like_count`、非法通知类型、`target_type` 与 `target_id` 不成对；正向用例 1000 字符评论可写入。级联行为：删帖后点赞 / 收藏 / 评论清空；触发者物理删除后通知保留且 `actor_id` 置 `NULL`；接收者删除后通知级联删除。合计 34 项断言全通过 |
+
+| `VR-M4-02` | 评论长度口径与 Unicode 校验 | 通过 | 新增可重复测试设施（`server/tests`，`node:test` + `tsx` + PGlite 内存库，`npm test` 一条命令跑完，已并入 `npm run verify`）。30 项断言全通过，其中先写的失败用例暴露两个真实缺陷并已修复：① `requireString` 用 `String.length`（UTF-16 码元）计数，10 个 emoji 被算成 20 字符，与 PostgreSQL `char_length`（码点）分裂——改为 `countChars()` 后 10 个 emoji 可正常通过，ZWJ 家庭 emoji 按 7 码点计；② 孤立代理项（`\uD800`）能通过校验，进入 pg 参数编码阶段抛错变成 500——改为在长度判定前用孤立代理正则拦截，返回 `VALIDATION_FAILED`。数据库侧另修：`btrim(body)` 挡不住纯换行 / 制表符评论，改为显式空白集合，四组纯空白样本均被拒。 |
 
 **M4 交付物**：点赞 / 收藏 / 评论 API 与前端、计数事务、通知中心。
 
@@ -627,8 +630,8 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M7-S1-T1` | 单元测试 | 排序权重、游标编解码、校验规则、错误映射、计数事务 | `server/tests/unit/` | `test` 通过，覆盖关键纯逻辑 |
-| `M7-S1-T2` | API 集成测试 | 注册 / 登录 / 发帖 / 点赞 / 评论 / 举报 / 管理端点，使用独立测试库 | `server/tests/integration/` | 每次执行前迁移并清理 |
+| `M7-S1-T1` | 单元测试 | 排序权重、游标编解码、校验规则、错误映射、计数事务（✅ 校验规则已随 `M4` 提前落地） | `server/tests/unit/` | `test` 通过，覆盖关键纯逻辑 |
+| `M7-S1-T2` | API 集成测试 | 注册 / 登录 / 发帖 / 点赞 / 评论 / 举报 / 管理端点，使用独立测试库（✅ 迁移与结构约束测试已提前落地，PGlite 每次全新建库） | `server/tests/integration/` | 每次执行前迁移并清理 |
 | `M7-S1-T3` | 端到端检查 | 关键路径：注册 → 发帖 → 互动 → 举报 → 处置 → 导出 | `tests/e2e/` | `test:e2e` 通过 |
 | `M7-S1-T4` | 上传安全用例 | 伪造扩展名 / MIME、超限、含 EXIF 的样例 | 上传测试夹具 | 全部被拒或净化 |
 | `M7-S1-T5` | 权限回归自动化 | 将 `M6-S4` 矩阵检查转为可重复用例 | 同上 | 与手工记录一致 |

@@ -890,11 +890,15 @@ erDiagram
 | `id` | `BIGSERIAL` | PK | — |
 | `post_id` | `BIGINT` | FK → `posts.id` ON DELETE CASCADE, NOT NULL | 帖子 |
 | `author_id` | `BIGINT` | FK → `users.id`, NOT NULL | 作者 |
-| `body` | `TEXT` | NOT NULL | 内容（单层，无 `parent_id`） |
+| `body` | `TEXT` | NOT NULL, 1–2000 字符 | 内容（单层，无 `parent_id`）；长度按 Unicode 码点计，emoji 算 1，与 `char_length` 同口径 |
 | `status` | `VARCHAR(16)` | NOT NULL, DEFAULT `published` | `published` / `removed` / `deleted` |
 | `like_count` | `INT` | NOT NULL, DEFAULT 0 | 用于综合排序 |
 | `created_at` / `updated_at` | `TIMESTAMPTZ` | NOT NULL | 时间 |
 | `deleted_at` | `TIMESTAMPTZ` | NULL | 软删除 |
+
+评论长度口径（`006_comment_length.sql`）：上限 **2000 字符**，按 Unicode 码点计。取值参照 Discourse 默认 32000（论坛长帖语义）、Reddit 评论 10000（英文长评文化）、微博正文 2000、小红书正文 1000；本项目帖子正文支持 20000，评论取正文的十分之一，容纳一段完整论证而不把评论区变成文章区。服务层用 `countChars()`（`Array.from`）计数，禁止使用 `String.length`——后者是 UTF-16 码元数，一个 emoji 会算 2，与数据库判定分裂。
+
+**空白口径**：数据库约束用 `btrim(body, E' \t\n\r\f\v')` 而非 `btrim(body)`，因为后者只裁普通空格，纯换行的评论可绕过非空判定。全角空格等 Unicode 空白由服务层 `trim()` 归一化。
 
 #### `likes` / `bookmarks`
 
