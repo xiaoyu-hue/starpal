@@ -32,6 +32,9 @@ export function TermsPage() {
               <Link to="/privacy" className="text-sm text-accent hover:underline">
                 隐私说明 →
               </Link>
+              <Link to="/disclaimer" className="text-sm text-accent hover:underline">
+                免责声明 →
+              </Link>
             </div>
           </Card>
         </>

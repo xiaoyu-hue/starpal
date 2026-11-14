@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Bell,
   BookOpen,
   Compass,
@@ -7,6 +8,7 @@ import {
   Info,
   Megaphone,
   MessageSquare,
+  Package,
   PenLine,
   ShieldCheck,
   UserRound,
@@ -52,8 +54,10 @@ export const MOBILE_TAB_KEYS = ['home', 'discover', 'messages', 'profile'] as co
  */
 export const ABOUT_LINKS = [
   { key: 'announcements', label: '社区公告', path: '/announcements', icon: Megaphone },
+  { key: 'product', label: '产品声明', path: '/product', icon: Package },
   { key: 'guidelines', label: '社区准则', path: '/guidelines', icon: BookOpen },
   { key: 'terms', label: '用户协议', path: '/terms', icon: FileText },
   { key: 'privacy', label: '隐私说明', path: '/privacy', icon: ShieldCheck },
+  { key: 'disclaimer', label: '免责声明', path: '/disclaimer', icon: AlertTriangle },
   { key: 'about', label: '关于星聚', path: '/about', icon: Info },
 ] as const

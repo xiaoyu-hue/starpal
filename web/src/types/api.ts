@@ -227,6 +227,19 @@ export type MetaTerms = DocMeta & {
   sections: DocSection[]
 }
 
+/** 免责声明：责任边界说明，与后端 DISCLAIMER 一致。 */
+export type MetaDisclaimer = DocMeta & {
+  version: string
+  sections: DocSection[]
+}
+
+/** 产品声明：定位与合规状态说明，与后端 PRODUCT 一致。 */
+export type MetaProduct = DocMeta & {
+  siteName: string
+  version: string
+  sections: DocSection[]
+}
+
 /** 关于页：站点自述、技术构成与致谢，与后端 ABOUT 一致。 */
 export type MetaAbout = {
   siteName: string

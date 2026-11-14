@@ -2,8 +2,10 @@ import { apiGet } from '../../lib/api-client'
 import type {
   MetaAbout,
   MetaAnnouncements,
+  MetaDisclaimer,
   MetaGuidelines,
   MetaPrivacy,
+  MetaProduct,
   MetaTerms,
 } from '../../types/api'
 
@@ -36,5 +38,17 @@ export async function fetchAbout(): Promise<MetaAbout> {
 /** 用户协议：消费 /api/meta/terms，注册勾选同意指向同一份内容。 */
 export async function fetchTerms(): Promise<MetaTerms> {
   const envelope = await apiGet<MetaTerms>('meta/terms')
+  return envelope.data
+}
+
+/** 免责声明：消费 /api/meta/disclaimer。 */
+export async function fetchDisclaimer(): Promise<MetaDisclaimer> {
+  const envelope = await apiGet<MetaDisclaimer>('meta/disclaimer')
+  return envelope.data
+}
+
+/** 产品声明：消费 /api/meta/product。 */
+export async function fetchProduct(): Promise<MetaProduct> {
+  const envelope = await apiGet<MetaProduct>('meta/product')
   return envelope.data
 }

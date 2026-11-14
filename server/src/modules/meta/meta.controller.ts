@@ -1,5 +1,13 @@
 import type { Request, Response } from 'express'
-import { ABOUT, ANNOUNCEMENTS, GUIDELINES, PRIVACY, TERMS } from '../../config/constants.js'
+import {
+  ABOUT,
+  ANNOUNCEMENTS,
+  DISCLAIMER,
+  GUIDELINES,
+  PRIVACY,
+  PRODUCT,
+  TERMS,
+} from '../../config/constants.js'
 import { sendData } from '../../shared/response.js'
 
 /** 社区准则：只读常量，不依赖数据库。长文正文在 config/docs 下。 */
@@ -25,4 +33,14 @@ export function aboutController(_req: Request, res: Response): void {
 /** 用户协议：注册时勾选同意的就是这一份。 */
 export function termsController(_req: Request, res: Response): void {
   sendData(res, TERMS)
+}
+
+/** 免责声明：责任边界的正式说明，含「免不掉的责任」一节。 */
+export function disclaimerController(_req: Request, res: Response): void {
+  sendData(res, DISCLAIMER)
+}
+
+/** 产品声明：定位、开放范围与合规状态的正式说明。 */
+export function productController(_req: Request, res: Response): void {
+  sendData(res, PRODUCT)
 }

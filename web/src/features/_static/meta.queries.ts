@@ -1,11 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchAbout, fetchAnnouncements, fetchGuidelines, fetchPrivacy, fetchTerms } from './meta.api'
+import {
+  fetchAbout,
+  fetchAnnouncements,
+  fetchDisclaimer,
+  fetchGuidelines,
+  fetchPrivacy,
+  fetchProduct,
+  fetchTerms,
+} from './meta.api'
 
 /** 缓存键按域命名，各说明页独立，互不串数据。 */
 export const metaKeys = {
   guidelines: ['meta', 'guidelines'] as const,
   privacy: ['meta', 'privacy'] as const,
   terms: ['meta', 'terms'] as const,
+  disclaimer: ['meta', 'disclaimer'] as const,
+  product: ['meta', 'product'] as const,
   announcements: ['meta', 'announcements'] as const,
   about: ['meta', 'about'] as const,
 }
@@ -29,6 +39,22 @@ export function useTermsQuery() {
   return useQuery({
     queryKey: metaKeys.terms,
     queryFn: ({ signal }) => fetchTerms(),
+  })
+}
+
+/** 免责声明：与协议配套，说明责任边界。 */
+export function useDisclaimerQuery() {
+  return useQuery({
+    queryKey: metaKeys.disclaimer,
+    queryFn: ({ signal }) => fetchDisclaimer(),
+  })
+}
+
+/** 产品声明：定位、开放范围与合规状态。 */
+export function useProductQuery() {
+  return useQuery({
+    queryKey: metaKeys.product,
+    queryFn: ({ signal }) => fetchProduct(),
   })
 }
 

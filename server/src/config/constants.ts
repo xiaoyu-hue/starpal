@@ -1,7 +1,11 @@
 /** 应用级常量：限制阈值、状态枚举、排序权重集中于此，禁止散落业务代码。 */
 import { ABOUT_DOC } from './docs/about.doc.js'
+import { DISCLAIMER_LIABILITY_SECTIONS } from './docs/disclaimer-liability.doc.js'
+import { DISCLAIMER_META, DISCLAIMER_SECTIONS } from './docs/disclaimer.doc.js'
 import { GUIDELINES_META, GUIDELINES_SECTIONS } from './docs/guidelines.doc.js'
 import { PRIVACY_META, PRIVACY_SECTIONS } from './docs/privacy.doc.js'
+import { PRODUCT_SCOPE_SECTIONS } from './docs/product-scope.doc.js'
+import { PRODUCT_META, PRODUCT_SECTIONS } from './docs/product.doc.js'
 import { TERMS_META, TERMS_SECTIONS } from './docs/terms.doc.js'
 
 export const APP_VERSION = '1.1.0'
@@ -165,6 +169,28 @@ export const TERMS = {
   version: APP_VERSION,
   ...TERMS_META,
   sections: TERMS_SECTIONS,
+}
+
+/**
+ * 免责声明：正文在 docs/disclaimer.doc.ts 与 docs/disclaimer-liability.doc.ts。
+ * 与协议的区别：协议约定双方权利义务，声明划定责任边界。
+ * 单列一节写明「免不掉的责任」，因为《民法典》第 506 条下整句免责本就无效。
+ */
+export const DISCLAIMER = {
+  version: APP_VERSION,
+  ...DISCLAIMER_META,
+  sections: [...DISCLAIMER_SECTIONS, ...DISCLAIMER_LIABILITY_SECTIONS],
+}
+
+/**
+ * 产品声明：正文在 docs/product.doc.ts 与 docs/product-scope.doc.ts。
+ * 定位、开放范围、合规状态的正式说明，避免被误认为商业平台或公共服务。
+ */
+export const PRODUCT = {
+  siteName: SITE_NAME,
+  version: APP_VERSION,
+  ...PRODUCT_META,
+  sections: [...PRODUCT_SECTIONS, ...PRODUCT_SCOPE_SECTIONS],
 }
 
 // ── M2 认证与账户约束 ────────────────────────────────────────────────

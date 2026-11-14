@@ -141,11 +141,17 @@ export function ProfilePage() {
         <Link to="/about" className={buttonClass('ghost', 'sm')}>
           关于
         </Link>
+        <Link to="/product" className={buttonClass('ghost', 'sm')}>
+          产品声明
+        </Link>
         <Link to="/guidelines" className={buttonClass('ghost', 'sm')}>
           社区准则
         </Link>
         <Link to="/privacy" className={buttonClass('ghost', 'sm')}>
           隐私说明
+        </Link>
+        <Link to="/disclaimer" className={buttonClass('ghost', 'sm')}>
+          免责声明
         </Link>
       </div>
     </div>

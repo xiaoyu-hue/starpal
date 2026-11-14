@@ -1,6 +1,14 @@
 import { Router } from 'express'
 import { healthController } from './modules/health/health.controller.js'
-import { aboutController, announcementsController, metaController, privacyController, termsController } from './modules/meta/meta.controller.js'
+import {
+  aboutController,
+  announcementsController,
+  disclaimerController,
+  metaController,
+  privacyController,
+  productController,
+  termsController,
+} from './modules/meta/meta.controller.js'
 import { authRouter } from './modules/auth/auth.routes.js'
 import { adminRouter } from './modules/admin/admin.routes.js'
 import { userRouter } from './modules/users/user.routes.js'
@@ -29,6 +37,8 @@ apiRouter.get('/meta/privacy', privacyController)
 apiRouter.get('/meta/terms', termsController)
 apiRouter.get('/meta/announcements', announcementsController)
 apiRouter.get('/meta/about', aboutController)
+apiRouter.get('/meta/disclaimer', disclaimerController)
+apiRouter.get('/meta/product', productController)
 apiRouter.use('/auth', authRouter)
 apiRouter.use('/admin', adminRouter)
 apiRouter.use('/users', userRouter)

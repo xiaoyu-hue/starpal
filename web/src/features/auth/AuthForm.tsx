@@ -95,7 +95,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     }
 
     if (isRegister && !agreed) {
-      setFormError('请先阅读并勾选同意《用户协议》与《隐私说明》')
+      setFormError('请先阅读并勾选同意《用户协议》《隐私说明》与《免责声明》')
       return
     }
 
@@ -218,9 +218,18 @@ export function AuthForm({ mode }: { mode: Mode }) {
             <Link to="/terms" target="_blank" rel="noreferrer" className="text-accent hover:underline">
               《用户协议》
             </Link>
-            与
+            、
             <Link to="/privacy" target="_blank" rel="noreferrer" className="text-accent hover:underline">
               《隐私说明》
+            </Link>
+            与
+            <Link
+              to="/disclaimer"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent hover:underline"
+            >
+              《免责声明》
             </Link>
           </span>
         </label>

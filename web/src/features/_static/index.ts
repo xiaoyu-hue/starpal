@@ -1,5 +1,7 @@
 export { PrivacyPage } from './PrivacyPage'
 export { GuidelinesPage } from './GuidelinesPage'
 export { TermsPage } from './TermsPage'
+export { DisclaimerPage } from './DisclaimerPage'
+export { ProductPage } from './ProductPage'
 export { AnnouncementsPage } from './AnnouncementsPage'
 export { AboutPage } from './AboutPage'
