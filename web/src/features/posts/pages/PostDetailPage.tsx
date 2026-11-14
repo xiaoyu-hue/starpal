@@ -12,6 +12,7 @@ import { PostInteractions } from '../components/PostInteractions'
 import { PostImages } from '../../../components/content/PostImages'
 import { RelatedPosts } from '../components/RelatedPosts'
 import { ReportButton } from '../../reports'
+import { TitleBadges } from '../../users'
 import { usePostDetailQuery } from '../queries'
 
 const STATUS_LABEL: Record<PostStatus, string> = {
@@ -124,12 +125,15 @@ export function PostDetailPage() {
           <div className="mt-4 flex items-center gap-2.5 border-b border-line pb-4">
             <Avatar name={post.author.displayName} src={post.author.avatarUrl} size={38} />
             <div className="min-w-0 flex-1">
-              <Link
-                to={`/u/${post.author.username}`}
-                className="sp-transition block truncate text-sm font-medium text-ink hover:text-accent"
-              >
-                {post.author.displayName}
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/u/${post.author.username}`}
+                  className="sp-transition truncate text-sm font-medium text-ink hover:text-accent"
+                >
+                  {post.author.displayName}
+                </Link>
+                <TitleBadges titles={post.author.titles} size="sm" />
+              </div>
               <p className="text-xs text-faint">
                 发布于 {formatTime(post.createdAt)}
                 {post.updatedAt !== post.createdAt && ` · 编辑于 ${formatTime(post.updatedAt)}`}
