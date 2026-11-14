@@ -39,7 +39,7 @@ export function buildExcerpt(body: string): string {
   return `${chars.slice(0, POST_EXCERPT_MAX).join('')}…`
 }
 
-function toListItem(record: PostRecord): PostListItem {
+export function toListItem(record: PostRecord): PostListItem {
   return {
     id: record.id,
     title: record.title,

@@ -59,6 +59,9 @@ const BookmarksPage = lazy(() =>
 const LikesPage = lazy(() =>
   import('../features/likes/LikesPage').then((m) => ({ default: m.LikesPage })),
 )
+const SearchPage = lazy(() =>
+  import('../features/search/SearchPage').then((m) => ({ default: m.SearchPage })),
+)
 const MyReportsPage = lazy(() =>
   import('../features/reports/MyReportsPage').then((m) => ({ default: m.MyReportsPage })),
 )
@@ -177,7 +180,7 @@ const routes: RouteObject[] = [
         ),
       },
       { path: 'u/:username', element: <ProfilePage /> },
-      { path: 'search', element: placeholder('搜索', 'M7', '全站检索将在 M7 里程碑交付。') },
+      { path: 'search', element: <Suspended><SearchPage /></Suspended> },
       { path: 'login', element: <Suspended><AuthPage mode="login" /></Suspended> },
       { path: 'register', element: <Suspended><AuthPage mode="register" /></Suspended> },
       { path: 'achievements', element: placeholder('成就时间线', 'M5', '成就与每周热门将在 M5 里程碑交付。') },

@@ -235,6 +235,9 @@ export const ROLE_ADMIN: Role = 'admin'
 // 由前端设计令牌着色，不随用户存储，防止任意自定义颜色。
 export const TITLE_IDS = ['community_leader', 'founder', 'admin'] as const
 export type TitleId = (typeof TITLE_IDS)[number]
+/** 搜索关键词最大长度：防止超长输入构造巨型 ILIKE 模式；超出按校验失败处理。 */
+export const SEARCH_TERM_MAX = 100
+
 export const TITLE_LABELS: Record<TitleId, string> = {
   community_leader: '社区长',
   founder: '创始人',

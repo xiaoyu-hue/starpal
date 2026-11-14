@@ -593,7 +593,7 @@ flowchart LR
 | `M5-S2-T3` | 时间线前端 | 成就时间线、解锁时间、说明 | `web/src/features/achievement/` | 无排行榜 / 签到 / 无限滚动控件 |
 | `M5-S2-T4` | 每周热门 | `NNN_views.sql` 中建立只读聚合视图，无定时写任务 | `migrations/NNN_*.sql` | 刷新可见，不产生额外写入 |
 
-#### `M5-S3` 搜索
+#### `M5-S3` 搜索 ✅ 已完成（2026-11-15）
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
@@ -613,6 +613,14 @@ flowchart LR
 **M5 完成判据**：`AC-16` 有验证记录；`DoD-01`—`DoD-10` 全部满足；导出文件与数据库内容一致。
 
 **风险与回退**：私信与成就均为独立模块，可单独回退而不影响互动链路；导出为只读，风险最低。
+
+##### `VR-M5-S3-01` · M5-S3 搜索验证记录（通过）
+
+- **环境**：本地 `node:test` + PGlite 内存真库（跑全部 `001`–`012` 迁移），`npm run verify` 全链路。
+- **技术选型**：`ILIKE '%关键词%'`（`ESCAPE '\'` 转义 `% _ \`），**不引入 pg_trgm / tsvector**。理由：内容以中文为主，PostgreSQL 默认分词器不切中文词，`tsvector` 对中文近乎失效；`pg_trgm` 需在 PGlite 构造期声明扩展、会侵入测试基建。小社区数据量下 ILIKE 全表扫描为毫秒级，先够用；将来数据量增大再加 `pg_trgm` 索引，是增量迁移、不动本接口。搜索**不需要新迁移**（标题/正文/话题名均在现有表）。
+- **实现**：新增 `server/src/modules/search/`（schema / repository / service / controller / routes / barrel），`GET /api/search?q=&type=all|post|topic&cursor=&limit=` 挂 `optionalAuth`（匿名可搜公开内容，登录者额外补 `isLiked`/`isBookmarked`）；查询复用 `posts` 模块的 `PROJECTION` / `VISIBLE` / `toListItem`（经 `posts/index.ts` 公共出口），保证搜索结果与信息流对同一帖子的可见性完全一致。前端新增 `web/src/features/search/`（`/search` 替换占位、顶栏入口已就位、范围切换、键集游标分页、空关键词与无结果明确空态）。
+- **真实命令与输出**：新增 `server/tests/integration/search.test.ts`，7 项断言——中文命中标题、中文命中正文、草稿/已删除/停用作者排除、`type=topic` 只按话题名而 `type=post` 不匹配话题名、键集游标分页不重不漏、空关键词短路、`%` 被转义不匹配一切。`npm run verify` 全绿（**106** 项测试通过、lint 硬规则 **0** 违规）。
+- **真实局限（如实标注）**：`ILIKE` 无索引加速，数据量显著增长后需补 `pg_trgm`；**登录态下「顶栏点搜索 → 输入 → 结果渲染」的完整浏览器交互 E2E 未执行**（读链路由集成测试与组件渲染覆盖，需真实后端+登录态复核）。
 
 ---
 

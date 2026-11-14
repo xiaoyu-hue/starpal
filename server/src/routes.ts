@@ -21,6 +21,7 @@ import { postRouter } from './modules/posts/index.js'
 import { topicRouter } from './modules/topics/index.js'
 import { imageRouter } from './modules/images/index.js'
 import { imageUploadRouter } from './modules/uploads/index.js'
+import { searchRouter } from './modules/search/index.js'
 
 /**
  * /api 路由汇总：元信息、认证、管理探针、个人资料、内容（帖子）与话题目录。
@@ -53,4 +54,5 @@ apiRouter.use('/posts', postCommentRouter)
 apiRouter.use('/posts', postRouter)
 apiRouter.use('/comments', commentRouter)
 apiRouter.use('/topics', topicRouter)
+apiRouter.use('/search', searchRouter)
 apiRouter.use('/images', imageRouter)

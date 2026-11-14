@@ -613,6 +613,12 @@ sequenceDiagram
 | PATCH | `/api/topics/:id` | 管理员 | 编辑话题 |
 | DELETE | `/api/topics/:id` | 管理员 | 归档话题 |
 
+**搜索**
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/search` | 公开 | 全站搜索：`q` 检索帖子标题 / 正文 / 话题名，`type=all\|post\|topic` 过滤范围，键集游标分页；匿名可读，登录者额外补 `isLiked` / `isBookmarked`；可见性沿用信息流 `VISIBLE`（草稿、已删除、停用作者的内容不出现） |
+
 **帖子与图片**
 
 | 方法 | 路径 | 权限 | 说明 |
