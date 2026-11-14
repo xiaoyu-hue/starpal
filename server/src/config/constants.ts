@@ -1,4 +1,5 @@
 /** 应用级常量：限制阈值、状态枚举、排序权重集中于此，禁止散落业务代码。 */
+import { ANNOUNCEMENT_ITEMS } from './docs/announcements.doc.js'
 import { ABOUT_DOC } from './docs/about.doc.js'
 import { DISCLAIMER_LIABILITY_SECTIONS } from './docs/disclaimer-liability.doc.js'
 import { DISCLAIMER_META, DISCLAIMER_SECTIONS } from './docs/disclaimer.doc.js'
@@ -106,31 +107,13 @@ export const GUIDELINES = {
 }
 
 /**
- * 社区公告：按时间倒序，最新在前。
- * 公告属运营信息而非用户内容，随代码版本化、不入库：改文案即发版，
- * 避免「公告写死在某个页面里、另一处还留着旧版本」的漂移。
+ * 社区公告：条目在 docs/announcements.doc.ts，此处只做组装。
  * 右侧栏卡片与 /announcements 页读同一份数据，只有一个真相源。
  */
 export const ANNOUNCEMENTS = {
   version: APP_VERSION,
   title: '社区公告',
-  items: [
-    {
-      date: '2026-11-14',
-      title: '「闲聊」话题上线',
-      body: '新增「闲聊」分类，排在话题列表第一位。不设主题的日常、打招呼、随手一句都可以发在这里。',
-    },
-    {
-      date: '2026-11-14',
-      title: '评论、点赞与收藏已开放',
-      body: '现在可以给帖子点赞、收藏和评论。评论正文上限 2000 字，emoji 按 1 个字计算；评论按时间倒序展示。',
-    },
-    {
-      date: '2026-11-12',
-      title: '星聚开始试运行',
-      body: '星聚 STARPAL 正在建设中，发帖、话题与个人主页已可用。私信、搜索与通知中心按里程碑逐步交付。',
-    },
-  ],
+  items: ANNOUNCEMENT_ITEMS,
 } as const
 
 // ── M2-S5 说明页（只读常量，不依赖数据库）─────────────────────────────
