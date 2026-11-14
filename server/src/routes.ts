@@ -7,6 +7,7 @@ import { userRouter } from './modules/users/user.routes.js'
 import { postRouter } from './modules/posts/index.js'
 import { topicRouter } from './modules/topics/index.js'
 import { imageRouter } from './modules/images/index.js'
+import { imageUploadRouter } from './modules/uploads/index.js'
 
 /**
  * /api 路由汇总：元信息、认证、管理探针、个人资料、内容（帖子）与话题目录。
@@ -15,6 +16,8 @@ import { imageRouter } from './modules/images/index.js'
  * `/api/topics` 只提供目录读取；帖子按话题筛选仍走 `/api/posts?topic=slug`，
  * 保证筛选后的可见性与排序规则与主信息流完全一致。
  * `/api/images` 只做受控读取，字节经存储适配器取回，响应带长缓存头与禁止嗅探头。
+ * `/api/posts/:postId/images` 是上传通道，须挂在 `/api/posts` 之前：
+ * 帖子路由没有该路径，虽会 fallthrough 到此处，但显式前置可省去一次无谓匹配。
  */
 export const apiRouter = Router()
 
@@ -25,6 +28,7 @@ apiRouter.get('/meta/about', aboutController)
 apiRouter.use('/auth', authRouter)
 apiRouter.use('/admin', adminRouter)
 apiRouter.use('/users', userRouter)
+apiRouter.use('/posts/:postId/images', imageUploadRouter)
 apiRouter.use('/posts', postRouter)
 apiRouter.use('/topics', topicRouter)
 apiRouter.use('/images', imageRouter)

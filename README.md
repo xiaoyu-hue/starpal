@@ -94,7 +94,7 @@
 
 - **M1**：前端工程骨架、设计系统、响应式应用外壳与导航、信息流外壳（含加载 / 错误 / 空三态）、后端骨架、PostgreSQL 连接与迁移机制、Express 单进程静态托管、说明页后端单源。
 - **M2**：注册 / 登录 / 登出与服务端会话（`M2-S1` / `M2-S2`）、受保护路由与角色守卫（`M2-S3`）、个人资料与设置（公开个人页、资料编辑、主题切换、账号注销与彻底擦除，`M2-S4`）、隐私 / 社区准则 / 关于三说明页（`M2-S5`）、以及 DoD-01 质量门（模块导入边界 lint、`seed`、`export:check`）。
-- **M3（进行中）**：内容数据模型（话题 / 帖子 / 图片元数据与二进制，`M3-S1`）、**帖子 API**（`M3-S2`）、**话题目录**（`M3-S4` 读侧）、**前端内容域**（`M3-S5`）已完成——用户现在可以在浏览器里走完「浏览信息流 → 挑话题 → 发帖 → 看详情 → 编辑 / 删除」全流程：三 Tab 信息流、话题筛选、话题详情、发帖与编辑表单、详情页（正文保留段落、相关帖子、作者操作）、个人页真实内容列表与滚动位置恢复。图片侧**读写通道已通**（`M3-S3` 存储适配器与 `GET /api/images/:key`），但上传管线（体积限制、魔术字节校验、重编码剥离 EXIF、前端选图）尚未实现，因此发帖暂不支持附图。
+- **M3（进行中）**：内容数据模型（话题 / 帖子 / 图片元数据与二进制，`M3-S1`）、**帖子 API**（`M3-S2`）、**话题目录**（`M3-S4` 读侧）、**前端内容域**（`M3-S5`）已完成——用户现在可以在浏览器里走完「浏览信息流 → 挑话题 → 发帖 → 看详情 → 编辑 / 删除」全流程：三 Tab 信息流、话题筛选、话题详情、发帖与编辑表单、详情页（正文保留段落、相关帖子、作者操作）、个人页真实内容列表与滚动位置恢复。图片侧**后端已闭环**（`M3-S3` 的 `T1`—`T5`：存储适配器、上传中间件、魔术字节校验与重编码、事务入库、受控读取），上传接口可用且会剥离 EXIF、统一转 WebP；仅剩前端选图界面（`T6`）与渲染优化（`T7`），因此发帖页暂时还不能附图。
 
 图片上传、点赞评论、私信、后台管理等仍按 `M3`—`M7` 里程碑交付。未实现的导航目的地以明确标注状态的占位页呈现，不提供点击无效果的伪交互控件；信息流无真实内容时返回服务端真实空结果，不填充演示数据。
 
@@ -120,7 +120,7 @@ npm run verify           # 类型检查 + 构建 + 体积检查
 node scripts/build-standalone.mjs   # 生成 web/dist/starpal-preview.html
 ```
 
-> 健康检查：`GET /api/health`；社区准则：`GET /api/meta/guidelines`；隐私：`GET /api/meta/privacy`；关于：`GET /api/meta/about`；信息流：`GET /api/posts?tab=latest|popular|recommended`（可加 `topic=<slug>` 按话题筛选）；帖子：`POST /api/posts`、`GET|PATCH|DELETE /api/posts/:id`、`GET /api/posts/:id/related`；话题目录：`GET /api/topics`；个人页内容：`GET /api/users/:username/posts`；图片读取：`GET /api/images/:key`（长缓存 + 禁止嗅探，仅读）。`seed` / `init:admin` / `export:check` 已在 DoD-01 落地。
+> 健康检查：`GET /api/health`；社区准则：`GET /api/meta/guidelines`；隐私：`GET /api/meta/privacy`；关于：`GET /api/meta/about`；信息流：`GET /api/posts?tab=latest|popular|recommended`（可加 `topic=<slug>` 按话题筛选）；帖子：`POST /api/posts`、`GET|PATCH|DELETE /api/posts/:id`、`GET /api/posts/:id/related`；话题目录：`GET /api/topics`；个人页内容：`GET /api/users/:username/posts`；图片读取：`GET /api/images/:key`（长缓存 + 禁止嗅探）；图片上传：`POST /api/posts/:id/images`（multipart，字段名 `image`，需作者或管理员）。`seed` / `init:admin` / `export:check` 已在 DoD-01 落地。
 
 ---
 

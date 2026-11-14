@@ -137,6 +137,26 @@ export async function deletePost(id: number, viewer: Viewer): Promise<void> {
 }
 
 /**
+ * 供附属能力复用（图片上传等）：确认调用方可以改动该帖子。
+ *
+ * 判定与 `updatePost` 完全一致，两处共用 `authorize`，避免权限规则在模块间漂移。
+ * 返回主键字符串形式，调用方无需再解析内部类型。
+ */
+export async function ensurePostEditable(
+  id: number,
+  viewer: Viewer,
+): Promise<{ authorId: string }> {
+  const existing = await findPostById(id)
+  if (existing === null) throw new DomainError('NOT_FOUND', '帖子不存在')
+  const { isAuthor, isAdmin } = authorize(existing, viewer)
+  if (!isAuthor && !isAdmin) throw new DomainError('FORBIDDEN', '无权修改该内容')
+  if (existing.status === 'removed' && !isAdmin) {
+    throw new DomainError('FORBIDDEN', '内容已被移除，无法修改')
+  }
+  return { authorId: String(existing.authorId) }
+}
+
+/**
  * 游标生成：latest 用创建时间，popular / recommended 用综合分。
  * 游标只承载排序键与主键，对客户端不透明；不带业务语义。
  */

@@ -10,8 +10,9 @@ build/
 server/public/
 *.log
 
-# 运行时上传目录
-uploads/
+# 历史运行时上传目录（ADR-014 后图片改存数据库，此处仅防旧本地目录误入库）
+# 必须锚定根路径：写成 `uploads/` 会匹配任意层级同名目录，连源码 modules/uploads 一起忽略。
+/server/uploads/
 
 # 编辑器与系统
 .DS_Store

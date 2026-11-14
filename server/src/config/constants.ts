@@ -28,6 +28,20 @@ export const POST_EXCERPT_MAX = 140
 /** 相关帖子返回上限，仅同话题近期内容。 */
 export const POST_RELATED_LIMIT = 5
 
+/**
+ * 图片管线参数（ARCHITECTURE.md §8.1）。
+ * 统一重编码为 WebP：体积约为原 JPEG 的六成、保留透明通道，且重编码即等于剥离元数据。
+ * 长边上限 2048 兼顾详情页清晰度与函数出网流量；实际字节上限由 `MAX_UPLOAD_BYTES` 控制。
+ */
+export const IMAGE_MAX_DIMENSION = 2048
+export const IMAGE_WEBP_QUALITY = 82
+/** 首轮编码仍超上限时的降级质量，只降一次，避免无限重试。 */
+export const IMAGE_WEBP_QUALITY_FALLBACK = 70
+/** 解码像素上限：阻止解压炸弹（小文件解出巨幅位图占满内存）。 */
+export const IMAGE_MAX_PIXELS = 40_000_000
+/** 单帖图片数量上限，与前端上传位一致。 */
+export const POST_IMAGES_MAX = 9
+
 /** 推荐流取数窗口：超出窗口的内容不再参与加权排序，避免陈年内容长期占据首屏。 */
 export const FEED_RECOMMENDED_WINDOW_DAYS = 30
 /** 热门流取数窗口：热门是「近期热门」，不是「历史总榜」。 */

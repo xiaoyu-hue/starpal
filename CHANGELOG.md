@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+### 新增（M3-S3 图片上传管线 · 后端闭环）
+
+- 新增 `storage/image-pipeline.ts`：魔术字节判真类型（JPEG / PNG / WebP / AVIF，SVG 与 GIF 一律拒绝）+ `sharp` 解码结果交叉校验，防「头部伪装 + 内容不符」；`limitInputPixels` 设 4000 万上限阻止解压炸弹。
+- 统一重编码为 WebP（质量 82、长边 ≤ 2048、不放大），首轮超限降到 70 再试一次。重编码同时完成两件事：压缩体积、剥离 EXIF / GPS / 设备型号。
+- `rotate()` 先按 EXIF `Orientation` 摆正再丢弃该标记，避免手机竖拍照片在网页上横躺。
+- 新增 `middleware/upload.ts`：multer 内存缓冲（不落盘）、`fileSize` 显式 3 MB、`files: 1`、`fields: 0`；multer 错误翻译为 `413` / `400` 统一包络。`bodyLimit` 放行 multipart 并兜住总请求体 4 MB，读请求不再构造 JSON 解析器。
+- 新增 `modules/uploads`：`POST /api/posts/:postId/images`，需作者或管理员。权限先于管线判定；重编码放在事务**之外**（CPU 密集，避免占用数据库连接）；`post_images` 与 `image_blobs` 在同一事务内提交，`pg_advisory_xact_lock` 串行分配排序位。
+- `posts` 模块导出 `ensurePostEditable`，与 `updatePost` 共用同一 `authorize`，避免权限规则在模块间漂移。
+- 单帖图片上限 9 张（`POST_IMAGES_MAX`），超限返回 `409`。
+- 实测 20 项断言全通过：带 EXIF 与 `Orientation=6` 的 JPEG 上传后尺寸由 1200×900 变为 900×1200、读回 `exif=false`；文本伪装与 SVG 均 `415`、3.6 MB 超限 `413`、未登录 `401`、他人帖子 `403`、第 10 张 `409`；并发 3 张后排序位 0–5 连续无重复；`post_images` 与 `image_blobs` 各 9 行、零孤儿。
+
+### 修复（工程）
+
+- `.gitignore` 中的 `uploads/` 规则会匹配任意层级同名目录，导致新增的 `server/src/modules/uploads/` 源码目录被整目录忽略、不会进入版本控制。改为锚定根路径 `/server/uploads/`——ADR-014 之后项目已不写磁盘，该规则仅防历史本地目录误入库。
+
 ### 新增（M3-S3 图片存储 · 读写通道）
 
 - 新建 `server/src/storage`：`StorageAdapter` 接口（`put` / `get` / `remove`）与 `postgres-bytea` 实现，单例注入点收敛到 `storage/index.ts`，不建工厂或注册机制。实现接受 `Pool | PoolClient`，使上传流程能在调用方事务内写字节，失败整体回滚。
