@@ -565,11 +565,13 @@ flowchart LR
 
 **前置条件**：`M4` 完成。
 
+> **迁移编号口径（M5 / M6 通用）**：`server/src/db/migrations/` 的顺序编号以**目录实际占用**为准。`M4` 收尾时已用到 `009_invite_codes.sql`，因此 `M5` / `M6` 的新迁移一律从下一个可用序号（现为 `010`）起顺编，且只增不改已应用的历史迁移。下表文件名统一用 `NNN_` 占位前缀（`NNN` = 开工时目录里的下一个可用序号，现为 `010`），不再预填具体编号——早期计划中的 `005` / `006` / `007` / `008` 已被 M1–M4 实际占用，照抄会导致文件覆盖或迁移账本冲突。
+
 #### `M5-S1` 私信（留言式）
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M5-S1-T1` | 会话与消息表 | `005_messages_notifications.sql` 建立 `conversations`、`messages`，表达式唯一索引保证两人一会话 | `migrations/005_*.sql` | 重复创建返回同一会话 |
+| `M5-S1-T1` | 会话与消息表 | `NNN_messages.sql` 建立 `conversations`、`messages`，表达式唯一索引保证两人一会话 | `migrations/NNN_*.sql` | 重复创建返回同一会话 |
 | `M5-S1-T2` | 私信 API | 会话列表、创建 / 获取、消息游标列表、发送；参与者校验 | `modules/messages/` | 非参与者访问被拒 |
 | `M5-S1-T3` | 留言式前端 | 会话列表、消息列表、发送框、刷新获取 | `web/src/features/message/` | 消息刷新后可见，无实时推送 |
 | `M5-S1-T4` | 升级余地确认 | 表结构与服务层不依赖传输方式，新增推送模块不需改表 | 架构 §10.1 复核 | 评审记录留档 |
@@ -578,10 +580,10 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M5-S2-T1` | 成就表 | `006_achievements.sql` 建立 `achievements`（`condition` JSONB）与 `user_achievements` 唯一约束 | `migrations/006_*.sql` | 同一用户对同一成就唯一 |
+| `M5-S2-T1` | 成就表 | `NNN_achievements.sql` 建立 `achievements`（`condition` JSONB）与 `user_achievements` 唯一约束 | `migrations/NNN_*.sql` | 同一用户对同一成就唯一 |
 | `M5-S2-T2` | 解锁服务 | 由发帖等可累积行为触发，条件数据化，不硬编码 | `modules/achievements/` | 新增称号无需改业务代码 |
 | `M5-S2-T3` | 时间线前端 | 成就时间线、解锁时间、说明 | `web/src/features/achievement/` | 无排行榜 / 签到 / 无限滚动控件 |
-| `M5-S2-T4` | 每周热门 | `008_views.sql` 中建立只读聚合视图，无定时写任务 | `migrations/008_*.sql` | 刷新可见，不产生额外写入 |
+| `M5-S2-T4` | 每周热门 | `NNN_views.sql` 中建立只读聚合视图，无定时写任务 | `migrations/NNN_*.sql` | 刷新可见，不产生额外写入 |
 
 #### `M5-S3` 搜索
 
@@ -616,8 +618,8 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M6-S1-T1` | 举报与日志表 | `007_reports_moderation.sql` 建立 `reports`、`moderation_logs` 及索引 | `migrations/007_*.sql` | 状态枚举与检查约束正确 |
-| `M6-S1-T2` | 公开视图 | `008_views.sql` 建立 `weekly_highlights` 与 `moderation_public_log` 脱敏视图 | `migrations/008_*.sql` | 公开视图不含操作者标识与内部备注 |
+| `M6-S1-T1` | 举报与日志表 | `NNN_reports_moderation.sql` 建立 `reports`、`moderation_logs` 及索引 | `migrations/NNN_*.sql` | 状态枚举与检查约束正确 |
+| `M6-S1-T2` | 公开视图 | `NNN_views.sql` 建立 `weekly_highlights` 与 `moderation_public_log` 脱敏视图 | `migrations/NNN_*.sql` | 公开视图不含操作者标识与内部备注 |
 
 #### `M6-S2` 举报链路
 
@@ -790,7 +792,7 @@ flowchart LR
 | 类别 | 内容 | 来源里程碑 |
 | --- | --- | --- |
 | 完整源码 | `web/` 前端、`server/` 后端、`scripts/` 脚本 | `M1`—`M6` |
-| 数据库 schema 与迁移 | `migrations/001…008`、`seeds/`、`schema_migrations` | `M1`—`M6` |
+| 数据库 schema 与迁移 | `migrations/001…009`（截至 M4）、`seeds/`、`schema_migrations` | `M1`—`M6` |
 | 环境变量文档 | 变量表、示例占位、安全说明 | `M7` |
 | 启动说明 | 开发 / 构建 / 单进程启动 | `M7` |
 | PostgreSQL 配置说明 | 实例准备、迁移、备份与恢复 | `M7` |

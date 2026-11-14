@@ -57,8 +57,7 @@ DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<database>
 SESSION_SECRET=<由部署方生成的高熵随机值>
 SESSION_TTL_HOURS=168
 
-# 注册与防刷
-INVITE_CODE=<由部署方设置并自行分发>
+# 注册与防刷（邀请码已改为「一人一码」，由管理员在管理界面逐码生成，不再用环境变量统一码）
 RATE_LIMIT_WINDOW_SECONDS=3600
 RATE_LIMIT_MAX=20
 LOGIN_FAIL_MAX=5
@@ -72,9 +71,10 @@ PUBLIC_DIR=./server/public
 # 初始管理员（仅初始化脚本读取，不常驻配置）
 ADMIN_USERNAME=<由部署方设置>
 ADMIN_PASSWORD=<由部署方设置>
+ADMIN_DISPLAY_NAME=<可选，留空则使用用户名>
 ```
 
-> `SESSION_SECRET`、`INVITE_CODE`、`ADMIN_PASSWORD` **不设可用默认值**：变量缺失或为空时，进程启动校验须直接失败。初始化脚本不输出凭据内容。
+> `DATABASE_URL` 与 `SESSION_SECRET` **不设可用默认值**：变量缺失或为空时，进程启动校验（`server/src/config/env.ts` 的 `REQUIRED`）须直接失败。`ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_DISPLAY_NAME` 仅由一次性初始化脚本读取，不参与常驻配置。初始化脚本不输出凭据内容。
 
 ---
 
@@ -87,7 +87,6 @@ ADMIN_PASSWORD=<由部署方设置>
 | `DATABASE_URL` | 是 | 无 | PostgreSQL 连接串，格式见 §5.2 | **敏感** |
 | `SESSION_SECRET` | 是 | 无 | 会话签名密钥，高熵随机值 | **敏感** |
 | `SESSION_TTL_HOURS` | 否 | `168` | 会话有效期（小时） | 公开 |
-| `INVITE_CODE` | 是 | 无 | 注册邀请码，由部署方分发，不进入仓库 | **敏感** |
 | `RATE_LIMIT_WINDOW_SECONDS` | 否 | `3600` | 速率限制统计窗口（秒） | 公开 |
 | `RATE_LIMIT_MAX` | 否 | `20` | 窗口内同一来源摘要允许的请求数 | 公开 |
 | `LOGIN_FAIL_MAX` | 否 | `5` | 登录失败次数上限，超过后临时限制 | 公开 |
@@ -97,6 +96,9 @@ ADMIN_PASSWORD=<由部署方设置>
 | `PUBLIC_DIR` | 否 | `./server/public` | 前端构建产物目录 | 公开 |
 | `ADMIN_USERNAME` | 初始化时 | 无 | 初始管理员用户名，仅由一次性脚本读取 | **敏感** |
 | `ADMIN_PASSWORD` | 初始化时 | 无 | 初始管理员密码，仅由一次性脚本读取 | **敏感** |
+| `ADMIN_DISPLAY_NAME` | 初始化时 | 无 | 初始管理员显示名，可选；留空则用用户名 | 公开 |
+
+> 邀请码为「一人一码」：由管理员在管理界面生成、哈希入库、用完即失效或可撤销，**不再使用环境变量统一码**（旧 `INVITE_CODE` 已随 `M4-S5` 下线，请勿配置）。现行变量以 `.env.example` 与上表为准；注册校验见 `server/src/modules/invite/` 与 `auth.service.ts`。
 
 ### 4.1 启动校验
 
@@ -379,7 +381,7 @@ pg_dump "<DATABASE_URL>" > starpal-YYYYMMDD.dump
 | 检查项 | 判定 |
 | --- | --- |
 | 仓库无真实凭据、密钥、邀请码、口令明文 | 待检查 |
-| `SESSION_SECRET` 与 `INVITE_CODE` 为部署方设置的高熵值 | 待检查 |
+| `SESSION_SECRET` 为部署方设置的高熵值；邀请码由管理员在管理界面逐码生成（无统一码） | 待检查 |
 | 会话 Cookie 启用 `HttpOnly` / `SameSite` / 生产环境 `Secure` | 待检查 |
 | 图片不落盘，读取路由携带 `X-Content-Type-Options: nosniff` | 待检查 |
 | 上传三层大小限制与代理层一致 | 待检查 |
@@ -490,6 +492,8 @@ pg_dump "<DATABASE_URL>" > starpal-YYYYMMDD.dump
 
 > 适用前提：**无信用卡**。Vercel Hobby 免费层免卡、支持自定义域名、自动 HTTPS，外部数据库使用 Neon Free（见 §17.1 对 Neon 的说明）。替代被绑卡阻断的 Render 方案（§17）。
 
+> **历史记录时效说明**：§18 各节是对应里程碑当时的部署与验证存档（含提交号、部署号与当时的环境变量），其中多处出现的 `INVITE_CODE` 属当时口径——统一邀请码已于 `M4-S5` 下线，改为管理员在管理界面逐码生成。**现行配置一律以 §3 / §4 与 `.env.example` 为准**。历史原文保留不改写，避免把「当时做过什么」修成「现在应该怎样」；§18.9 描述当前实例配置，已按要求脱敏。
+
 ### 18.1 组件分工
 
 | 组件 | 服务 | 说明 |
@@ -591,13 +595,13 @@ pg_dump "<DATABASE_URL>" > starpal-YYYYMMDD.dump
 
 ### 18.9 实际部署实例信息（Vercel）
 
-本仓库在 Vercel 上的真实配置（供对照与排障）：
+本仓库在 Vercel 上的真实配置（供对照与排障）。仓库转为公开后，项目 ID / 团队 ID 等实例标识不再写入文档（虽非密钥，但公开后所有人可见，会缩小被定向探测的范围）；需要时以 Vercel 控制台为准，其余排障配置保留。
 
 | 项 | 值 |
 | --- | --- |
 | 项目名 | `starpal` |
-| 项目 ID | `prj_q2qC2UnY2xHvfC8Zsj47dhaBoiaM` |
-| 所属团队 | `team_QE8gosnNcsAnwgIhsMPNR365`（`xiaoyu-hue's projects`） |
+| 项目 ID | 见 Vercel 控制台 → Project Settings |
+| 所属团队 | 见 Vercel 控制台（个人账号下的团队） |
 | Git 连接 | GitHub `xiaoyu-hue/starpal`，生产分支 `main`，`createDeployments=enabled` |
 | 生产域名 | `https://starpal.vercel.app` |
 | 运行时 | Node `22.x` |
@@ -607,7 +611,7 @@ pg_dump "<DATABASE_URL>" > starpal-YYYYMMDD.dump
 | 函数打包 | `vercel.json` 的 `functions["api/index.ts"].includeFiles: "server/dist/**"` 将整个编译产物打入函数包 |
 | API 转发 | `rewrites: /api/:path* → /api`（置于 SPA 回退之前，覆盖任意层级 `/api/*/*`，见 §18.12） |
 | SPA 回退 | `rewrites: /((?!api).*) → /index.html`（排除裸 `/api`） |
-| 环境变量 | `DATABASE_URL` / `SESSION_SECRET` / `INVITE_CODE`（均加密，仅平台可见；修改后需重新部署才能生效） |
+| 环境变量 | `DATABASE_URL` / `SESSION_SECRET`（均加密，仅平台可见；修改后需重新部署才能生效）；邀请码不通过环境变量配置，见 §4 |
 | 自定义域名 | `starpal.cc.cd` 已在 Vercel 登记；DNSHE 需加 CNAME：`starpal` → `cname.vercel-dns.com` |
 | 部署触发 | 推送 `main` 自动构建（GitHub → Vercel webhook） |
 
