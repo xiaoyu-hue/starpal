@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
-import { Card } from '../../components/ui/Primitives'
+import { Card, Badge } from '../../components/ui/Primitives'
 import { StaticPage, StatusLine } from './StaticPage'
 import { useAnnouncementsQuery } from './meta.queries'
+import { ANNOUNCEMENT_KIND_META } from './announcement-kinds'
 
 /** 把 ISO 日期（2026-11-14）转成中文短日期；非法值原样返回，不因数据格式问题让整页崩掉。 */
 function formatDate(iso: string): string {
@@ -25,17 +26,36 @@ export function AnnouncementsPage() {
               <p className="text-sm leading-relaxed text-muted">暂无公告。</p>
             </Card>
           ) : (
-            data.items.map((item) => (
-              <Card key={`${item.date}-${item.title}`} className="space-y-2 p-5">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 className="text-base font-semibold text-ink">{item.title}</h2>
-                  <time dateTime={item.date} className="text-xs text-faint">
-                    {formatDate(item.date)}
-                  </time>
-                </div>
-                <p className="text-sm leading-relaxed text-muted">{item.body}</p>
-              </Card>
-            ))
+            data.items.map((item) => {
+              const kind = ANNOUNCEMENT_KIND_META[item.kind] ?? ANNOUNCEMENT_KIND_META.feature
+              return (
+                <Card key={`${item.date}-${item.title}`} className="space-y-3 p-5">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <Badge variant={kind.variant}>{kind.label}</Badge>
+                    <time dateTime={item.date} className="text-xs text-faint">
+                      {formatDate(item.date)}
+                    </time>
+                  </div>
+                  <h2 className="text-base font-semibold leading-snug text-ink">{item.title}</h2>
+                  <p className="text-sm leading-relaxed text-muted">{item.summary}</p>
+                  {item.changes.length > 0 && (
+                    <ul className="space-y-1.5 text-sm leading-relaxed text-muted">
+                      {item.changes.map((change) => (
+                        <li key={change} className="flex gap-2">
+                          <span aria-hidden="true" className="mt-2 h-1 w-1 shrink-0 rounded-full bg-faint" />
+                          <span>{change}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {item.action && (
+                    <p className="rounded-sm border-l-2 border-[var(--sp-accent)] bg-accent-soft px-3 py-2 text-xs leading-relaxed text-muted">
+                      需要你做的事：{item.action}
+                    </p>
+                  )}
+                </Card>
+              )
+            })
           )}
           <Card className="flex flex-wrap items-center justify-between gap-2 p-4">
             <span className="text-xs text-faint">公告随版本发布，旧公告保留在列表中</span>

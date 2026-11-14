@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Megaphone, TrendingUp, Bookmark } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Card } from '../../components/ui/Primitives'
+import { Badge, Card } from '../../components/ui/Primitives'
 import { useTopicsQuery } from '../../features/topics'
 import { useAnnouncementsQuery } from '../../features/_static/meta.queries'
+import { ANNOUNCEMENT_KIND_META } from '../../features/_static/announcement-kinds'
 
 function RailCard({
   title,
@@ -35,6 +36,10 @@ export function RightRail() {
   const topicsQuery = useTopicsQuery()
   const announcementsQuery = useAnnouncementsQuery()
   const latest = announcementsQuery.data?.items[0]
+  // 后端新增类型时老代码不该整块崩掉：取不到就退回「新增功能」，宁可标签不准也不要白屏。
+  const latestKind = latest
+    ? (ANNOUNCEMENT_KIND_META[latest.kind] ?? ANNOUNCEMENT_KIND_META.feature)
+    : null
   const hot = [...(topicsQuery.data ?? [])]
     .filter((topic) => topic.postCount > 0)
     .sort((a, b) => b.postCount - a.postCount)
@@ -82,8 +87,13 @@ export function RightRail() {
           <p className={PLACEHOLDER}>暂无公告</p>
         ) : (
           <>
+            {latestKind && (
+              <span className="mb-1 inline-flex">
+                <Badge variant={latestKind.variant}>{latestKind.label}</Badge>
+              </span>
+            )}
             <p className="text-sm font-medium text-ink">{latest.title}</p>
-            <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-muted">{latest.body}</p>
+            <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-muted">{latest.summary}</p>
             <Link
               to="/announcements"
               className="sp-transition mt-2 inline-block text-xs text-accent hover:underline"

@@ -12,7 +12,7 @@ export function Card({ className, children, ...rest }: HTMLAttributes<HTMLDivEle
 
 type BadgeProps = {
   children: ReactNode
-  variant?: 'topic' | 'accent' | 'neutral'
+  variant?: 'topic' | 'accent' | 'neutral' | 'warn'
   className?: string
 }
 
@@ -21,6 +21,8 @@ export function Badge({ children, variant = 'neutral', className }: BadgeProps) 
     topic: 'bg-accent-soft text-accent',
     accent: 'bg-accent text-on-accent',
     neutral: 'bg-subtle text-muted border border-line',
+    // 状态类标签需要比正文更醒目，但不该像新功能那样显眼：用危险色的浅底，不加边框。
+    warn: 'bg-[var(--sp-danger-soft)] text-[var(--sp-danger)]',
   }
   return (
     <span

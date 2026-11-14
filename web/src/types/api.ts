@@ -253,9 +253,22 @@ export type MetaAbout = {
   feedback: { heading: string; paragraphs: string[] }
 }
 
+/** 公告类型：决定页面上的标签样式，与后端 AnnouncementKind 一一对应。 */
+export type AnnouncementKind = 'feature' | 'fix' | 'rule' | 'status'
+
+/** 单条公告：摘要供右栏卡片，changes 为公告页明细，action 为需要用户配合的事项。 */
+export type Announcement = {
+  date: string
+  kind: AnnouncementKind
+  title: string
+  summary: string
+  changes: string[]
+  action?: string
+}
+
 /** 社区公告：与后端 ANNOUNCEMENTS 一致，条目按时间倒序。 */
 export type MetaAnnouncements = {
   version: string
   title: string
-  items: { date: string; title: string; body: string }[]
+  items: Announcement[]
 }
