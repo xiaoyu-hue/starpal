@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Bell,
   BookOpen,
+  Bookmark,
   Compass,
   FileText,
   Home,
@@ -31,17 +32,19 @@ export const DESTINATIONS: Record<string, Destination> = {
   topics: { key: 'topics', label: '话题', path: '/topics', icon: Layers3 },
   create: { key: 'create', label: '发布', path: '/posts/new', icon: PenLine },
   notifications: { key: 'notifications', label: '通知', path: '/notifications', icon: Bell },
+  bookmarks: { key: 'bookmarks', label: '我的收藏', path: '/bookmarks', icon: Bookmark },
   profile: { key: 'profile', label: '我的', path: '/settings', icon: UserRound },
   messages: { key: 'messages', label: '私信', path: '/messages', icon: MessageSquare },
 }
 
-/** 桌面顶栏与左栏展开的六个目的地。 */
+/** 桌面顶栏与左栏展开的七个目的地。 */
 export const DESKTOP_KEYS = [
   'home',
   'discover',
   'topics',
   'create',
   'notifications',
+  'bookmarks',
   'profile',
 ] as const
 

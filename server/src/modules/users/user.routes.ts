@@ -5,6 +5,7 @@ import { requireAuth } from '../../middleware/require-auth.js'
 import {
   deleteAccountController,
   eraseAccountController,
+  myBookmarksController,
   ownProfileController,
   publicPostsController,
   publicProfileController,
@@ -23,6 +24,7 @@ export const userRouter = Router()
 
 const meRouter = Router()
 meRouter.get('/', ownProfileController)
+meRouter.get('/bookmarks', myBookmarksController)
 meRouter.patch('/', updateProfileController)
 meRouter.delete('/', deleteAccountController)
 meRouter.post('/erase', eraseAccountController)

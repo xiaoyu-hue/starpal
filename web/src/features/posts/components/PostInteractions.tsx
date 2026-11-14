@@ -6,7 +6,8 @@ import { cn } from '../../../lib/cn'
 import { useAuth } from '../../auth'
 import type { PostDetail } from '../../../types/api'
 import { messageOf } from '../errors'
-import { useBookmarkMutation, useLikeMutation } from '../queries'
+import { useBookmarkMutation } from '../../bookmarks'
+import { useLikeMutation } from '../queries'
 
 /**
  * 点赞与收藏。

@@ -58,8 +58,9 @@ export async function uploadPostImage(postId: number, file: File): Promise<Uploa
 }
 
 /**
- * 点赞 / 收藏：`PUT` 建立、`DELETE` 撤销，均为幂等。
+ * 点赞：`PUT` 建立、`DELETE` 撤销，均为幂等。
  * 不提供「切换」接口：显式动作在重放时不会把「赞」翻成「取消赞」。
+ * 收藏开关见 features/bookmarks，开关语义与这里一致，集中一处避免两处行为分叉。
  */
 export async function setPostLike(
   id: number,
@@ -68,16 +69,6 @@ export async function setPostLike(
   const envelope = on
     ? await apiPut<{ liked: boolean; likeCount: number }>(`posts/${id}/like`)
     : await apiDelete<{ liked: boolean; likeCount: number }>(`posts/${id}/like`)
-  return envelope.data
-}
-
-export async function setPostBookmark(
-  id: number,
-  on: boolean,
-): Promise<{ bookmarked: boolean; bookmarkCount: number }> {
-  const envelope = on
-    ? await apiPut<{ bookmarked: boolean; bookmarkCount: number }>(`posts/${id}/bookmark`)
-    : await apiDelete<{ bookmarked: boolean; bookmarkCount: number }>(`posts/${id}/bookmark`)
   return envelope.data
 }
 

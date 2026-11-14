@@ -53,6 +53,9 @@ const InviteCodesPage = lazy(() =>
 const NotificationsPage = lazy(() =>
   import('../features/notifications/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
 )
+const BookmarksPage = lazy(() =>
+  import('../features/bookmarks/BookmarksPage').then((m) => ({ default: m.BookmarksPage })),
+)
 const AboutPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.AboutPage })),
 )
@@ -115,6 +118,14 @@ const routes: RouteObject[] = [
         ),
       },
       { path: 'notifications', element: <Suspended><NotificationsPage /></Suspended> },
+      {
+        path: 'bookmarks',
+        element: (
+          <RequireAuth>
+            <Suspended><BookmarksPage /></Suspended>
+          </RequireAuth>
+        ),
+      },
       { path: 'messages', element: placeholder('私信', 'M5', '留言式私信将在 M5 里程碑交付。') },
       {
         path: 'settings',

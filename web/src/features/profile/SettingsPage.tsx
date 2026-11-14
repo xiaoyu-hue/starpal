@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Check, KeyRound } from 'lucide-react'
+import { Bookmark, Check, KeyRound } from 'lucide-react'
 import { Avatar, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
@@ -44,6 +44,19 @@ export function SettingsPage() {
       <ProfileSection key={query.data.username} profile={query.data} onSaved={refresh} />
       <PasswordSection />
       <ThemeSection />
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-6">
+        <div>
+          <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
+            <Bookmark size={16} /> 我的收藏
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            收藏的帖子只有你自己能看到，随时可以取消。
+          </p>
+        </div>
+        <Link to="/bookmarks" className={buttonClass('secondary', 'sm')}>
+          查看收藏
+        </Link>
+      </Card>
       <AboutSection />
       {user?.role === 'admin' && (
         <Card className="space-y-3 p-6">

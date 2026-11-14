@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { feedKeys } from '../feed'
-import { profileKeys } from '../profile'
+import { feedKeys, postKeys } from '../../lib/query-keys'
 import type { PostDetail } from '../../types/api'
+import { profileKeys } from '../profile'
 import {
   createComment,
   createPost,
@@ -12,7 +12,6 @@ import {
   fetchComments,
   fetchPostDetail,
   fetchRelatedPosts,
-  setPostBookmark,
   setPostLike,
   updatePost,
   uploadPostImage,
@@ -20,13 +19,8 @@ import {
   type UpdatePostPayload,
 } from './api'
 
-/** 缓存键按域命名；详情与相关帖子共用帖子 id，保证过期时一起失效。 */
-export const postKeys = {
-  all: ['post'] as const,
-  detail: (id: number) => ['post', 'detail', id] as const,
-  related: (id: number) => ['post', 'related', id] as const,
-  comments: (id: number) => ['post', 'comments', id] as const,
-}
+/** 缓存键定义在 lib/query-keys；此处重新导出，保持 posts 公共出口路径不变。 */
+export { postKeys }
 
 export function usePostDetailQuery(id: number) {
   return useQuery({
@@ -119,10 +113,11 @@ export function useDeletePostImageMutation(postId: number) {
 }
 
 /**
- * 点赞 / 收藏：乐观更新详情缓存，失败回滚，成功以服务端返回的计数为准。
+ * 点赞：乐观更新详情缓存，失败回滚，成功以服务端返回的计数为准。
  *
  * 为什么用服务端计数而不是本地累加：并发下别人也在点赞，本地 +1 只是猜测。
  * 乐观更新只为让按钮立刻有反馈；服务端返回后立即校正，避免「显示 13 实际 12」。
+ * 收藏开关集中到 features/bookmarks（卡片与详情页共用一份实现），此处只保留点赞。
  */
 export function useLikeMutation(id: number) {
   const client = useQueryClient()
@@ -152,34 +147,6 @@ export function useLikeMutation(id: number) {
     onSettled: async () => {
       // 列表里的计数与热门排序都会变；只标记过期，返回列表时再取，不在详情页强行重排。
       await client.invalidateQueries({ queryKey: feedKeys.all })
-    },
-  })
-}
-
-export function useBookmarkMutation(id: number) {
-  const client = useQueryClient()
-  const key = postKeys.detail(id)
-  return useMutation({
-    mutationFn: (on: boolean) => setPostBookmark(id, on),
-    onMutate: async (on: boolean) => {
-      await client.cancelQueries({ queryKey: key })
-      const previous = client.getQueryData<PostDetail>(key)
-      if (previous) {
-        client.setQueryData<PostDetail>(key, {
-          ...previous,
-          isBookmarked: on,
-          bookmarkCount: Math.max(previous.bookmarkCount + (on ? 1 : -1), 0),
-        })
-      }
-      return { previous }
-    },
-    onError: (_error, _on, context) => {
-      if (context?.previous) client.setQueryData(key, context.previous)
-    },
-    onSuccess: (state) => {
-      client.setQueryData<PostDetail>(key, (prev) =>
-        prev ? { ...prev, isBookmarked: state.bookmarked, bookmarkCount: state.bookmarkCount } : prev,
-      )
     },
   })
 }

@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { KeyboardEvent, MouseEvent } from 'react'
+import { useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Bookmark, Heart, MessageCircle, Share2 } from 'lucide-react'
-import { Avatar, Badge, Card } from '../../../components/ui/Primitives'
 import { PostCover } from '../../../components/content/PostImages'
+import { Avatar, Badge, Card } from '../../../components/ui/Primitives'
+import { cn } from '../../../lib/cn'
 import type { FeedPost } from '../../../types/api'
+import { useAuth } from '../../auth'
+import { useBookmarkMutation } from '../../bookmarks'
 
 function formatTime(iso: string): string {
   const date = new Date(iso)
@@ -19,25 +22,42 @@ type PostCardProps = {
 
 /**
  * 帖子卡片：整卡可进入详情，标题为语义主锚点。
- * 计数来自服务端真实值；尚未接入的操作（收藏 / 分享）以禁用态呈现，
+ * 收藏是可用的实时开关（与详情页共用同一 mutation）；分享尚未开放，仍以禁用态呈现，
  * 不做「点了没反应」的假按钮。
  */
 export function PostCard({ post, position, total }: PostCardProps) {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const bookmark = useBookmarkMutation(post.id)
+  const [error, setError] = useState<string | null>(null)
   const href = `/posts/${post.id}`
 
-  // 卡内已有链接时不再重复导航，避免嵌套锚点与外部 onClick 相互抢事件。
+  // 卡内已有链接或按钮时不再重复导航，避免嵌套交互与整卡 onClick 相互抢事件。
   function handleClick(event: MouseEvent<HTMLDivElement>) {
-    if ((event.target as HTMLElement).closest('a')) return
+    if ((event.target as HTMLElement).closest('a, button')) return
     navigate(href)
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key !== 'Enter') return
-    // 焦点在内部链接时交给链接自己处理，避免一次按键跳两次。
-    if ((event.target as HTMLElement).closest('a')) return
+    // 焦点在内部链接或按钮时交给它自己处理，避免一次按键跳两次。
+    if ((event.target as HTMLElement).closest('a, button')) return
     event.preventDefault()
     navigate(href)
+  }
+
+  function toggleBookmark(event: MouseEvent<HTMLButtonElement>) {
+    // 整卡可点进详情：按钮必须止住冒泡，否则一次点击会同时收藏并跳走。
+    event.stopPropagation()
+    if (!user) {
+      navigate('/login')
+      return
+    }
+    setError(null)
+    bookmark.mutate(!post.isBookmarked, {
+      onError: (cause) =>
+        setError(cause instanceof Error ? cause.message : '操作失败，请稍后重试。'),
+    })
   }
 
   return (
@@ -86,13 +106,36 @@ export function PostCard({ post, position, total }: PostCardProps) {
         <span className="inline-flex items-center gap-1.5">
           <MessageCircle size={15} aria-hidden="true" /> {post.commentCount} 评论
         </span>
-        <span className="inline-flex items-center gap-1.5" aria-disabled="true" title="收藏功能将在 M4 接入">
-          <Bookmark size={15} aria-hidden="true" /> 收藏
-        </span>
-        <span className="inline-flex items-center gap-1.5" aria-disabled="true" title="分享功能将在后续里程碑接入">
+        <button
+          type="button"
+          onClick={toggleBookmark}
+          disabled={bookmark.isPending}
+          aria-pressed={post.isBookmarked}
+          aria-label={post.isBookmarked ? '取消收藏' : '收藏'}
+          title={post.isBookmarked ? '取消收藏' : '收藏'}
+          className={cn(
+            'sp-transition inline-flex items-center gap-1.5 rounded-sm px-1 py-0.5',
+            'hover:text-ink disabled:cursor-wait disabled:opacity-70',
+            post.isBookmarked ? 'text-accent' : 'text-muted',
+          )}
+        >
+          <Bookmark
+            size={15}
+            aria-hidden="true"
+            className={post.isBookmarked ? 'fill-current' : undefined}
+          />
+          {post.bookmarkCount} 收藏
+        </button>
+        <span className="inline-flex items-center gap-1.5" aria-disabled="true" title="分享功能尚未开放">
           <Share2 size={15} aria-hidden="true" /> 分享
         </span>
       </div>
+
+      {error ? (
+        <p className="mt-2 text-xs text-[var(--sp-danger)]" role="alert">
+          {error}
+        </p>
+      ) : null}
     </Card>
   )
 }

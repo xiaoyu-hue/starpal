@@ -6,10 +6,15 @@ import { ANNOUNCEMENT_ITEMS } from '../../src/config/docs/announcements.doc.js'
 
 /**
  * 关于页正文的合规与一致性不变量。
- * 把三条最容易漂移的口径钉在测试里：
+ * 把四条最容易漂移的口径钉在测试里：
  * ① 分离式许可三类必须写全；② 源码获取途径必须存在；
- * ③ 未完成能力清单必须与公告 status 条（面向用户的唯一真源）一致。
+ * ③ 未完成能力清单必须与公告 status 条（面向用户的唯一真源）一致；
+ * ④ 已交付能力不得再被写成未完成（收藏列表即最新一例）。
  */
+
+/** 当前对社区用户公示的未完成能力，公告 status 条与关于页自述必须逐条一致。 */
+const PENDING_GAPS = ['私信', '搜索', '举报与申诉入口'] as const
+
 describe('关于页许可与源码信息', () => {
   it('三类许可齐全，且各自写明适用对象与范围', () => {
     const licenses = ABOUT.licensing.items.map((item) => item.license)
@@ -33,13 +38,26 @@ describe('关于页许可与源码信息', () => {
 })
 
 describe('关于页未完成清单与公告真源一致', () => {
-  it('公告 status 条存在，且四项未完成能力逐条出现在关于页自述中', () => {
+  it('公告 status 条与关于页自述列出同样的未完成能力', () => {
     const status = ANNOUNCEMENT_ITEMS.find((item) => item.kind === 'status')
     assert.ok(status, '公告真源应含 status 条')
     const intro = ABOUT.intro.join('')
-    for (const gap of ['私信', '搜索', '收藏列表界面', '举报与申诉入口']) {
+    const changes = status.changes.join('')
+    for (const gap of PENDING_GAPS) {
       assert.ok(intro.includes(gap), `关于页自述缺少未完成项：${gap}`)
+      assert.ok(changes.includes(gap), `公告 status 缺少未完成项：${gap}`)
     }
+  })
+
+  it('收藏列表已交付：不再列为未完成，且写进已交付能力', () => {
+    const status = ANNOUNCEMENT_ITEMS.find((item) => item.kind === 'status')!
+    const intro = ABOUT.intro.join('')
+    assert.ok(!intro.includes('收藏列表界面'), '关于页仍把收藏列表界面列为未完成')
+    // 公告其它明细会写「已交付」的说明，故只校验「未完成：」那一行，避免把交付说明误判成缺口。
+    const pendingLine = status.changes.find((line) => line.startsWith('未完成：')) ?? ''
+    assert.ok(pendingLine.length > 0, '公告 status 缺少未完成清单行')
+    assert.ok(!pendingLine.includes('收藏列表'), '公告 status 的未完成清单仍含收藏列表')
+    assert.match(intro, /我的收藏列表.*已经可用/)
   })
 
   it('不再把已交付能力写成未完成', () => {

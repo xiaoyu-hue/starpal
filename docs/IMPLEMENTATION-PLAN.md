@@ -489,7 +489,7 @@ flowchart LR
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
 | `M4-S2-T1` | ✅ 点赞服务 | 写入 / 删除 `likes` 与更新计数在同一事务；重复请求不产生重复行 | `modules/interactions/` | `AC-07` 有记录，并发重复请求幂等 |
-| `M4-S2-T2` | ✅ 收藏服务 | 同上，作用于 `bookmarks`；幂等开关 + 计数事务 | `modules/interactions/` | 刷新后计数与数据库一致（`VR-M4-03`）。**仅有收藏开关与计数，无独立收藏列表接口 / 页面**；收藏列表界面属未完成项，见公告 status 条目 |
+| `M4-S2-T2` | ✅ 收藏服务 | 同上，作用于 `bookmarks`；幂等开关 + 计数事务 | `modules/interactions/` | 刷新后计数与数据库一致（`VR-M4-03`）。**仅有收藏开关与计数，无独立收藏列表接口 / 页面**；收藏列表界面属未完成项，见公告 status 条目（本行记录 M4-S2 当时状态；收藏列表已于 M4 收尾后第 1 步补齐，见 `VR-M4-12`） |
 | `M4-S2-T3` | ✅ 端点挂载 | `PUT` / `DELETE` 语义端点注册并挂载认证守卫 | `app.ts` | 未登录请求被拒 |
 | `M4-S2-T4` | ✅ 乐观更新 | 前端先更新、服务端校对、失败回滚并提示 | `web/src/features/posts/components/PostInteractions.tsx` | 断网场景计数回滚，不出现假计数；成功以服务端返回计数校正 |
 
@@ -550,6 +550,8 @@ flowchart LR
 | `VR-M4-10` | 自助改密真实浏览器与端到端行为（`M4-S6`） | 通过 | 本地真实 PostgreSQL + 真实 Express + 真实 HTTP，15 项断言全过：管理员生成邀请码 → 注册测试用户 → 双会话登录；未登录改密 `401 AUTH_REQUIRED`、旧密码错 `401 INVALID_CREDENTIALS`、新密码太短 `400 VALIDATION_FAILED`、正确改密 `200 {"changed":true}`；改密后当前会话 `/api/auth/me` 仍 `200`、其它会话 `401`；旧密码登录被拒、新密码登录成功；连续错误旧密码第 5 次触发 `429 RATE_LIMITED`。另 6 项 PGlite 集成测试覆盖哈希更新、只撤销其它会话、不影响他人会话、Argon2id 往返与损坏哈希容错（测试数 51→57）。前端 390 px 无头 Chromium：`/settings` 显示「修改密码」分区（当前 / 新 / 确认三次输入、提示、保存按钮），无横向溢出；真实提交后出现「密码已修改成功，其它设备需重新登录」，控制台 0 错误 |
 
 | `VR-M4-11` | 站内许可与源码入口（`M4` 收尾后的合规补充，非 `M4` 功能） | 通过 | `npm run verify` 全绿：`typecheck` / `build` / `check:size` / `lint`（0 违规、行数预算内）/ `test`（62 项全通过，含新增 `server/tests/unit/about-doc.test.ts` 5 项）。`/api/meta/about` 新增 `licensing` 字段（三类许可 + `sourceUrl` + `sourceNote`），`MetaAbout` 同步；「关于」页渲染许可卡片，页脚「源码」链接复用同一地址，不另写一份。断言覆盖：三类许可顺序与内容、源码地址为 https 且含索取兜底、文案不含「已公开 / 尚未公开 / 私有仓库」等会随仓库可见性漂移的表述、未完成四项与公告 `status` 真源一致、已交付能力不再被写成未完成。另用 Chromium 窄视口（实测 485×757，底部导航可见）+ 只读静态服务喂编译后的真实 `ABOUT` 常量验证 `/about`：许可卡片、三类许可名、仓库地址均渲染；页脚 8 个链接（7 个说明页 + 「源码」）、`sourceHref` 为 `https://github.com/xiaoyu-hue/starpal`；无过时文案；以**内容底边**判定，滚动到底时链接列表 / 许可标注的视口 y 为 629 / 661，底部导航顶边 692，均未被遮挡；无横向溢出（`scrollWidth == clientWidth == 485`） |
+
+| `VR-M4-12` | 我的收藏列表（`M4` 收尾后第 1 步，非 `M4` 功能） | 通过 | `npm run verify` 全绿：`typecheck` / `build` / `check:size`（222 个源文件全部在预算内）/ `lint`（硬规则 0 违规）/ `test`（68 项全通过，含新增 `server/tests/integration/bookmarks-list.test.ts` 5 项）。PGlite 真库断言：只返回本人且仍可见的收藏、按收藏时间倒序（同时间以 id 为第二键）、投影带出收藏时间与已注销作者占位署名、游标编解码往返后翻页不重不漏、他人收藏与空页。`GET /api/users/me/bookmarks` 挂在 `/me` 整组 `requireAuth` 下、只按 `principal.id` 查询；构建产物确认 `BookmarksPage` 独立分包、帖子页面仍独立分包。无头 Chromium 复核首页 / `/bookmarks` / `/settings` 三路由 `id="root"` 正常挂载、无 Uncaught JS 错误、未登录访问受保护路由落到登录页（静态预览无后端，接口错误态属预期）。**登录态下收藏页与卡片收藏按钮的完整交互 E2E 未执行**（需真实后端与登录态），如实标注为未验证 |
 
 **M4 交付物**：点赞 / 收藏 / 评论 API 与前端、计数事务、通知中心、一人一码邀请制、自助改密。
 

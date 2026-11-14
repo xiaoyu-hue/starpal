@@ -595,7 +595,7 @@ sequenceDiagram
 | PATCH | `/api/users/me` | 本人 | 更新显示名 / 头像 / 简介 / 可选资料可见性 |
 | DELETE | `/api/users/me` | 本人 | 软删除账号 |
 | POST | `/api/users/me/erase` | 本人 | 彻底擦除我的数据 |
-| GET | `/api/me/bookmarks` | 登录 | 收藏列表 |
+| GET | `/api/users/me/bookmarks` | 本人 | 我的收藏列表（按收藏时间倒序、键集游标分页，只返回当前登录者且仍可见的帖子） |
 
 **话题**
 

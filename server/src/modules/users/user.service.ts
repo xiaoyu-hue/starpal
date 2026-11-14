@@ -18,7 +18,7 @@ import {
   MBTI_VALUES,
   ZODIAC_VALUES,
 } from '../../config/constants.js'
-import { countPostsOf, listUserPosts } from '../posts/index.js'
+import { countPostsOf, listBookmarkedPosts, listUserPosts } from '../posts/index.js'
 import {
   eraseUser,
   findOwnProfileById,
@@ -175,4 +175,16 @@ export async function deleteOwnAccount(userId: string): Promise<void> {
 /** 彻底擦除本人数据：在软删除基础上清除可识别标识并记录擦除事件。 */
 export async function eraseOwnAccount(userId: string): Promise<void> {
   await eraseUser(userId)
+}
+
+/**
+ * 本人收藏列表：只查当前登录者的收藏，不接受任何 userId 参数，越权面在入口即收窄。
+ * 游标解码与公开帖子列表共用 parseCursor：非法游标按参数错误拒绝，不静默退回第一页。
+ */
+export async function getOwnBookmarks(
+  userId: string,
+  rawCursor?: unknown,
+): Promise<UserPostsPage> {
+  const cursor = parseCursor(rawCursor)
+  return listBookmarkedPosts(userId, cursor)
 }

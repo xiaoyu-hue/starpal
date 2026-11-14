@@ -5,6 +5,7 @@ import { encodeCursor } from '../../shared/pagination.js'
 import {
   countAuthorPosts,
   listAuthorPosts,
+  listBookmarkedPosts as listBookmarkedPostsRepo,
   listFeedPosts,
   listRelatedPosts,
 } from './post.feed.repository.js'
@@ -225,4 +226,29 @@ export async function listUserPosts(
 
 export async function countPostsOf(authorId: string): Promise<number> {
   return countAuthorPosts(authorId)
+}
+
+/**
+ * 当前用户收藏列表：按收藏时间倒序，仅返回仍可见的帖子。
+ * 收藏列表必然属于登录用户，viewerId 即 userId，复用同一批量补齐互动态的逻辑：
+ * 列表项 isBookmarked 会自然为 true，isLiked 按真实点赞补齐，不需特判。
+ */
+export async function listBookmarkedPosts(
+  userId: string,
+  cursor: { t: string; id: string } | null,
+  limit = FEED_PAGE_SIZE,
+): Promise<PostPage> {
+  const { rows, hasMore } = await listBookmarkedPostsRepo(userId, cursor, limit)
+  const last = rows[rows.length - 1]
+  const items = await attachViewerFlags(rows.map(toListItem), userId)
+  return {
+    items,
+    // 收藏查询必带 bookmarked_at；缺失时宁可不翻页，也不发出语义错误的游标
+    // （与 nextCursorOf 对 rankScore 的处理一致）。
+    nextCursor:
+      hasMore && last?.bookmarkedAt
+        ? encodeCursor({ t: last.bookmarkedAt, id: String(last.id) })
+        : null,
+    hasMore,
+  }
 }

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { PoolClient, QueryResultRow } from 'pg'
-import { pool } from '../../db/pool.js'
+import type { QueryResultRow } from 'pg'
 
 /**
  * 帖子查询投影与行映射：列表、详情、相关帖子共用同一投影，
@@ -78,6 +77,8 @@ export type PostRow = QueryResultRow & {
   images: { id: string; key: string; width: number; height: number }[]
   /** 仅 popular / recommended 的 CTE 查询会返回；latest 为 undefined。 */
   rank_score?: number
+  /** 仅收藏列表查询会返回（JOIN bookmarks 的 created_at）；其余列表为 undefined。 */
+  bookmarked_at?: Date
 }
 
 /** 作者已注销时统一替换为占位署名并隐去头像，与个人资料投影保持一致（ADR-010）。 */
@@ -109,6 +110,9 @@ export function mapRow(row: PostRow) {
       height: image.height,
     })),
     rankScore: row.rank_score,
+    // 收藏列表按「收藏时间」倒序分页，游标排序键取自 bookmarks.created_at，
+    // 而非帖子创建时间；该字段只在收藏查询里存在，不进入对外列表投影。
+    bookmarkedAt: row.bookmarked_at?.toISOString(),
     // 互动态由调用方按 viewer 批量补齐（见 interactions/flags.ts）；
     // 这里给出匿名默认值，避免每个调用点都要拼一份完整对象。
     isLiked: false,
@@ -119,12 +123,21 @@ export function mapRow(row: PostRow) {
 /** 落库记录：含内部主键（authorId / topicId），服务层据此判权限，对外投影时剔除。 */
 export type PostRecord = ReturnType<typeof mapRow>
 
+/**
+ * 查询执行器：以最小结构接口注入，使同一段列表 SQL 既能跑在连接池/事务连接上，
+ * 也能在测试的 PGlite 内存库里执行（与 interactions 的 Executor 同一思路），
+ * 避免「测试另写一份 SQL」的假验证。
+ */
+export type RowExecutor = {
+  query(sql: string, params: unknown[]): Promise<{ rows: PostRow[] }>
+}
+
 /** 统一执行入口：允许传入事务连接，使写入与读回在同一事务内完成。 */
 export async function queryRows(
-  executor: PoolClient | typeof pool,
+  executor: RowExecutor,
   sql: string,
   params: unknown[],
 ): Promise<PostRecord[]> {
-  const result = await executor.query<PostRow>(sql, params)
+  const result = await executor.query(sql, params)
   return result.rows.map(mapRow)
 }

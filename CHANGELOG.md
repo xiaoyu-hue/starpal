@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+### 新增（我的收藏列表）
+
+- 后端新增 `GET /api/users/me/bookmarks`：挂在 `/api/users/me` 整组 `requireAuth` 之下，只按登录者 `principal.id` 查询，不接受任何用户标识入参；按 `bookmarks.created_at` 倒序、以 `(收藏时间, 帖子 id)` 为键集游标分页；复用 `PROJECTION` / `VISIBLE` 统一可见性口径与 `attachViewerFlags` 补齐互动态。无需新迁移（`bookmarks` 表与 `bookmarks_user_idx` 已存在）。
+- `post.projection.ts` 的 `queryRows` 改为结构型 `RowExecutor` 注入，使同一段列表 SQL 可在 PGlite 内存真库验证（与 `interactions` 的 `Executor` 同一思路，避免「测试另写一份 SQL」的假验证）；投影新增可选 `bookmarkedAt`，仅用于生成收藏游标，不进入对外列表投影。
+- 前端新增 `web/src/features/bookmarks/`：`/bookmarks` 路由（`RequireAuth`）、收藏列表页（复用 `FeedView` 与无限滚动，空态引导回首页）、侧栏 / 移动抽屉 / 设置页三处入口；移动端四个底部 Tab 保持不变。
+- 信息流卡片的收藏占位改为真实开关，与详情页共用唯一一份 `useBookmarkMutation`：登录检查、阻止整卡跳转冒泡、乐观更新、失败回滚、服务端计数校正；取消收藏后收藏列表失效重取（列表按收藏时间排序，不本地猜插入位置）。分享仍为明确禁用占位。
+- 把 `feedKeys` / `postKeys` / `bookmarkKeys` 集中到 `web/src/lib/query-keys.ts`，各域 barrel 重新导出以保持现有导入路径不变；避免跨域写入引用 `posts` 重型 barrel 或形成循环依赖。构建产物确认 `BookmarksPage` 独立分包、帖子页面仍独立分包。
+- 验证：新增 `server/tests/integration/bookmarks-list.test.ts`（5 项 PGlite 真库：只返回本人且仍可见的收藏、按收藏时间倒序且同时间以 id 为第二键、投影带出收藏时间与已注销作者占位署名、游标编解码往返后翻页不重不漏、他人收藏与空页），更新 `server/tests/unit/about-doc.test.ts`（未完成清单三项 + 「收藏列表已交付」断言）。`npm run verify` 全绿（lint 硬规则 0 违规、行数预算内）；无头 Chromium 复核首页 / `/bookmarks` / `/settings` 三路由正常挂载、无 Uncaught JS 错误、未登录守卫生效。**登录态下收藏页与卡片收藏按钮的完整交互 E2E 未执行**（需真实后端与登录态），如实标注为未验证。
+
+### 更正（文档同步）
+
+- 社区公告 `status` 条、关于页自述、README 的未完成清单由四项改为三项（移除「收藏列表界面」），并把「我的收藏」补入可用能力；新增一条功能公告说明入口、可见范围与取消收藏后的表现。
+- `docs/ARCHITECTURE.md` 端点由旧的 `/api/me/bookmarks` 更正为实际实现的 `/api/users/me/bookmarks`（`/me` 整组统一登录校验）。
+- `privacy-rights.doc.ts`：删去「目前没有独立的收藏列表页」，改为「我的收藏」仅本人登录后可见；顺带修正同一文件「无法自助改密 / 不能删除自己帖子」的过时表述（两项能力早已交付）。
+
 ### 新增（站内许可与源码入口）
 
 - 「关于」页新增「许可与源码」区块（`server/src/config/docs/about.doc.ts`）：按分离式授权写清源代码 AGPL-3.0-or-later、文档与文字 CC BY-NC-SA 4.0、名称与标识商标保留三类适用范围，并给出源码仓库地址与 AGPL-3.0 第 13 条的源码索取途径；`/api/meta/about` 响应与 `MetaAbout` 类型同步扩展，前端 `AboutPage.tsx` 渲染。

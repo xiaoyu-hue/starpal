@@ -5,6 +5,7 @@ import { clearSessionCookie } from '../../modules/auth/index.js'
 import {
   deleteOwnAccount,
   eraseOwnAccount,
+  getOwnBookmarks,
   getOwnProfile,
   getPublicPosts,
   getPublicProfile,
@@ -94,6 +95,21 @@ export async function eraseAccountController(
     await eraseOwnAccount(req.principal!.id)
     clearSessionCookie(req, res)
     sendData(res, { erased: true })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/** 本人收藏列表：登录校验由 /me 路由组统一承担，这里只取 principal.id，不接受用户标识入参。 */
+export async function myBookmarksController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const page = await getOwnBookmarks(req.principal!.id, req.query.cursor)
+    // 与 /api/posts、/:username/posts 同构：data 为列表，meta 承载游标，前端共用解包逻辑。
+    sendData(res, page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore })
   } catch (error) {
     next(error)
   }

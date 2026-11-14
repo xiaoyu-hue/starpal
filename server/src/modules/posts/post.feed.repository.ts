@@ -16,6 +16,7 @@ import {
   VISIBLE,
   queryRows,
   type PostRecord,
+  type RowExecutor,
 } from './post.projection.js'
 
 /**
@@ -167,4 +168,32 @@ export async function countAuthorPosts(authorId: string): Promise<number> {
     [authorId],
   )
   return result.rows[0]?.n ?? 0
+}
+
+/**
+ * 当前用户收藏列表：按「收藏时间」倒序（不是帖子创建时间）。
+ *
+ * JOIN bookmarks 后每个 (user, post) 至多一行（主键约束），不会放大结果集；
+ * 可见性沿用 VISIBLE：帖子被删除/移除、话题归档或作者停用后，不再出现在收藏里。
+ * 游标以 (b.created_at, p.id) 为键集，与 ORDER BY 严格对应，避免翻页跳项。
+ * 可注入 executor，使同一段 SQL 能在 PGlite 内存库里验证，而非测试另写一份。
+ */
+export async function listBookmarkedPosts(
+  userId: string,
+  cursor: { t: string; id: string } | null,
+  limit: number,
+  executor: RowExecutor = pool,
+): Promise<ListResult> {
+  const rows = await queryRows(
+    executor,
+    `SELECT ${PROJECTION}, b.created_at AS bookmarked_at ${FROM_JOINS}
+      JOIN bookmarks b ON b.post_id = p.id AND b.user_id = $1
+      WHERE ${VISIBLE}
+        AND ($2::timestamptz IS NULL OR (b.created_at, p.id) < ($2::timestamptz, $3::bigint))
+      ORDER BY b.created_at DESC, p.id DESC
+      LIMIT $4`,
+    [userId, cursor?.t ?? null, cursor?.id ?? null, limit + 1],
+  )
+  const hasMore = rows.length > limit
+  return { rows: rows.slice(0, limit), hasMore }
 }
