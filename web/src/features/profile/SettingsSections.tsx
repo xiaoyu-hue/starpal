@@ -7,7 +7,8 @@ import { useTheme } from '../../hooks/useTheme'
 import { useAuth } from '../auth'
 import { deleteOwnAccount, eraseOwnAccount } from './api'
 
-const APP_VERSION = '0.1.0'
+/** 版本号由构建注入（`web/vite.config.ts` → 包版本），此处不写死。 */
+const APP_VERSION = __APP_VERSION__
 
 /** 主题选择：浅色 / 深色 / 跟随系统，选择保存在本机并刷新保留。 */
 export function ThemeSection() {

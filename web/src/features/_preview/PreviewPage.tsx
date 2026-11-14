@@ -31,7 +31,7 @@ export function PreviewPage() {
             <StarpalWordmark compact />
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden text-xs text-faint sm:inline">设计系统 · v0.1.0</span>
+            <span className="hidden text-xs text-faint sm:inline">设计系统预览</span>
             <Button
               variant="secondary"
               size="sm"

@@ -9,6 +9,7 @@
  *   R2 设计令牌字面量：web/src 下不得硬编码颜色字面量（#hex / rgb() / hsl()），
  *                    允许清单：tailwind.config.ts、styles/tokens.css、lib/theme.ts。
  *   R3 导入扩展名一致性：server 相对导入必须以 .js 结尾；web 相对导入不得带扩展名。
+ *   R4 版本号一致性：根 / web / server 三个 package.json 与 server 的 APP_VERSION 必须相同。
  *
  * 软规则（仅告警，不失败）：
  *   W1 导入排序：外部包 import 须先于相对 import，且组内按字典序。
@@ -153,6 +154,32 @@ for (const base of SCAN) {
     }
   }
 }
+
+/** R4 版本号一致性：四处版本号必须同源，避免界面、健康检查与包声明各说各话。 */
+function checkVersions() {
+  const pkgFiles = ['package.json', 'web/package.json', 'server/package.json']
+  const pkgVersions = pkgFiles.map((f) => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(ROOT, f), 'utf8')).version ?? null
+    } catch {
+      return null
+    }
+  })
+  let backend = null
+  try {
+    const src = fs.readFileSync(path.join(ROOT, 'server/src/config/constants.ts'), 'utf8')
+    backend = src.match(/APP_VERSION\s*=\s*'([^']+)'/)?.[1] ?? null
+  } catch {
+    backend = null
+  }
+  const all = [...pkgVersions, backend]
+  if (all.some((v) => !v) || new Set(all).size !== 1) {
+    const detail = [...pkgFiles.map((f, i) => `${f}=${pkgVersions[i] ?? '缺失'}`), `APP_VERSION=${backend ?? '缺失'}`]
+    errors.push(`[R4] 版本号不一致：${detail.join('，')}`)
+  }
+}
+
+checkVersions()
 
 let ok = true
 if (errors.length) {
