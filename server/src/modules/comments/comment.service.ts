@@ -23,7 +23,7 @@ import type { CommentQuery, CreateCommentInput } from './comment.schema.js'
 
 const poolExecutor: Executor = { query: (sql, params) => pool.query(sql, params) }
 
-function toItem(row: CommentRow, viewer: Viewer): CommentItem {
+export function toItem(row: CommentRow, viewer: Viewer): CommentItem {
   const isAuthor = viewer !== null && String(row.author_id) === viewer.id
   const erased = row.author_status === 'deleted'
   return {
@@ -34,6 +34,7 @@ function toItem(row: CommentRow, viewer: Viewer): CommentItem {
       username: row.username,
       displayName: erased ? '已注销用户' : row.display_name,
       avatarUrl: erased ? null : row.avatar_url,
+      titles: erased ? [] : row.author_titles ?? [],
     },
     createdAt: row.created_at.toISOString(),
     isAuthor,

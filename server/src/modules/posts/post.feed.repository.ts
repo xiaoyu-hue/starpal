@@ -158,8 +158,11 @@ export async function listAuthorPosts(
 }
 
 /** 作者已发布帖子计数：与列表同一过滤条件，避免「显示 3 条却写 5 篇」。 */
-export async function countAuthorPosts(authorId: string): Promise<number> {
-  const result = await pool.query<{ n: number }>(
+export async function countAuthorPosts(
+  authorId: string,
+  executor: { query(sql: string, params: unknown[]): Promise<{ rows: Record<string, unknown>[] }> } = pool,
+): Promise<number> {
+  const result = await executor.query(
     `SELECT count(*)::int AS n
        FROM posts p
        JOIN topics t ON t.id = p.topic_id
@@ -167,7 +170,7 @@ export async function countAuthorPosts(authorId: string): Promise<number> {
       WHERE ${VISIBLE} AND p.author_id = $1`,
     [authorId],
   )
-  return result.rows[0]?.n ?? 0
+  return (result.rows[0] as { n: number } | undefined)?.n ?? 0
 }
 
 /**

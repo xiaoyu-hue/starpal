@@ -31,12 +31,14 @@ export type CommentRow = {
   username: string
   display_name: string
   author_status: string
+  author_titles: string[]
   avatar_url: string | null
 }
 
 const COMMENT_SELECT = `
   SELECT c.id, c.post_id, c.body, c.status, c.created_at, c.author_id,
-         u.username, u.display_name, u.status AS author_status, up.avatar_url
+         u.username, u.display_name, u.status AS author_status, u.titles AS author_titles,
+         up.avatar_url
     FROM comments c
     JOIN users u ON u.id = c.author_id
     LEFT JOIN user_profiles up ON up.user_id = u.id

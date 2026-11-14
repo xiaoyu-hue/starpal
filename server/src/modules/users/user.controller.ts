@@ -11,6 +11,7 @@ import {
   getPublicPosts,
   getPublicProfile,
   updateOwnProfile,
+  updateOwnTitles,
 } from './user.service.js'
 
 /** 个人资料控制器：参数解析 → 服务层 → 统一包络。 */
@@ -66,6 +67,19 @@ export async function updateProfileController(
 ): Promise<void> {
   try {
     const profile = await updateOwnProfile(req.principal!.id, req.body)
+    sendData(res, { profile })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateTitlesController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const profile = await updateOwnTitles(req.principal!.id, req.principal!.role, req.body)
     sendData(res, { profile })
   } catch (error) {
     next(error)

@@ -16,7 +16,10 @@ import {
   DISPLAY_NAME_MAX,
   DISPLAY_NAME_MIN,
   MBTI_VALUES,
+  ROLE_ADMIN,
+  TITLE_IDS,
   ZODIAC_VALUES,
+  type TitleId,
 } from '../../config/constants.js'
 import { countPostsOf, listBookmarkedPosts, listLikedPosts, listUserPosts } from '../posts/index.js'
 import {
@@ -26,6 +29,8 @@ import {
   softDeleteUser,
   type ProfileUpdateInput,
   updateProfile,
+  updateTitles,
+  type Executor,
 } from './user.repository.js'
 import type { OwnProfile, PublicProfile, UserPostsPage } from './user.types.js'
 
@@ -35,8 +40,11 @@ import type { OwnProfile, PublicProfile, UserPostsPage } from './user.types.js'
  * 公开投影：不返回密码哈希、角色、会话、网络地址等任何内部字段。
  * 已注销账户返回去标识化的「已注销用户」投影；被停用账户按不存在处理。
  */
-export async function getPublicProfile(username: string): Promise<PublicProfile> {
-  const row = await findPublicProfileByUsername(username)
+export async function getPublicProfile(
+  username: string,
+  executor?: Executor,
+): Promise<PublicProfile> {
+  const row = await findPublicProfileByUsername(username, executor)
   if (!row) throw new DomainError('NOT_FOUND', '用户不存在')
   const isDeleted = row.status === 'deleted'
   const showOptional = row.show_optional && !isDeleted
@@ -47,15 +55,20 @@ export async function getPublicProfile(username: string): Promise<PublicProfile>
     biography: isDeleted ? null : row.biography,
     createdAt: row.created_at.toISOString(),
     postCount: await countPostsOf(row.id),
+    titles: isDeleted ? [] : row.titles,
     optional: showOptional
       ? { zodiac: row.zodiac, mbti: row.mbti, ageBand: row.age_band }
       : null,
   }
 }
 
+
 /** 本人视角资料读取（含可选字段真实值与 showOptional 开关）。 */
-export async function getOwnProfile(userId: string): Promise<OwnProfile> {
-  const row = await findOwnProfileById(userId)
+export async function getOwnProfile(
+  userId: string,
+  executor?: Executor,
+): Promise<OwnProfile> {
+  const row = await findOwnProfileById(userId, executor)
   if (!row) throw new DomainError('NOT_FOUND', '用户不存在')
   return {
     username: row.username,
@@ -63,7 +76,8 @@ export async function getOwnProfile(userId: string): Promise<OwnProfile> {
     avatarUrl: row.avatar_url,
     biography: row.biography,
     createdAt: row.created_at.toISOString(),
-    postCount: await countPostsOf(row.id),
+    postCount: await countPostsOf(row.id, executor),
+    titles: row.titles,
     showOptional: row.show_optional,
     zodiac: row.zodiac,
     mbti: row.mbti,
@@ -110,6 +124,7 @@ function parseCursor(raw: unknown): { t: string; id: string } | null {
 export async function updateOwnProfile(
   userId: string,
   raw: unknown,
+  executor?: Executor,
 ): Promise<OwnProfile> {
   const body = requireObject(raw)
   const input: ProfileUpdateInput = {}
@@ -159,7 +174,59 @@ export async function updateOwnProfile(
     avatarUrl: row.avatar_url,
     biography: row.biography,
     createdAt: row.created_at.toISOString(),
-    postCount: await countPostsOf(row.id),
+    postCount: await countPostsOf(row.id, executor),
+    titles: row.titles,
+    showOptional: row.show_optional,
+    zodiac: row.zodiac,
+    mbti: row.mbti,
+    ageBand: row.age_band,
+  }
+}
+
+/**
+ * 头衔更新（M5.5-S1）：仅管理员可对自己的账号设置 / 清除头衔，其他人只读。
+ * 取值须在预设目录内（012 迁移 CHECK 约束二次兜底），重复或顺序无关。
+ */
+export async function updateOwnTitles(
+  userId: string,
+  role: string,
+  raw: unknown,
+  executor?: Executor,
+): Promise<OwnProfile> {
+  if (role !== ROLE_ADMIN) {
+    throw new DomainError('FORBIDDEN', '只有管理员可以设置头衔')
+  }
+  const body = requireObject(raw)
+  if (!('titles' in body)) {
+    throw new DomainError('VALIDATION_FAILED', '请求体缺少 titles 字段', [
+      { field: 'titles', constraint: '必须为头衔 id 数组' },
+    ])
+  }
+  const rawTitles = body.titles
+  if (!Array.isArray(rawTitles)) {
+    throw new DomainError('VALIDATION_FAILED', 'titles 必须为数组', [
+      { field: 'titles', constraint: `取值须为 ${TITLE_IDS.join(' | ')} 的数组` },
+    ])
+  }
+  const seen = new Set<TitleId>()
+  const titles: TitleId[] = []
+  for (const item of rawTitles) {
+    const value = requireEnum(item, 'titles[]', TITLE_IDS)
+    if (!seen.has(value)) {
+      seen.add(value)
+      titles.push(value)
+    }
+  }
+
+  const row = await updateTitles(userId, titles, executor)
+  return {
+    username: row.username,
+    displayName: row.display_name,
+    avatarUrl: row.avatar_url,
+    biography: row.biography,
+    createdAt: row.created_at.toISOString(),
+    postCount: await countPostsOf(row.id, executor),
+    titles: row.titles,
     showOptional: row.show_optional,
     zodiac: row.zodiac,
     mbti: row.mbti,

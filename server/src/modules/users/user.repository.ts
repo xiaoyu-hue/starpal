@@ -3,6 +3,11 @@ import { randomBytes } from 'node:crypto'
 import type { PoolClient } from 'pg'
 import { pool, withTransaction } from '../../db/pool.js'
 
+/** 最小执行器接口：使同一段投影 / 写入 SQL 既能跑在连接池，也能在 PGlite 内存库直测。 */
+export type Executor = {
+  query(sql: string, params: unknown[]): Promise<{ rows: Record<string, unknown>[] }>
+}
+
 /** 个人资料数据访问。全部参数化查询；可选资料字段白名单构建，禁止拼接用户输入。 */
 
 export type ProfileRow = {
@@ -16,6 +21,7 @@ export type ProfileRow = {
   mbti: string | null
   age_band: string | null
   show_optional: boolean
+  titles: string[]
   created_at: Date
 }
 
@@ -26,29 +32,33 @@ export type ProfileRow = {
  */
 export async function findPublicProfileByUsername(
   username: string,
+  executor: Executor = pool,
 ): Promise<ProfileRow | null> {
-  const result = await pool.query<ProfileRow>(
+  const result = await executor.query(
     `SELECT u.id, u.username, u.display_name, u.status, p.avatar_url, p.biography,
-            p.zodiac, p.mbti, p.age_band, p.show_optional, u.created_at
+            p.zodiac, p.mbti, p.age_band, p.show_optional, u.titles, u.created_at
        FROM users u
        LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE u.username = $1 AND u.status <> 'suspended'`,
     [username],
   )
-  return result.rows[0] ?? null
+  return (result.rows[0] as ProfileRow) ?? null
 }
 
 /** 本人视角资料：含可选字段（不论 show_optional），用于设置页回填。 */
-export async function findOwnProfileById(userId: string): Promise<ProfileRow | null> {
-  const result = await pool.query<ProfileRow>(
+export async function findOwnProfileById(
+  userId: string,
+  executor: Executor = pool,
+): Promise<ProfileRow | null> {
+  const result = await executor.query(
     `SELECT u.id, u.username, u.display_name, u.status, p.avatar_url, p.biography,
-            p.zodiac, p.mbti, p.age_band, p.show_optional, u.created_at
+            p.zodiac, p.mbti, p.age_band, p.show_optional, u.titles, u.created_at
        FROM users u
        LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE u.id = $1 AND u.status <> 'deleted'`,
     [userId],
   )
-  return result.rows[0] ?? null
+  return (result.rows[0] as ProfileRow) ?? null
 }
 
 /** 资料更新：显示名落在 users 表，展示字段落在 user_profiles 表，同一事务内完成。 */
@@ -119,6 +129,38 @@ const KEY_TO_COLUMN: Record<string, string> = {
   mbti: 'mbti',
   ageBand: 'age_band',
   showOptional: 'show_optional',
+}
+
+/**
+ * 头衔更新：仅改动 users.titles（预设目录白名单由 012 迁移的 CHECK 约束兜底），
+ * 在事务内完成并回读整行，供服务层构建 OwnProfile。调用方须先校验角色与取值。
+ */
+export async function updateTitles(
+  userId: string,
+  titles: string[],
+  executor?: Executor,
+): Promise<ProfileRow> {
+  const SELECT =
+    `SELECT u.id, u.username, u.display_name, u.status, p.avatar_url, p.biography,
+            p.zodiac, p.mbti, p.age_band, p.show_optional, u.titles, u.created_at
+       FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id
+      WHERE u.id = $1`
+  if (executor) {
+    await executor.query(
+      'UPDATE users SET titles = $1, updated_at = now() WHERE id = $2',
+      [titles, userId],
+    )
+    const row = await executor.query(SELECT, [userId])
+    return row.rows[0] as ProfileRow
+  }
+  return withTransaction(async (client: PoolClient) => {
+    await client.query('UPDATE users SET titles = $1, updated_at = now() WHERE id = $2', [
+      titles,
+      userId,
+    ])
+    const row = await client.query<ProfileRow>(SELECT, [userId])
+    return row.rows[0]!
+  })
 }
 
 /** 吊销某用户的全部服务端会话（登出、删除、擦除时调用）。 */

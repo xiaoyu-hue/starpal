@@ -2,6 +2,8 @@
 import { Router } from 'express'
 import { optionalAuth } from '../../middleware/optional-auth.js'
 import { requireAuth } from '../../middleware/require-auth.js'
+import { requireRole } from '../../middleware/require-role.js'
+import { ROLE_ADMIN } from '../../config/constants.js'
 import {
   deleteAccountController,
   eraseAccountController,
@@ -11,6 +13,7 @@ import {
   publicPostsController,
   publicProfileController,
   updateProfileController,
+  updateTitlesController,
 } from './user.controller.js'
 
 /**
@@ -28,6 +31,7 @@ meRouter.get('/', ownProfileController)
 meRouter.get('/bookmarks', myBookmarksController)
 meRouter.get('/likes', myLikesController)
 meRouter.patch('/', updateProfileController)
+meRouter.patch('/titles', requireRole(ROLE_ADMIN), updateTitlesController)
 meRouter.delete('/', deleteAccountController)
 meRouter.post('/erase', eraseAccountController)
 

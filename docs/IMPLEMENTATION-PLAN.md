@@ -573,7 +573,7 @@ flowchart LR
 
 **前置条件**：`M4` 完成。
 
-> **迁移编号口径（M5 / M5.5 / M6 通用）**：`server/src/db/migrations/` 的顺序编号以**目录实际占用**为准。`M4` 收尾时已用到 `009_invite_codes.sql`，其后「我的点赞」列表占用 `010_likes_user_idx.sql`，「举报 + 申诉最小闭环」又占用 `011_reports.sql`，因此 `M5` / `M5.5` / `M6` 的新迁移一律从下一个可用序号（现为 `012`）起顺编，且只增不改已应用的历史迁移。`M5.5-S1`（头衔列）将占用 `012`，其后 `M5` / `M6` 顺延。下表文件名统一用 `NNN_` 占位前缀（`NNN` = 开工时目录里的下一个可用序号，现为 `012`），不再预填具体编号——早期计划中的 `005` / `006` / `007` / `008` 已被 M1–M4 实际占用，照抄会导致文件覆盖或迁移账本冲突。
+> **迁移编号口径（M5 / M5.5 / M6 通用）**：`server/src/db/migrations/` 的顺序编号以**目录实际占用**为准。`M4` 收尾时已用到 `009_invite_codes.sql`，其后「我的点赞」列表占用 `010_likes_user_idx.sql`，「举报 + 申诉最小闭环」又占用 `011_reports.sql`，因此 `M5` / `M5.5` / `M6` 的新迁移一律从下一个可用序号（现为 `012`）起顺编，且只增不改已应用的历史迁移。`M5.5-S1`（头衔列）已占用 `012_user_titles.sql`（见 `VR-M5.5-01`）。下表文件名统一用 `NNN_` 占位前缀（`NNN` = 开工时目录里的下一个可用序号，现为 `013`），不再预填具体编号——早期计划中的 `005` / `006` / `007` / `008` 已被 M1–M4 实际占用，照抄会导致文件覆盖或迁移账本冲突。
 
 #### `M5-S1` 私信（留言式）
 
@@ -628,13 +628,29 @@ flowchart LR
 > - **签到 / 积分参考**：`IlluminateApp`（基础 10 分/日 + 连签倍率 + 周五加成 + 随机掉落）、`daily-checkin`（24 小时冷却、连签奖励、防重复）、`Motixion`（按行为自动算分）。
 > - **设计哲学**（theopensourceway 指南 / GitHub gamification 研究 / community-building SKILL）：避免显性排行榜与过度竞争；积分 / 头衔应奖励真实参与；「头衔很廉价，真正的信任与权限才是阶梯」。对小型亲密社区，轻量、含蓄、非竞争性更合适——首交付物只做头衔预览，不引入积分榜。
 
-#### `M5.5-S1` 站长账号头衔预览（首交付物）
+#### `M5.5-S1` 站长账号头衔预览（首交付物） ✅ 已完成（2026-11-15）
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M5.5-S1-T1` | 头衔数据模型 | 在 `users` 表增 `title` 列（或 `user_titles` 表 + 唯一约束），存站长授权头衔文本 | `migrations/012_*.sql` | 迁移可重跑、不破坏现有列 |
-| `M5.5-S1-T2` | 头衔读写 API | 仅站长（`ROLE_ADMIN`）可对自己账号设置 / 清除头衔；其他人只读 | `modules/users` 或 `modules/titles` | 非站长改他人头衔被拒（`FORBIDDEN`） |
-| `M5.5-S1-T3` | 预览前端 | 设置页 / 个人页展示头衔，站长可见「预览」态与空态 | `web/src/features/profile` 或 `titles` | 头衔渲染；无头衔时明确空态，不显示占位伪控件 |
+| `M5.5-S1-T1` | 头衔数据模型 | 在 `users` 表增 `titles TEXT[]` 列（非单 `title` 列——支持多头衔并存），CHECK 约束钉死只允许 `community_leader` / `founder` / `admin` 三种枚举、并以 `UPDATE` 给现有站长账号回填三种头衔 | `migrations/012_user_titles.sql` | 迁移可重跑（幂等 `ADD COLUMN ... DEFAULT`）；非法枚举被约束拦截 |
+| `M5.5-S1-T2` | 头衔读写 API | `PATCH /api/users/me/titles` 经 `requireRole(ROLE_ADMIN)` 守卫，仅站长可对自己账号设置 / 清除头衔；非站长返回 `FORBIDDEN`，非法枚举 / 非数组返回 `VALIDATION_FAILED`，服务层 `Set` 去重并保持稳定顺序 | `modules/users`（repository / service / controller / routes） | 见 `VR-M5.5-01` |
+| `M5.5-S1-T3` | 预览前端 | 设置页（仅 `role === 'admin'` 渲染 `TitlesSection` 可勾选开关）、个人页署名、帖子 / 评论署名三处展示 `TitleBadges`；无头衔时不渲染、`feed`/`posts`/`profile` 三特性统一经 `features/users` 公共出口引用，满足 lint R1 边界 | `web/src/features/profile`、`web/src/features/users/TitleBadges.tsx` | 见 `VR-M5.5-01` |
+
+> **首版头衔配色（按用户意图，已落设计令牌 `tokens.css`，亮 / 暗双主题）**：
+> - 社区长 `community_leader`：金色 `#b8860b` / 暗 `#d9a441`——代表权力；
+> - 创始人 `founder`：紫色 `#5b57d6` / 暗 `#918df2`——项目品牌色；
+> - 管理员 `admin`：青色（teal）`#0d9488` / 暗 `#2dd4bf`——代表运维操作。
+>
+> **刻意不做的部分**（讲清取舍，非遗漏）：首版只做「站长自定义开空头衔」与「署名展示」，不做经验 / 等级 / 签到（`M5.5-S2` / `M5.5-S3`），不做任何基于头衔的权限提升（头衔纯展示，权限仍只由 `role` 决定），不做头衔排行榜。这一版解决的是「社区里有几个特殊身份的人能被一眼认出」，不是「成长体系」。
+
+##### `VR-M5.5-01` · M5.5-S1 验证记录（通过）
+
+- **环境**：本地 `node:test` + PGlite 内存真库（跑全部 `001`–`012` 迁移），`npm run verify` 全链路。
+- **真实命令与输出**：
+  - 新增 `server/tests/integration/titles.test.ts`，9 项断言覆盖：迁移 `012` CHECK 约束拒非法枚举 / 存合法数组；仅 `ROLE_ADMIN` 可写（非站长 `FORBIDDEN`）；非数组 / 非法 id 返回 `VALIDATION_FAILED`；服务层 `Set` 去重且顺序稳定；`getOwnProfile` / `getPublicProfile` 投影含 `titles`；帖子 / 评论作者 `titles` 透传、被擦除作者降级为 `[]`。
+  - `npm run verify`：`typecheck` / `build`（2327 模块、`012` 迁移已随构建拷贝）/ `check:size`（245 文件在预算内）/ `lint`（硬规则 **0** 违规）/ `test`（**99** 项通过、**0** 失败）全绿。
+- **断言对照**：服务层对 `titles` 做 `Set` 去重，repository 层不过滤——测试通过服务层 `updateOwnTitles(..., ex)` 验证去重，避免「测试另写一份 SQL」的假验证。
+- **真实局限（如实标注）**：头衔展示依赖真实登录态下的个人页 / 信息流 / 评论渲染，无头浏览器静态路由挂载与单测已覆盖数据层与组件渲染，但**登录态下「设置页勾选 → 署名实时出现」的完整交互 E2E 未执行**，需真实后端 + 登录态复核。
 
 #### `M5.5-S2` 经验与等级（后续增量）
 
@@ -846,7 +862,7 @@ flowchart LR
 | 类别 | 内容 | 来源里程碑 |
 | --- | --- | --- |
 | 完整源码 | `web/` 前端、`server/` 后端、`scripts/` 脚本 | `M1`—`M6` |
-| 数据库 schema 与迁移 | `migrations/001…011`（截至 M4 为 `001…009`，其后补 `010_likes_user_idx.sql`、`011_reports.sql`）、`seeds/`、`schema_migrations` | `M1`—`M6` |
+| 数据库 schema 与迁移 | `migrations/001…012`（截至 M4 为 `001…009`，其后补 `010_likes_user_idx.sql`、`011_reports.sql`、`012_user_titles.sql`）、`seeds/`、`schema_migrations` | `M1`—`M6` |
 | 环境变量文档 | 变量表、示例占位、安全说明 | `M7` |
 | 启动说明 | 开发 / 构建 / 单进程启动 | `M7` |
 | PostgreSQL 配置说明 | 实例准备、迁移、备份与恢复 | `M7` |

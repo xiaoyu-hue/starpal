@@ -4,6 +4,7 @@ import { Avatar, Badge } from '../../../components/ui/Primitives'
 import { Button } from '../../../components/ui/Button'
 import { Modal } from '../../../components/ui/Dialog'
 import { ReportButton } from '../../reports'
+import { TitleBadges } from '../../users'
 import type { CommentItem } from '../../../types/api'
 
 function formatTime(iso: string): string {
@@ -33,6 +34,7 @@ export function CommentEntry({ comment, removing, onRemove }: Props) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-ink">{comment.author.displayName}</span>
+          <TitleBadges titles={comment.author.titles} size="sm" />
           <span className="text-xs text-faint">{formatTime(comment.createdAt)}</span>
           {removed && <Badge variant="neutral">已移除</Badge>}
         </div>

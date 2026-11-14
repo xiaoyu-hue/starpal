@@ -229,6 +229,18 @@ export type Role = (typeof ROLES)[number]
 export const ROLE_USER: Role = 'user'
 export const ROLE_ADMIN: Role = 'admin'
 
+// ── M5.5-S1 用户头衔 ─────────────────────────────────────────────────
+// 头衔为预设目录，id 与 012 迁移的 CHECK 约束白名单一致；业务代码禁止写死头衔字符串。
+// 颜色与语义固定：社区长=金色（权力）、创始人=品牌紫（项目色）、管理员=青色（运营），
+// 由前端设计令牌着色，不随用户存储，防止任意自定义颜色。
+export const TITLE_IDS = ['community_leader', 'founder', 'admin'] as const
+export type TitleId = (typeof TITLE_IDS)[number]
+export const TITLE_LABELS: Record<TitleId, string> = {
+  community_leader: '社区长',
+  founder: '创始人',
+  admin: '管理员',
+}
+
 // ── M2-S4 个人资料约束 ───────────────────────────────────────────────
 // 可选资料与账户核心分离（user_profiles 表）；下列枚举为展示值，集中于此便于调整。
 // 星座 / 年龄段使用中文展示值；MBTI 使用国际通行四字母代码。

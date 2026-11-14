@@ -12,6 +12,14 @@
 - **刻意不做的部分**（讲清取舍，非遗漏）：不做自动处置、不改内容可见性、不停用账号、不做六分区后台与审核日志；管理员只能标记「已处理 / 已驳回」并写答复，实际处置仍由运营者人工判断。这一版解决的是「没有站内入口、只能靠留言」，不是「治理自动化」。
 - 验证：新增 `server/tests/integration/reports.test.ts`（PGlite 真库权限矩阵与状态流转），`npm run verify` 全绿；测试数、扫描文件数等数字以 `docs/IMPLEMENTATION-PLAN.md` 的 `VR-M4-14` 实测输出为准，不写死在本文。构建分包与无头浏览器静态路由复核结论见同条记录。**登录态下举报 / 申诉完整 HTTP 端到端未执行**，如实标注为未验证。
 
+### 新增（头衔系统首版 · M5.5-S1）
+
+- 数据库新增 `012_user_titles.sql`：在 `users` 表加 `titles TEXT[]` 列（支持多头衔并存），CHECK 约束钉死只允许 `community_leader` / `founder` / `admin` 三种枚举；并以 `UPDATE` 给现有 `role = admin` 账号回填三种头衔。幂等、可重跑。
+- 后端新增 `PATCH /api/users/me/titles`，挂在 `/api/users/me` 整组 `requireAuth` 之下并叠加 `requireRole(ROLE_ADMIN)` 守卫——只有站长能对自己账号开关头衔；非站长返回 `FORBIDDEN`，非法枚举 / 非数组返回 `VALIDATION_FAILED`，服务层 `Set` 去重并保持稳定顺序。权限仍只由 `role` 决定，头衔纯展示，不提升任何能力。
+- 前端新增 `web/src/features/users/TitleBadges.tsx`（`features/users` 公共出口统一对外，满足 lint R1 边界）：在资料页署名、帖子署名、评论署名三处展示彩色头衔徽章；无头衔时不渲染（明确空态，不显示占位伪控件）。设置页仅当 `role === 'admin'` 渲染 `TitlesSection` 可勾选开关。
+- 配色按意图落设计令牌（亮 / 暗双主题）：社区长金色（权力）、创始人紫色（品牌色）、管理员青色（运维）。
+- 验证：新增 `server/tests/integration/titles.test.ts`（9 项 PGlite 真库断言），`npm run verify` 全绿（99 项测试、lint 硬规则 0 违规、245 文件在行数预算内）；见 `docs/IMPLEMENTATION-PLAN.md` 的 `VR-M5.5-01`。**登录态下「设置页勾选 → 署名实时出现」的完整交互 E2E 未执行**，如实标注为未验证。
+
 ### 更正（文档同步）
 
 - 公告 `status` 条、关于页自述、README 的未完成清单由三项改为两项（移除「举报与申诉入口」），并把「举报与申诉最小闭环」补入可用能力；新增一条功能公告说明入口、可见范围与「只标记状态、不自动处置」的边界。

@@ -49,6 +49,12 @@ export async function updateOwnProfile(payload: ProfileUpdatePayload): Promise<O
   return envelope.data.profile
 }
 
+/** 更新本人头衔（仅管理员可用）：提交预设头衔 id 数组，服务端校验角色与取值。 */
+export async function updateOwnTitles(titles: string[]): Promise<OwnProfile> {
+  const envelope = await apiPatch<OwnProfileData>('users/me/titles', { titles })
+  return envelope.data.profile
+}
+
 /** 软删除本人账号。 */
 export async function deleteOwnAccount(): Promise<void> {
   await apiDelete<{ deleted: boolean }>('users/me')

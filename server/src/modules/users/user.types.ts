@@ -9,6 +9,8 @@ export type PublicProfile = {
   biography: string | null
   createdAt: string
   postCount: number
+  /** 头衔：预设目录中的 id 列表，公开可见，已注销用户为空数组。 */
+  titles: string[]
   /** 未公开或已注销时为 null；否则为各选填字段当前值（单项仍可能为 null）。 */
   optional: {
     zodiac: string | null
@@ -25,6 +27,7 @@ export type OwnProfile = {
   biography: string | null
   createdAt: string
   postCount: number
+  titles: string[]
   showOptional: boolean
   zodiac: string | null
   mbti: string | null

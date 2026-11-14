@@ -225,8 +225,11 @@ export async function listUserPosts(
   }
 }
 
-export async function countPostsOf(authorId: string): Promise<number> {
-  return countAuthorPosts(authorId)
+export async function countPostsOf(
+  authorId: string,
+  executor?: { query(sql: string, params: unknown[]): Promise<{ rows: Record<string, unknown>[] }> },
+): Promise<number> {
+  return countAuthorPosts(authorId, executor)
 }
 
 /**

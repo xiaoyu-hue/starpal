@@ -7,6 +7,7 @@ import { Avatar, Badge, Card } from '../../../components/ui/Primitives'
 import { cn } from '../../../lib/cn'
 import type { FeedPost } from '../../../types/api'
 import { useAuth } from '../../auth'
+import { TitleBadges } from '../../users'
 import { useBookmarkMutation } from '../../bookmarks'
 
 function formatTime(iso: string): string {
@@ -74,12 +75,15 @@ export function PostCard({ post, position, total }: PostCardProps) {
       <div className="flex items-center gap-2.5">
         <Avatar name={post.author.displayName} src={post.author.avatarUrl} size={36} />
         <div className="min-w-0 flex-1">
-          <Link
-            to={`/u/${post.author.username}`}
-            className="sp-transition block truncate text-sm font-medium text-ink hover:text-accent"
-          >
-            {post.author.displayName}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to={`/u/${post.author.username}`}
+              className="sp-transition block truncate text-sm font-medium text-ink hover:text-accent"
+            >
+              {post.author.displayName}
+            </Link>
+            <TitleBadges titles={post.author.titles} size="sm" />
+          </div>
           <p className="text-xs text-faint">{formatTime(post.createdAt)}</p>
         </div>
         <Badge variant="topic">{post.topic.nameZh}</Badge>

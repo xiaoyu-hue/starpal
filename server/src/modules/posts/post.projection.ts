@@ -25,6 +25,7 @@ export const PROJECTION = `
   u.username,
   u.display_name,
   u.status   AS author_status,
+  u.titles  AS author_titles,
   up.avatar_url,
   COALESCE((
     SELECT json_agg(
@@ -72,6 +73,7 @@ export type PostRow = QueryResultRow & {
   username: string
   display_name: string
   author_status: string
+  author_titles: string[]
   avatar_url: string | null
   /** 图片引用（键 + 尺寸 + 主键），聚合子查询一次取齐，避免列表逐条查图。 */
   images: { id: string; key: string; width: number; height: number }[]
@@ -103,6 +105,7 @@ export function mapRow(row: PostRow) {
       username: row.username,
       displayName: deleted ? '已注销用户' : row.display_name,
       avatarUrl: deleted ? null : row.avatar_url,
+      titles: deleted ? [] : row.author_titles ?? [],
     },
     topic: { slug: row.topic_slug, nameZh: row.topic_name },
     images: row.images.map((image) => ({

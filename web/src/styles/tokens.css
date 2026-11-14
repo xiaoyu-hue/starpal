@@ -46,6 +46,12 @@
   --sp-danger-soft: #fbeeec;
   --sp-success: #2f7d5b;
 
+  /* 头衔配色（M5.5-S1）：社区长=金色（权力）、创始人=品牌紫、管理员=青色（运营）。
+     颜色固定于此，不随用户存储，避免任意自定义。 */
+  --sp-title-community-leader: #b8860b;
+  --sp-title-founder: #5b57d6;
+  --sp-title-admin: #0d9488;
+
   /* 字号阶梯 */
   --sp-text-xs: 12px;
   --sp-text-sm: 14px;
@@ -116,4 +122,9 @@
   --sp-danger: #e5847b;
   --sp-danger-soft: #3a2328;
   --sp-success: #6cc79a;
+
+  /* 头衔配色（暗色）：在深色背景上提亮以保证对比 */
+  --sp-title-community-leader: #d9a441;
+  --sp-title-founder: #918df2;
+  --sp-title-admin: #2dd4bf;
 }

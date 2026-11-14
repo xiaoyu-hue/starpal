@@ -50,7 +50,7 @@ export type FeedPost = {
   excerpt: string
   topic: { slug: string; nameZh: string }
   /** displayName 由服务端统一下发（已注销作者为「已注销用户」），卡片署名以此为准。 */
-  author: { username: string; displayName: string; avatarUrl: string | null }
+  author: { username: string; displayName: string; avatarUrl: string | null; titles: string[] }
   likeCount: number
   commentCount: number
   bookmarkCount: number
@@ -136,6 +136,8 @@ export type PublicProfile = {
   biography: string | null
   createdAt: string
   postCount: number
+  /** 头衔：预设目录 id 列表，公开可见；已注销用户为空数组。 */
+  titles: string[]
   optional:
     | { zodiac: string | null; mbti: string | null; ageBand: string | null }
     | null
@@ -149,6 +151,7 @@ export type OwnProfile = {
   biography: string | null
   createdAt: string
   postCount: number
+  titles: string[]
   showOptional: boolean
   zodiac: string | null
   mbti: string | null
@@ -176,7 +179,7 @@ export type CommentItem = {
   /** `removed` 仅管理员在详情页可见，普通读者拿不到这类记录。 */
   status: 'published' | 'removed'
   /** 已注销作者的署名由服务端降级为「已注销用户」。 */
-  author: { username: string; displayName: string; avatarUrl: string | null }
+  author: { username: string; displayName: string; avatarUrl: string | null; titles: string[] }
   createdAt: string
   isAuthor: boolean
   canRemove: boolean

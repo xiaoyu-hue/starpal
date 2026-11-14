@@ -8,6 +8,7 @@ import { ApiError } from '../../lib/api-client'
 import { mergeFeedPages } from '../../lib/pagination'
 import { PostCard } from '../feed'
 import { useAuth } from '../auth'
+import { TitleBadges } from '../users'
 import { usePublicProfileQuery, useUserPostsQuery } from './queries'
 
 /** 公开个人页：头像、显示名、用户名、简介、注册日期与帖子占位。 */
@@ -70,6 +71,7 @@ export function ProfilePage() {
               <h1 className="truncate text-xl font-semibold text-ink">
                 {profile.displayName}
               </h1>
+              <TitleBadges titles={profile.titles} />
               {isSelf && (
                 <Link to="/settings" className={buttonClass('secondary', 'sm')}>
                   <Pencil size={14} /> 编辑资料

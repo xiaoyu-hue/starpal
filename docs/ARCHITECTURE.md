@@ -1054,10 +1054,11 @@ server/src/db/migrations/
 ├── 008_terms_acceptance.sql
 ├── 009_invite_codes.sql
 ├── 010_likes_user_idx.sql
-└── 011_reports.sql
+├── 011_reports.sql
+└── 012_user_titles.sql
 ```
 
-明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。`011_reports.sql` 建 `reports` 表（用 `kind` 区分举报 / 申诉，CHECK 约束钉死目标形态与终态字段）及 `reports_mine_idx` / `reports_queue_idx` / 带 `WHERE` 条件的 `reports_pending_target_idx`；这一版不含 `moderation_logs`。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications`、M6 计划中的 `NNN_reports_moderation.sql` / `NNN_views.sql` 等属未来里程碑，未落盘，不在此列）。
+明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。`011_reports.sql` 建 `reports` 表（用 `kind` 区分举报 / 申诉，CHECK 约束钉死目标形态与终态字段）及 `reports_mine_idx` / `reports_queue_idx` / 带 `WHERE` 条件的 `reports_pending_target_idx`；这一版不含 `moderation_logs`。`012_user_titles.sql` 在 `users` 表加 `titles TEXT[]` 列（CHECK 约束只允许 `community_leader` / `founder` / `admin` 三种枚举）并给现有 `role = admin` 账号回填三种头衔，头衔纯展示、不提升权限。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications`、M6 计划中的 `NNN_reports_moderation.sql` / `NNN_views.sql` 等属未来里程碑，未落盘，不在此列）。
 
 | 规则 | 内容 |
 | --- | --- |

@@ -11,7 +11,7 @@ export type CommentItem = {
   id: number
   body: string
   status: CommentStatus
-  author: { username: string; displayName: string; avatarUrl: string | null }
+  author: { username: string; displayName: string; avatarUrl: string | null; titles: string[] }
   createdAt: string
   isAuthor: boolean
   canRemove: boolean

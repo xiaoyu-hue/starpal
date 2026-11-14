@@ -15,6 +15,7 @@ import {
 } from '../../config/profile-constants'
 import { AccountSection, Field, Select, ThemeSection, AboutSection } from './SettingsSections'
 import { PasswordSection } from './PasswordSection'
+import { TitlesSection } from './TitlesSection'
 import type { OwnProfile } from '../../types/api'
 
 /** 设置页编排：资料编辑、主题、关于与账号。由路由级 RequireAuth 守卫进入。 */
@@ -101,6 +102,9 @@ export function SettingsPage() {
             </Link>
           </div>
         </Card>
+      )}
+      {user?.role === 'admin' && (
+        <TitlesSection titles={query.data.titles} onSaved={() => { void query.refetch() }} />
       )}
       <AccountSection onDeleted={() => { void refresh(); navigate('/') }} />
     </div>
