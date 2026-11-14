@@ -3,130 +3,164 @@
 > 让兴趣相遇，让热爱聚集。
 > Where Interests Meet, Communities Grow.
 
+![版本](https://img.shields.io/badge/version-1.2.0-2563eb)
+![源代码许可](https://img.shields.io/badge/code-AGPL--3.0--or--later-blue)
+![文档许可](https://img.shields.io/badge/docs-CC%20BY--NC--SA%204.0-orange)
+![Node.js](https://img.shields.io/badge/node-%3E%3D22.12%20%3C23-339933)
+
 | 项目 | 内容 |
 | --- | --- |
 | 中文名 | 星聚 |
 | 英文名 | STARPAL |
 | 品牌标记 | SP |
-| 版本 | v1.1.0 |
-| 状态 | 已发布 / 架构基线 |
-| 形态 | 响应式 Web 应用（桌面 / 平板 / 移动端浏览器） |
+| 当前版本 | **v1.2.0**（2026-11-14 发布） |
+| 状态 | 已上线 · 邀请制运营中 |
+| 形态 | 响应式 Web 应用（桌面 / 平板 / 移动端浏览器），非 App |
+| 当前访问地址 | `starpal.cc.cd` |
+| 源代码许可 | AGPL-3.0-or-later |
+| 文档许可 | CC BY-NC-SA 4.0 |
 
-星聚 STARPAL 是一个以话题为核心组织方式的通用兴趣社区平台：成员围绕话题发布内容、阅读与讨论、收藏与检索、相互留言，并在明确的社区准则下完成内容治理。项目采用自有品牌与视觉语言，话题组织结构参考主流社区形态，不复用其品牌资产或代码实现。
+**星聚 STARPAL 是一个以话题组织的、邀请制的小型兴趣社区。** 成员凭运营者颁发的邀请码注册，围绕话题发帖、配图、评论、点赞与收藏，并在明确的社区准则下共处。它不是模板、不是演示项目、也不是商业服务；社区里是真实存在的人，因此任何改动都以「不打扰、不误导、可回溯」为前提。
+
+**先把三个名字分清楚**（此前协议文档曾把域名当成品牌，已更正）：
+
+- **星聚（STARPAL）** 是品牌与服务名；
+- **运营者** 是维护这项服务的个人；
+- **`starpal.cc.cd`** 只是当前访问地址，不是品牌标识，也不是运营主体。日后更换域名，协议与说明继续适用于同一项服务。
+
+> 本项目**不是**平台、不是商业服务、不是公共服务、不是长期可用性承诺，也不是原生 App；它是非经营性、小规模、由个人维护的兴趣社区。完整边界见站内「产品声明」与「免责声明」页（文案源文件：[`product.doc.ts`](./server/src/config/docs/product.doc.ts)、[`disclaimer.doc.ts`](./server/src/config/docs/disclaimer.doc.ts)）。
 
 ---
 
-## 特性
+## 目录
+
+- [功能概览](#功能概览)
+- [当前状态与路线图](#当前状态与路线图)
+- [给使用者](#给使用者)
+- [给开发者](#给开发者)
+  - [技术栈](#技术栈)
+  - [环境要求](#环境要求)
+  - [快速开始](#快速开始)
+  - [环境变量](#环境变量)
+  - [脚本契约](#脚本契约)
+  - [项目结构](#项目结构)
+  - [API 概览](#api-概览)
+  - [质量门与测试](#质量门与测试)
+  - [部署](#部署)
+- [安全与隐私](#安全与隐私)
+- [文档索引](#文档索引)
+- [版本与发布](#版本与发布)
+- [许可与第三方](#许可与第三方)
+- [致谢与依赖](#致谢与依赖)
+- [贡献](#贡献)
+- [反馈与联系](#反馈与联系)
+
+---
+
+## 功能概览
+
+以下每一项都对应仓库中的真实实现；**尚未完成的能力不列在这里**，见[当前状态与路线图](#当前状态与路线图)。
 
 **内容与发现**
-- 三栏首页与推荐 / 最新 / 热门三 Tab 信息流，确定性排序、游标分页
-- 帖子创建、编辑、删除、详情、相关帖子
-- 图片上传，服务端魔术字节校验、重新编码与元数据剥离
-- 九个内置话题分类、话题发现页、话题详情与筛选
-- 搜索、每周热门、成就时间线
 
-**互动与账户**
-- 注册 / 登录 / 登出、服务端会话、受保护路由
-- 路由级认证与角色守卫、管理端点统一挂载；初始管理员由一次性脚本创建，无公开注册入口
-- 只采集用户名与密码；邀请码 + 限流 + 蜜罐 + 失败限次的分层防刷
-- 点赞、收藏、评论、通知、留言式私信
-- 公开个人页、资料编辑、可选资料默认不公开
-- 一键导出本人全部内容为 Markdown / JSON
+- 三种信息流（`latest` 最新 / `popular` 热门 / `recommended` 推荐），确定性排序 + 键集游标分页，无重复无遗漏。
+- 帖子创建、编辑、删除（作者或管理员）、详情页、相关帖子；正文与图片混排。
+- 图片上传：服务端按**魔术字节**校验真实类型（JPEG / PNG / WebP / AVIF，拒绝 SVG 等可执行内容），统一重编码为 WebP 并剥离 EXIF / GPS 元数据；二进制存于 PostgreSQL，不落本地磁盘。
+- 图片大图查看：灯箱原比例展示，支持鼠标、键盘（`←` `→` `Esc`）与触摸滑动，多图循环切换。
+- 十个内置话题（含「闲聊」）、话题目录页、话题详情与按话题筛选。
 
-**治理与后台**
-- 举报帖子 / 评论 / 行为，管理员复核、处置、封禁
-- 独立管理后台六分区，全部管理端点在服务端校验角色
-- 只追加审核日志与脱敏公开审核记录
+**互动与通知**
+
+- 点赞 / 收藏：幂等开关端点（`PUT` 建立、`DELETE` 撤销），计数与明细在同一事务内更新，详情页按钮乐观更新、失败回滚、以服务端返回计数校正。
+- 评论：单层结构，时间倒序游标列表，正文上限 2000 **Unicode 码点**（emoji 算 1），作者或管理员可删除；匿名可读、登录才可发表。
+- 通知中心：评论触发给帖子作者的通知（自己评论自己不产生通知），顶栏铃铛红点角标（>99 记 `99+`）、未读数、列表未读高亮与「全部标为已读」。
+
+**账户与安全**
+
+- **邀请制注册**：一人一码、用完即失效、可撤销。邀请码以 HMAC-SHA256 哈希存储，明文仅在生成时返回一次；注册在**同一事务内原子消费**，无效码整笔回滚，杜绝「码废号建成」。管理员在设置页「运营管理」中生成 / 查看 / 撤销。
+- 注册 / 登录 / 登出、服务端会话（Cookie `HttpOnly` + `SameSite=Lax` + 生产环境 `Secure`）、受保护路由。
+- **自助改密**：登录后凭当前密码设置新密码；同事务撤销该用户其它设备的会话，当前设备不掉线；改密失败独立限流。
+- 账号注销与**彻底擦除本人数据**；公开个人页、资料编辑、浅色 / 深色主题切换。
+- 口令用 **Argon2id**（经 `hash-wasm` 纯 WASM 实现，适配 Serverless，无原生编译依赖），参数随哈希串存储。
+- 分层防刷：限流、蜜罐字段、登录失败限次、改密失败限次、安全事件留痕；注册勾选同意《用户协议》《隐私说明》《免责声明》并留痕。
+
+**社区与信息**
+
+- 结构化**社区公告**：类型标签（新增 / 修复 / 规则 / 状态）、先摘要后明细、写明「对你的影响」；右栏卡片与独立公告页读同一份后端数据。
+- 六份说明页：用户协议、隐私说明、社区准则、免责声明、产品声明、关于。文案随代码版本化、不入库，页面展示的即当前代码行为。
 
 **工程质量**
-- 统一设计令牌与 Liquid Glass 视觉系统，浅深两套主题
-- 前后端职责分离、按业务域模块化、单向依赖与冻结的契约边界
-- 加载 / 错误 / 空三态、语义化 HTML、键盘导航、对比度保障
-- 版本化数据库迁移、结构化日志、集中错误处理、零付费第三方依赖
+
+- 统一设计令牌（含导航 / 浮层的玻璃质感）、浅深两套主题、响应式布局、加载 / 错误 / 空三态、语义化 HTML 与键盘可达。
+- 前后端按业务域模块化、单向依赖、模块导入边界由 lint 硬规则守护；参数化查询 + 事务边界 + 服务端权限校验。
+- 版本化数据库迁移（`001`–`009`，只增不改历史）、结构化日志、集中错误处理、统一响应包络。
+- 唯一质量门 `npm run verify`、单文件行数预算、lint 硬规则、Node 内置测试框架 + PGlite 内存库。
+- 零付费第三方依赖；全部源码文件带 `SPDX-License-Identifier` 头。
 
 ---
 
-## 文档索引
+## 当前状态与路线图
 
-| 文档 | 内容 |
-| --- | --- |
-| [产品需求文档](./docs/PRD.md) | 产品定义、角色权限、功能与非功能需求、验收标准、版本边界 |
-| [系统架构设计](./docs/ARCHITECTURE.md) | 分层与模块边界、API 契约、数据模型、安全设计、扩展点与收口机制 |
-| [实施计划与里程碑](./docs/IMPLEMENTATION-PLAN.md) | 里程碑 / 阶段 / 任务级拆解、验证记录、完成判据、交付清单 |
-| [部署与配置指南](./docs/DEPLOYMENT.md) | 环境变量、PostgreSQL 配置、迁移、启动、备份与故障排查 |
-| [变更记录](./CHANGELOG.md) | 版本与变更登记 |
+以 [`docs/IMPLEMENTATION-PLAN.md`](./docs/IMPLEMENTATION-PLAN.md) 为准。里程碑与发布对应关系：
 
-需求编号（`FR-*` / `NFR-*`）、验收编号（`AC-*`）、架构决策（`ADR-*`）、任务编号（`M#-S#-T#`）在四份文档间交叉引用，变更时须同步更新。
+| 里程碑 | 内容 | 状态 | 发布 |
+| --- | --- | --- | --- |
+| `M1` | 项目骨架、设计系统、响应式外壳、三态 | ✅ 已交付 | `v1.0.0` |
+| `M2` | 注册登录、会话安全、个人资料与设置 | ✅ 已交付 | `v1.0.0` |
+| `M3` | 帖子、图片上传、话题、详情页、大图查看 | ✅ 已交付 | `v1.1.0` |
+| `M4` | 点赞收藏评论、通知中心、一人一码、自助改密 | ✅ 已交付 | **`v1.2.0`** |
+| `M5` | 私信、成就时间线、每周热门、搜索、导出 | ⬜ 未开始 | — |
+| `M6` | 管理后台、举报、审核、权限校验、审计日志 | ⬜ 未开始 | — |
+| `M7` | 测试与性能加固、部署文档、验收 | ⬜ 未开始 | — |
+
+**当前对社区用户公示的四项未完成**（与站内公告一致）：私信、搜索、收藏列表界面、举报与申诉入口。另有「发现」「成就时间线」等导航目的地以明确标注状态的占位页呈现，不提供点击无效果的伪交互控件。
+
+> 「已实现但无界面」不计入已完成：收藏**开关**已可用，但**没有独立的收藏列表页与列表接口**，因此仍列在缺口一侧。信息流无真实内容时返回服务端真实空结果，不填充演示数据制造活跃假象。
+
+`M4` 的功能与验证已全部完成：`6` 个子阶段 `24/24` 子任务、验证记录 `VR-M4-01`—`VR-M4-10` 全部通过（含真实 PostgreSQL 端到端与 390px 浏览器实机验证），`npm run verify` 全绿。**`v1.2.0` 即 `M4` 的收尾发布版本。** 测试数量、扫描文件数等一切数字均以 `npm run verify` 当次实际输出为准，不在文档中写死。
 
 ---
 
-## 技术栈
+## 给使用者
+
+**怎么进来**：本站为邀请制，注册需要运营者亲自颁发的邀请码。请向邀请人索取；一个码只能注册一次，用完即失效，运营者可随时撤销。旧版统一通用码已下线。
+
+**进来之后**：浏览信息流 → 挑话题 → 写正文 / 配图 → 发布 → 在详情页被点赞、收藏、评论；有人评论你的帖子会收到通知；在「设置」里可以改资料、换主题、改密码，也可以注销或彻底擦除自己的数据。
+
+**想反馈 / 投诉 / 申诉**：站内私信社区长兼管理员 **@Solvyre**。私信功能尚在开发中，上线前请在任意**社区公告帖下留言**，写明用户名与诉求即可。为保护你的个人信息，请不要在公开场合贴身份证、住址、联系方式等材料。
+
+**想了解规则**：页脚与抽屉菜单可到达社区公告、社区准则、隐私说明、用户协议、免责声明、产品声明、关于。注册时勾选同意的三份协议也可随时查阅。
+
+---
+
+## 给开发者
+
+> 本节假设你在本地搭建一份**自己的**实例。生产环境配置见 [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)。
+
+### 技术栈
 
 | 层 | 技术 |
 | --- | --- |
-| 运行时 | Node.js 22 LTS、npm |
-| 前端 | React、TypeScript、Vite、React Router、Tailwind CSS、shadcn/ui（基于 Radix UI）、Lucide React、TanStack Query |
-| 后端 | Express、PostgreSQL、服务端会话、模式校验、`sharp` 图像处理 |
-| 存储 | PostgreSQL（结构化数据与图片二进制，`ADR-014`） |
-| 部署 | 前端构建为静态产物，由 Express 单进程同时托管静态资源与 `/api` |
+| 运行时 | Node.js `>=22.12 <23`（由 `.nvmrc` 与 `engines.node` 锁定）、npm workspaces |
+| 前端 | React 19 + TypeScript、Vite、React Router、TanStack Query、Tailwind CSS、**Radix UI 原语 + 自研组件**、lucide-react |
+| 后端 | Express 5、PostgreSQL（`pg`，全部参数化查询）、`hash-wasm`（Argon2id）、`sharp`（图片重编码）、`multer`（上传）、`dotenv` |
+| 存储 | PostgreSQL：结构化数据与图片二进制同库（`ADR-014`），无对象存储、无本地文件目录 |
+| 测试 | Node 内置 `node:test` + `tsx` + `@electric-sql/pglite`（WASM 内存库，不连真实库） |
+| 部署 | Vercel Serverless Function（`api/index.ts`）+ Neon PostgreSQL；前端静态产物构建至 `server/public/` |
 
-具体依赖版本由各包 `package.json` 与 lockfile 固定。明确不引入全局状态库、图表库、动效库、拖拽库、特效组件集、Redis、消息队列、对象存储 SDK、外部验证码与 SSR 框架。
+精确版本以各 `package.json` 与 `package-lock.json` 为准，不在文档中另写一份。项目**未引入** shadcn/ui、ALTCHA、全局状态库、ORM、Redis、消息队列、对象存储 SDK、外部验证码与 SSR 框架；防刷与组件均为自研。
 
----
-
-## 环境要求
+### 环境要求
 
 | 项 | 要求 |
 | --- | --- |
-| Node.js | 22 LTS（版本由 `.nvmrc` 与 `engines.node` 锁定） |
-| npm | 随 Node.js 提供 |
-| PostgreSQL | 可达实例，连接信息经环境变量提供 |
-| 文件系统 | 无需可写磁盘：图片二进制存于 PostgreSQL（`ADR-014`），不依赖持久卷 |
+| Node.js | `>=22.12 <23` |
+| npm | 随 Node.js 提供（workspaces） |
+| PostgreSQL | 一个可达实例，连接串经 `DATABASE_URL` 注入 |
+| 文件系统 | 无需可写持久卷：图片二进制存于 PostgreSQL |
 | 浏览器 | 现代桌面与移动浏览器 |
 
-安装、迁移、启动与备份的完整步骤见 [部署与配置指南](./docs/DEPLOYMENT.md)。
-
----
-
-## 当前实现状态
-
-`M1`（可运行空壳）与 `M2`（账户与资料）随 **`v1.0.0`** 发布，`M3`（内容域）随 **`v1.1.0`** 发布：
-
-- **M1**：前端工程骨架、设计系统、响应式应用外壳与导航、信息流外壳（含加载 / 错误 / 空三态）、后端骨架、PostgreSQL 连接与迁移机制、Express 单进程静态托管、说明页后端单源。
-- **M2**：注册 / 登录 / 登出与服务端会话（`M2-S1` / `M2-S2`）、受保护路由与角色守卫（`M2-S3`）、个人资料与设置（公开个人页、资料编辑、主题切换、账号注销与彻底擦除，`M2-S4`）、隐私 / 社区准则 / 关于三说明页（`M2-S5`）、以及 DoD-01 质量门（模块导入边界 lint、`seed`、`export:check`）。
-- **M3（已完成，话题写侧例外）**：内容域**全链路可用**——数据模型（`M3-S1`）、帖子 API（`M3-S2`）、图片上传（`M3-S3`）、话题目录（`M3-S4` 读侧）与前端内容域（`M3-S5`）均已完成。用户可以在浏览器里走完「浏览信息流 → 挑话题 → 写正文 → 选图 → 发布 → 看详情 → 编辑 / 删图 / 删除」全流程：三 Tab 信息流与游标分页、话题筛选、图片上传（服务端校验真实类型、重编码为 WebP、剥离 EXIF 与 GPS）、详情页图文混排、卡片封面、编辑页即时增删图、个人页真实内容与滚动位置恢复。
-
-- **M4（进行中）**：互动域数据模型（点赞 / 收藏 / 评论 / 通知四张表）已建立；**点赞、收藏与评论已可用**——幂等互动端点、计数与明细同事务、详情页按钮含乐观更新与失败回滚、评论区支持发表 / 时间倒序列表 / 作者与管理员删除（评论触发通知写入，通知中心待交付）。
-
-`M3-S4` 的管理端话题增删改与 `moderation_logs` 留痕随管理后台一并交付；通知中心、私信、后台管理等仍按后续里程碑交付。未实现的导航目的地以明确标注状态的占位页呈现，不提供点击无效果的伪交互控件；信息流无真实内容时返回服务端真实空结果，不填充演示数据。
-
-`M1` / `M2` 已具备部署到托管平台免费层的生产就绪性：构建命令、启动命令、环境变量契约与免费层限制见 [部署与配置指南 §17 / §18](./docs/DEPLOYMENT.md)。生产迁移使用 `npm run migrate:prod`（执行编译产物，不依赖 `tsx`），本地开发仍使用 `npm run migrate`。
-
-**托管平台选择**：原计划 Render + Neon，但 Render 免费层自 2026 年起强制绑卡，本项目部署方无信用卡，已弃用 Render，改选 **Vercel + Neon**（免卡、支持自定义域名 `starpal.cc.cd`、自动 HTTPS）。后端相应从常驻 Express 进程改造为 Vercel Serverless Function（见 §18），前端静态产物仍由构建生成于 `server/public/`。
-
-```bash
-nvm use
-npm install
-cp .env.example .env     # 填入本地开发值；.env 已被 gitignore 排除
-npm run migrate          # 在空库执行 001 迁移（幂等）
-npm run dev              # 并行启动后端 API 与前端开发服务器
-npm run build            # 前端产物输出至 server/public，后端编译
-npm run start            # Express 单进程托管前端与 API
-npm run check:size       # 检查单文件体积预算
-npm run verify           # 类型检查 + 构建 + 体积检查
-```
-
-快速查看视觉（不连接后端、可双击打开）：
-
-```bash
-node scripts/build-standalone.mjs   # 生成 web/dist/starpal-preview.html
-```
-
-> 健康检查：`GET /api/health`；社区准则：`GET /api/meta/guidelines`；隐私：`GET /api/meta/privacy`；关于：`GET /api/meta/about`；信息流：`GET /api/posts?tab=latest|popular|recommended`（可加 `topic=<slug>` 按话题筛选）；帖子：`POST /api/posts`、`GET|PATCH|DELETE /api/posts/:id`、`GET /api/posts/:id/related`；话题目录：`GET /api/topics`；个人页内容：`GET /api/users/:username/posts`；图片读取：`GET /api/images/:key`（1 小时缓存 + 禁止嗅探）；图片上传：`POST /api/posts/:id/images`（multipart，字段名 `image`）；图片删除：`DELETE /api/posts/:id/images/:imageId`。上传与删除均需作者或管理员。`seed` / `init:admin` / `export:check` 已在 DoD-01 落地。
-
----
-
-## 快速开始
+### 快速开始
 
 ```bash
 # 1. 使用锁定的 Node 版本
@@ -135,151 +169,274 @@ nvm use
 # 2. 安装依赖（根目录 npm workspaces 一次安装）
 npm install
 
-# 3. 配置环境变量（参考 docs/DEPLOYMENT.md，仅使用占位值）
-#    .env.example 提供变量名清单
+# 3. 配置环境变量：复制示例，填入本地值（.env 已被 gitignore 排除，切勿提交真实值）
+cp .env.example .env
 
-# 4. 初始化数据库（M1 仅执行 001 迁移）
+# 4. 执行全部数据库迁移（001–009，幂等、只增不改）
 npm run migrate
 
-# 5. 开发模式：并行启动后端 API（:3000）与前端开发服务器
+# 5. 创建初始管理员（仅本地/首次部署执行一次）
+#    不要把密码写在命令行里（会留在 shell 历史与进程列表）：
+#    把 ADMIN_* 写进未被跟踪的 .env.local，再执行：
+node --env-file=.env.local scripts/init-admin.mjs
+
+# 6. 开发模式：并行启动后端 API（:3000）与前端开发服务器
 npm run dev
 
-# 6. 构建与单进程启动
+# 7. 可选：写入明确标注「示例」的种子话题与帖子（仅开发期视觉验证）
+npm run seed
+
+# 8. 构建（前端产物 → server/public，后端编译 → server/dist）
 npm run build
+
+# 9. 单进程启动（本地验证用；生产由 Vercel Serverless 接管）
 npm run start
 
-# 7. 静态检查
+# 10. 全量质量门（交付前必跑）
 npm run verify
 ```
 
-健康检查：`GET /api/health`。开发模式下前端通过代理访问 `/api`；生产模式下前端静态产物与 API 由同一进程提供。
+开发模式下前端通过代理访问 `/api`；健康检查 `GET /api/health`。快速查看视觉而不连后端：`node scripts/build-standalone.mjs` 生成 `web/dist/starpal-preview.html`。
 
----
+> **注册需要邀请码**：初始管理员由脚本创建，不经过注册表单。之后请登录管理员账号，在「设置 → 运营管理 → 邀请码」生成邀请码；明文只显示一次，请妥善保存。
 
-## 项目结构
+### 环境变量
 
-```text
-├── docs/                    # 产品、架构、实施计划、部署文档
-├── web/                     # 前端（独立构建）
-│   └── src/
-│       ├── app/             # 路由、Provider、应用外壳
-│       ├── features/        # 按业务域划分的功能模块
-│       ├── components/      # 通用 UI、布局、三态组件
-│       ├── lib/             # API 客户端、请求缓存、工具
-│       ├── styles/          # 设计令牌与全局样式
-│       └── types/           # API 契约类型
-├── server/                  # 后端（独立构建）
-│   └── src/
-│       ├── config/          # 环境变量与常量
-│       ├── db/              # 连接池、迁移执行器、迁移与种子
-│       ├── middleware/      # 固定顺序的中间件链
-│       ├── modules/         # 按业务域划分的模块（四层同构）
-│       ├── shared/          # 错误、响应、分页、事务、校验
-│       └── storage/         # 存储适配器与图片管线
-├── scripts/                 # 初始化、导出校验等脚本
-├── CHANGELOG.md
-└── README.md
-```
+完整键名与说明见 [`.env.example`](./.env.example)，校验逻辑见 [`server/src/config/env.ts`](./server/src/config/env.ts)。
 
----
+| 变量 | 必需 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | ✅ | — | PostgreSQL 连接串，启动时校验前缀 |
+| `SESSION_SECRET` | ✅ | — | 高熵随机值，用于会话与邀请码 HMAC |
+| `NODE_ENV` | — | `development` | `development` / `test` / `production` |
+| `PORT` | — | `3000` | 本地开发监听端口 |
+| `SESSION_TTL_HOURS` | — | `168` | 会话有效期（小时） |
+| `RATE_LIMIT_WINDOW_SECONDS` / `RATE_LIMIT_MAX` | — | `3600` / `20` | 限流窗口与上限 |
+| `LOGIN_FAIL_MAX` | — | `5` | 登录 / 改密失败限次 |
+| `SECURITY_EVENT_RETENTION_DAYS` | — | `30` | 安全事件保留天数 |
+| `MAX_UPLOAD_BYTES` / `MAX_BODY_BYTES` | — | `3145728` / `4194304` | 单图 3 MB / 请求体 4 MB（Vercel 硬上限留余量） |
+| `PUBLIC_DIR` | — | `./server/public` | 静态产物目录 |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_DISPLAY_NAME` | — | — | 仅初始化脚本读取，不常驻配置 |
 
-## 脚本契约
+> 已下线的 `INVITE_CODE`（统一通用码）**不再使用**，请勿配置。邀请码改为数据库内逐码生成。
+
+### 脚本契约
 
 | 脚本 | 作用 |
 | --- | --- |
-| `dev` | 启动前端开发服务器 / 后端 API 进程 |
-| `build` | 前端产出静态文件、后端编译 |
-| `start` | 单进程启动，托管静态资源与 API |
-| `migrate` | 执行未应用的数据库迁移 |
-| `seed` | 写入演示话题与示例帖（可选） |
-| `init:admin` | 一次性创建初始管理员 |
-| `lint` / `typecheck` | 静态检查（含模块导入边界）/ 类型检查 |
-| `test` / `test:e2e` | 单元与集成测试 / 端到端检查 |
-| `export:check` | 校验导出文件可读性 |
+| `npm run dev` | 并行启动前端开发服务器与后端 API |
+| `npm run dev:web` / `dev:server` | 单独启动前端 / 后端 |
+| `npm run build` | 前端构建 + 后端编译 |
+| `npm run start` | 单进程托管静态资源与 API（本地） |
+| `npm run migrate` / `migrate:prod` | 执行未应用迁移（后者跑编译产物，不依赖 `tsx`） |
+| `npm run seed` | 写入示例话题与帖子（可选、明确标注「示例」） |
+| `npm run init:admin` | 一次性创建初始管理员 |
+| `npm run typecheck` / `lint` / `check:size` | 类型检查 / lint 硬规则 / 单文件行数预算 |
+| `npm test` | 单元与集成测试（PGlite 内存库） |
+| `npm run verify` | **唯一质量门**：typecheck → build → check:size → lint → test，必须全绿 |
+| `npm run export:check` | 校验导出文件可读性 |
+| `npm run preview` | 预览前端构建产物 |
 
----
+### 项目结构
 
-## 演示内容与空态
+```text
+├── api/                     # Vercel Serverless 入口（index.ts）
+├── web/                     # 前端 workspace
+│   └── src/
+│       ├── app/             # 路由、Provider、应用外壳（顶栏/抽屉/侧栏）
+│       ├── features/        # 按业务域划分的功能模块（含公共 index 出口）
+│       ├── components/      # 通用 UI、布局、三态、品牌矢量组件
+│       ├── lib/             # API 客户端与工具
+│       ├── config/          # 前端共享常量
+│       ├── styles/          # 设计令牌与全局样式
+│       └── types/           # API 契约类型
+├── server/                  # 后端 workspace
+│   └── src/
+│       ├── config/          # 环境变量、常量、说明页与公告文案（docs/）
+│       ├── db/              # 连接池、迁移执行器、迁移 SQL（001–009）
+│       ├── middleware/      # requireAuth / requireRole / optionalAuth 等
+│       ├── modules/         # 按业务域四层同构（routes/controller/service/repository）
+│       ├── shared/          # 错误码、响应包络、分页、事务、校验原语
+│       └── storage/         # 图片管线（校验 + WebP 重编码）
+├── scripts/                 # 迁移、种子、初始化、质量门脚本
+├── docs/                    # PRD / ARCHITECTURE / IMPLEMENTATION-PLAN / DEPLOYMENT / DOC_SYNC
+├── CHANGELOG.md             # 变更记录
+├── AGENTS.md                # 给 AI Agent 的项目级协作规则
+└── README.md
+```
 
-种子数据包含少量明确标注「示例」的话题与帖子，仅用于开发期视觉验证，不代表真实成员产出的内容。无真实内容时，各页面展示引导式空态，不以演示内容制造活跃假象。
+### API 概览
 
----
+所有端点前缀 `/api`，响应统一 `ApiEnvelope` 包络；写入类端点除注明外均需登录。完整请求/响应契约见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)。
 
-## 安全说明
+| 组 | 端点 | 说明 |
+| --- | --- | --- |
+| 元信息 | `GET /health`、`GET /meta/{guidelines,privacy,terms,announcements,about,disclaimer,product}` | 公开；说明页与公告文案单一真源 |
+| 认证 | `POST /auth/register`、`/login`、`/logout`、`GET /auth/me`、`POST /auth/change-password` | 注册需邀请码；改密需登录 |
+| 个人 | `GET /users/me`、`PATCH /users/me`、`DELETE /users/me`、`POST /users/me/erase` | 本人资料 / 注销 / 彻底擦除 |
+| 公开 | `GET /users/:username`、`GET /users/:username/posts` | 公开个人页与其帖子 |
+| 帖子 | `GET /posts?tab=&topic=`、`POST /posts`、`GET /posts/:id`、`PATCH /posts/:id`、`DELETE /posts/:id`、`GET /posts/:id/related` | 三 Tab 信息流、游标分页 |
+| 互动 | `PUT` / `DELETE /posts/:id/like`、`/posts/:id/bookmark` | 幂等开关，计数同事务 |
+| 评论 | `GET` / `POST /posts/:postId/comments`、`DELETE /comments/:id` | 单层、倒序游标、作者/管理员删除 |
+| 通知 | `GET /notifications`、`GET /notifications/unread`、`POST /notifications/read` | 列表游标 / 未读数 / 全部已读 |
+| 图片 | `POST /posts/:postId/images`（multipart，字段 `image`）、`DELETE /posts/:postId/images/:imageId`、`GET /images/:key` | 上传/删除需作者或管理员；读取带长缓存与禁止嗅探头 |
+| 话题 | `GET /topics` | 目录（仅读侧） |
+| 管理 | `GET /admin/whoami`、`GET` / `POST /admin/invite-codes`、`POST /admin/invite-codes/:id/revoke` | 整组 `requireAuth + requireRole(ROLE_ADMIN)` |
 
-- 密码使用带盐单向哈希存储；凭据、会话密钥、邀请码与初始管理员凭据全部经环境变量注入，仓库不含任何真实值。
-- 权限判定、输入校验、文件类型与大小校验均在服务端完成；前端隐藏控件与客户端校验不构成安全边界。
-- 不提供公开管理员注册；管理端点统一挂载角色校验；重要管理动作写入只追加的审核日志。
-- 上传文件经魔术字节校验与重新编码后写入无执行权限目录，响应携带禁止类型嗅探的响应头。
+### 质量门与测试
 
-完整安全设计见 [系统架构设计 §9](./docs/ARCHITECTURE.md#9-安全架构)。
+`npm run verify` 是**唯一交付入口**，五项全绿才可提交：
 
----
-
-## 已知限制
-
-| 项 | 说明 |
+| 环节 | 内容 |
 | --- | --- |
-| 单实例部署 | 不具备水平扩展能力；会话与限流已持久化，便于后续拆分 |
-| 私信 | v1.0 为留言式，需刷新获取新消息 |
-| 排序 | 确定性加权，无个性化推荐与自适应能力 |
-| 评论 | 单层结构，不含嵌套回复 |
-| 检索 | 数据库条件检索，未接入独立检索引擎 |
-| 图片存储 | 二进制存于 PostgreSQL，无对象存储与 CDN；图片总量超过 500 MB 时应迁至对象存储（`ADR-014` §8.4） |
-| 防刷边界 | 不采集联系方式的注册体系无法彻底阻断自动化注册，目标为提高自动化成本 |
+| `typecheck` | 前后端 TypeScript 类型检查 |
+| `build` | Vite 构建 + 后端编译 |
+| `check:size` | `web/src`、`server/src` 下 `.ts/.tsx ≤ 300 行`、`.css ≤ 400 行`；超预算须拆分文件，不得调高阈值 |
+| `lint` | 硬规则 `R1` 模块导入边界 / `R2` 设计令牌（禁硬编码颜色）/ `R3` 导入扩展名 / `R4` 四处版本号一致；任一命中即失败 |
+| `test` | `node:test` + PGlite 内存库，测试间互不影响、不连真实库 |
 
-完整清单与风险登记见 [PRD §10](./docs/PRD.md#10-已知限制与风险) 与 [实施计划 §9](./docs/IMPLEMENTATION-PLAN.md#9-已知限制与未完成项)。
+新增功能须同步新增/更新测试；新增源码文件须带 `SPDX-License-Identifier: AGPL-3.0-or-later` 头。版本号唯一真源是根 `package.json`，构建期注入 `__APP_VERSION__`，由 `R4` 保证四处同源。
+
+### 部署
+
+线上为 **Vercel + Neon**：`vercel.json` 把 `/api/:path*` 重写到 Serverless Function `api/index.ts`，其余路径回退到 `index.html`；前端静态产物构建至 `server/public/`，由 `includeFiles` 带上 `server/dist/**`。
+
+关键约束（踩过的坑，详见 `docs/DEPLOYMENT.md`）：
+
+- **不依赖原生编译模块**：`argon2` / `bcrypt` / `sharp` 等原生依赖在 Serverless 不保证可用，故口令哈希改用 `hash-wasm` 的纯 WASM Argon2id（`sharp` 仅用于构建期图片管线，走平台预编译层）。
+- **请求体上限**：Vercel 硬上限 4.5 MB，故 `MAX_BODY_BYTES` 设为 4 MB、单图 3 MB。
+- **生产迁移**：用 `npm run migrate:prod` 执行编译产物，不依赖 `tsx`；迁移只增不改历史。
+- **AGPL 网络义务**：通过网络提供服务的运营者须向用户提供对应完整源码，部署方上线时须确保页脚「源码」链接真实可用。
+
+托管平台从早前的 Render + Neon 改为 Vercel + Neon，原因是 Render 免费层自 2026 年起强制绑卡，而本项目无对公支付手段。
 
 ---
 
-## 版本与发布规则
+## 安全与隐私
 
-本项目采用语义化版本（SemVer）。**`v1.0.0` 是架构基线**——即冻结的 v1.0 产品范围（PRD / 架构 / 实施计划 / 部署指南）所对应代码的首个正式发布。后续版本严格按下列规则递增，且任何版本变更都须同步更新 `CHANGELOG.md`、本文件版本表与 `package.json` 的 `version` 及后端 `APP_VERSION`。四处取值由 `npm run lint` 的 `R4` 规则强制一致；界面上的版本号由构建期从 `package.json` 注入，不在前端另写一份。
+- 口令用 **Argon2id** 单向哈希（参数随哈希串存储）；邀请码用 **HMAC-SHA256** 哈希存储、恒定时间比较；会话密钥、数据库凭据等全部经环境变量注入，仓库不含任何真实值。
+- **权限一律在服务端校验**：路由组统一挂载 `requireAuth` / `requireRole(ROLE_ADMIN)`，前端隐藏控件只减少误触，不构成安全边界。
+- 全部 SQL 参数化；跨表一致性用 `withTransaction` 事务边界；上传按魔术字节校验并重新编码。
+- 会话 Cookie `HttpOnly` + `SameSite=Lax` + 生产环境 `Secure`；分层防刷（限流 / 蜜罐 / 失败限次 / 事件留痕）。
+- 只采集用户名与口令，**不采集手机号、邮箱等联系方式**；因此无法提供「忘记密码邮件找回」——改密仅支持登录后自助修改。
+- 五份协议与隐私说明如实披露：「公开内容意味着什么」「我们明确不做的几件事」、未实现能力不写成已实现。
+
+完整安全设计见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) §9，面向用户的说明见 [`server/src/config/docs/privacy.doc.ts`](./server/src/config/docs/privacy.doc.ts)。
+
+> 本项目未经第三方安全审计，不建议用于处理敏感信息。发现安全隐患请通过[反馈与联系](#反馈与联系)告知，勿公开利用细节。
+
+---
+
+## 文档索引
+
+| 文档 | 内容 |
+| --- | --- |
+| [`docs/PRD.md`](./docs/PRD.md) | 产品定义、角色权限、功能与非功能需求、验收标准 |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | 分层与模块边界、API 契约、数据模型、安全设计 |
+| [`docs/IMPLEMENTATION-PLAN.md`](./docs/IMPLEMENTATION-PLAN.md) | 里程碑拆解、验证记录（`VR-Mx-xx`）、完成判据 |
+| [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) | 环境变量、迁移、启动、备份与故障排查 |
+| [`docs/DOC_SYNC.md`](./docs/DOC_SYNC.md) | 文档与版本同步规范（唯一真源 + 发布前检查清单） |
+| [`AGENTS.md`](./AGENTS.md) | 给 AI Agent 的项目级协作规则 |
+| [`CHANGELOG.md`](./CHANGELOG.md) | 版本与变更登记 |
+| [`TRADEMARK.md`](./TRADEMARK.md) | 名称 / Logo / 图标的商标保留政策 |
+| [`COPYRIGHT`](./COPYRIGHT) | 版权归属与许可文件对照 |
+| [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md) | 第三方依赖许可清单 |
+
+需求编号（`FR-*` / `NFR-*`）、验收编号（`AC-*`）、架构决策（`ADR-*`）、任务编号（`M#-S#-T#`）与验证记录（`VR-Mx-xx`）在多份文档间交叉引用，变更时按 `DOC_SYNC.md` 逐项同步。
+
+---
+
+## 版本与发布
+
+采用语义化版本（SemVer）。**`v1.0.0` 是架构基线**（冻结的 v1.0 产品范围对应的首个正式发布）；`v1.1.0` 交付 `M3` 内容域；**`v1.2.0` 交付 `M4` 互动域收尾**。
 
 | 版本位 | 触发条件 | 示例 |
 | --- | --- | --- |
-| **主版本 `X.0.0`** | 架构基线变更、破坏性架构调整、冻结清单（数据表 / 后端模块 / API 端点）扩展或收缩、部署模型变化等重大变更 | `1.0.0` → `2.0.0` |
-| **次版本 `1.X.0`** | 功能更新：在基线范围内新增功能、落地新里程碑（`M3`—`M7`）、新增端点、经迁移新增数据表等，保持向后兼容 | `1.0.0` → `1.1.0` |
-| **修订版本 `1.1.X`** | 修复、优化、文档更新、非功能调整等，不改变功能或对外契约 | `1.1.0` → `1.1.1` |
+| 主版本 `X.0.0` | 架构基线变更、破坏性调整、冻结清单扩展或收缩、部署模型变化 | `1.2.0` → `2.0.0` |
+| 次版本 `1.X.0` | 新增功能、落地新里程碑、新增端点、经迁移新增数据表 | `1.1.0` → `1.2.0` |
+| 修订版本 `1.2.X` | 修复、优化、文档更新，不改变对外契约 | `1.2.0` → `1.2.1` |
 
 约定：
 
-- 标签格式为 `vX.Y.Z`，与代码版本号保持一致。
-- 主版本变更须走 `ADR` 并记录于架构文档；表结构变更只新增迁移文件，不修改已执行迁移。
-- 公开部署、外部账号注册、生产数据清除、既有代码覆盖等不可逆操作须单独审批。
+- 标签格式 `vX.Y.Z`，与代码版本号一致；正式发布附 GitHub Release 说明。
+- 版本号唯一真源是根 `package.json`；`web` / `server` 三个包、`APP_VERSION`、`package-lock.json` 由 `lint` 的 `R4` 强制同源，界面版本号由构建期注入。
+- 主版本变更须走 `ADR`；表结构变更只新增迁移文件，不修改已执行迁移。
+- **公告刻意不含版本号**（运营信息与代码版本解耦）；版本信息以 `CHANGELOG.md` 与 Release 为准。
+- 公开部署、打 tag、发版等不可逆操作须单独审批后执行。
 
 ---
 
 ## 许可与第三方
 
-**版权所有 © 2026 xiaoyu-hue**（GitHub: [@xiaoyu-hue](https://github.com/xiaoyu-hue)）。版权归属与许可对照见 [`COPYRIGHT`](./COPYRIGHT)。
+**版权所有 © 2026 xiaoyu-hue**（GitHub: [@xiaoyu-hue](https://github.com/xiaoyu-hue)）。归属与许可对照见 [`COPYRIGHT`](./COPYRIGHT)。
 
 本项目采用**代码与文档分离授权**：
 
 | 对象 | 许可证 | 说明 |
 | --- | --- | --- |
 | **源代码**（`web/`、`server/`、`scripts/`、`api/`） | **AGPL-3.0-or-later** | GNU Affero 通用公共许可证 v3 或更高版本，含网络服务条款。全文见 [`LICENSE`](./LICENSE)。 |
-| **文档与文字内容**（`docs/`、`README.md`、`CHANGELOG.md` 及其它说明性 Markdown） | **CC BY-NC-SA 4.0** | 署名—非商业性使用—相同方式共享 4.0 国际。全文与链接见 [`LICENSE-docs`](./LICENSE-docs)。 |
-| **名称、标志与应用图标（品牌资产）** | **商标保留** | STARPAL 星聚的名称 / Logo / 图标为商标，不通过 AGPL 或 CC 授权；仅允许指名性合理使用。见 [`TRADEMARK.md`](./TRADEMARK.md)。 |
-| **第三方组件与开发依赖** | 各自原有许可证 | 见 [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md)；分发时保留各依赖的版权与许可声明。 |
+| **文档与文字内容**（`docs/`、`README.md`、`CHANGELOG.md`、`AGENTS.md` 等说明性 Markdown） | **CC BY-NC-SA 4.0** | 署名—非商业性使用—相同方式共享 4.0 国际。全文与适用范围见 [`LICENSE-docs`](./LICENSE-docs)。 |
+| **名称、Logo、应用图标与品牌卡（商标）** | **商标保留** | 不通过 AGPL 或 CC 授权，仅允许指名性合理使用。见 [`TRADEMARK.md`](./TRADEMARK.md)。 |
+| **第三方组件与开发依赖** | 各自原有许可证 | 见 [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md)；分发时保留各依赖版权与许可声明。 |
 
-> **AGPL-3.0 的网络义务**：通过网络提供本软件服务的运营者，须向用户提供对应的完整源码。本项目源码与许可证一并在本仓库公开；部署方上线对外服务时，须确保该源码获取途径对用户真实可用（例如在页脚提供"源码"链接）。
+> **AGPL-3.0 的网络义务**：通过网络提供本软件服务的运营者，须向用户提供对应的完整源码。本项目源码与许可证一并在本仓库公开；部署方上线对外服务时，须确保该源码获取途径对用户真实可用（如页脚「源码」链接）。
 >
-> **代码与文档许可相互独立**：代码允许商业使用（但衍生作品与网络服务须开源），文档本身**不允许商业性使用**（NC）。由于含 NC 条件，文档许可**不属于**"自由文化/开源"许可，准确表述为"采用 CC BY-NC-SA 4.0"。
+> **代码与文档许可相互独立**：代码允许商业使用（但衍生作品与网络服务须开源），文档本身**不允许商业性使用**（NC）。由于含 NC 条件，文档许可**不属于**「自由文化/开源」许可，准确表述为「采用 CC BY-NC-SA 4.0」。
 >
-> **商标与品牌资产单独保留**：AGPL 与 CC 均为著作权许可证，**不授予商标权**。STARPAL 星聚的名称、Logo、应用图标为商标，其使用受 [`TRADEMARK.md`](./TRADEMARK.md) 约束，不随代码或文档的开源而开放。
->
-> 文档中提及的 Lemmy、Discuit、shadcn/ui、ALTCHA、sharp 等开源项目仅作设计思路与技术资料参考，未引入其代码或品牌资产。全部第三方依赖均为 MIT / ISC / Apache-2.0 / BSD / MPL-2.0 等宽松或弱传染许可，与 AGPL-3.0 兼容。
+> **商标与品牌资产单独保留**：AGPL 与 CC 均为著作权许可，**不授予商标权**。STARPAL 星聚的名称、Logo、应用图标为商标，其使用受 [`TRADEMARK.md`](./TRADEMARK.md) 约束，不随代码或文档的开源而开放。
+
+---
+
+## 致谢与依赖
+
+### 致敬
+
+星聚站在开源社区与既有社区产品积累的经验之上。以下项目为**设计思路与工程惯例的参考**，本项目未引入其代码或品牌资产，也不代表其背书或关联：
+
+| 参考 | 借鉴了什么 |
+| --- | --- |
+| Discourse、GitHub Releases | 结构化更新通告的写法：类型标签、先摘要后明细、写明「对你的影响」 |
+| Reddit、Discuit、Lemmy | 兴趣社区的形态，以及隐私说明 / 社区准则的章节骨架 |
+| 微博、小红书 | 评论长度口径的现实对照 |
+| OWASP | 口令哈希选型（Argon2id）与会话 Cookie 安全属性 |
+
+感谢所有上游依赖的维护者与贡献者——没有他们的工作，一个由个人维护的小社区不可能以零付费成本稳定运行。也感谢每一位社区成员：这是一个邀请制、小规模、由真实的人组成的社区，你们的信任与反馈是项目保持克制、不夸大能力的理由。
+
+本项目代码在 AI 编程助手辅助下编写，由运营者负责审阅、验证与发布；这一点在站内产品声明中同样如实披露。
+
+### 依赖
+
+精确版本以各 `package.json` 与 `package-lock.json` 为准；**完整逐包许可清单**见 [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md)。
+
+| 类别 | 主要组件 | 许可证 |
+| --- | --- | --- |
+| 前端运行时 | React、React DOM、React Router、TanStack Query、Radix UI 原语、lucide-react | MIT / ISC |
+| 构建与样式 | Vite、TypeScript、Tailwind CSS、PostCSS、Autoprefixer | MIT / Apache-2.0 |
+| 后端运行时 | Express、pg、hash-wasm、sharp、multer、dotenv | MIT / BSD-2-Clause / Apache-2.0 |
+| 测试 | Node 内置 `node:test`、tsx、PGlite | MIT / Apache-2.0 |
+| 数据库与托管 | PostgreSQL、Vercel、Neon | 服务，非代码依赖 |
+
+上述直接与传递依赖均为 MIT / ISC / Apache-2.0 / BSD / MPL-2.0 / CC-BY-4.0 等宽松或弱传染许可，**可与 AGPL-3.0 组合，无冲突**。分发时须保留各依赖的版权声明与许可文本（Apache-2.0 另须随附 `NOTICE`，MPL-2.0 文件级修改须以 MPL 公开）。
 
 ---
 
 ## 贡献
 
-变更须遵循以下约定：
+本项目为个人维护的邀请制社区，**暂不开放外部账号注册与公开协作入口**，但欢迎通过[反馈与联系](#反馈与联系)提出建议或报告问题。若你 fork 了本仓库自行修改，请遵守以下约定：
 
-1. 需求增删同步更新 PRD 编号与追踪矩阵，架构变更登记 ADR。
+1. 需求增删同步更新 PRD 编号与追踪矩阵；架构变更登记 ADR。
 2. 表结构变更只新增迁移文件，不修改已执行迁移。
-3. 接口变更同步更新架构文档端点清单与类型定义。
-4. 代码与 `README` / `CHANGELOG` 同步更新。
-5. 验证记录须包含实际执行的命令与输出；未执行项标记为「未验证」。
-6. 公开部署、外部账号注册、生产数据清除、既有代码覆盖等操作须单独审批。
+3. 接口变更同步更新架构文档端点清单与前后端类型定义。
+4. 代码与 `README` / `CHANGELOG` 同步更新，并按 [`docs/DOC_SYNC.md`](./docs/DOC_SYNC.md) 逐项检查。
+5. 新增功能同时新增/更新测试；验证记录须包含实际执行的命令与输出，未执行项标记「未验证」。
+6. `npm run verify` 全绿才可交付；新增源码带 SPDX 头。
+7. 公开部署、外部账号注册、生产数据清除、既有代码覆盖等不可逆操作须单独审批。
+8. 衍生作品与网络服务须遵守 AGPL-3.0 的开源与源码提供义务；文档另受 CC BY-NC-SA 4.0 的非商业与相同方式共享约束；名称与 Logo 的使用见商标政策。
+
+---
+
+## 反馈与联系
+
+站内私信社区长兼管理员 **@Solvyre**（私信上线前请在任意社区公告帖下留言）。仓库未公开时请使用站内渠道，不要通过代码托管平台的公开 Issue 提交涉及个人信息的内容。
+
+安全漏洞请勿公开披露细节，先通过上述渠道私下告知。

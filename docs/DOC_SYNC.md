@@ -6,8 +6,9 @@
 > **唯一真源原则（星聚实际）**：
 > - **版本号**：以根 `package.json` 的 `version` 为唯一真源，构建注入 `__APP_VERSION__`；
 >   由 `lint` 的 `R4` 保证根 / `web` / `server` 三个 `package.json` 与 `APP_VERSION` 同源。
->   ⚠️ **当前 `1.1.0`，但项目尚未正式发版**：公告刻意不含版本号，所有变更记在 `CHANGELOG.md` 的 `[Unreleased]`。
->   因此本规范**不要求每次变更 bump 版本**；发版是 🟡「先问」类决策，须作者拍板后统一处理。
+>   **当前 `1.2.0`**（`M4` 收尾版本，已发布；`1.1.0` 早已发布）。公告按政策不含版本号，
+>   日常变更累积在 `CHANGELOG.md` 的 `[Unreleased]`。因此本规范**不要求每次变更 bump 版本**；
+>   发版是 🟡「先问」类决策，须作者拍板后统一处理（bump 四处版本号 + lock + `[Unreleased]` 转正 + 打 tag / Release）。
 > - **数字**（测试数、文件数、迁移数、依赖数）：以 `npm run verify` / `npm test` / 文件系统的**实际输出**为准，禁止写死在文档里。
 > - **功能 / 状态描述**：以**代码实现**为唯一真源；对用户的公开口径以 `server/src/config/docs/announcements.doc.ts` 为唯一真源。
 >   「已实现但无界面」算**未完成**（沿用公告既定口径）。文档不得超出实现。
@@ -86,12 +87,12 @@
 
 | 变化类型 | 版本动作 | 说明 |
 | --- | --- | --- |
-| 新增用户可见功能 | minor | 如 `1.1.0 → 1.2.0` |
-| 修复 bug / 安全修复 | patch | 如 `1.1.0 → 1.1.1` |
+| 新增用户可见功能 | minor | 如 `1.1.0 → 1.2.0`（本次） |
+| 修复 bug / 安全修复 | patch | 如 `1.2.0 → 1.2.1` |
 | 仅文档 / CI / 工程变更 | patch 或不 bump | 本项目日常多属此类，进 `[Unreleased]` 即可 |
 | 破坏性变更 | major | 需先过决策三问 |
 
-**当前口径**：`M4` 收尾前不单独发版；公告与 `CHANGELOG` 用 `[Unreleased]` 累积，待作者拍板统一发版。
+**当前口径**：`M4` 已随 `1.2.0` 发版（`1.1.0` 为更早的已发布版本）。日常变更继续在 `[Unreleased]` 累积，是否发新版由作者按上表拍板；公告始终不含版本号。
 
 ---
 
@@ -135,7 +136,7 @@
 | 文件 | 角色 |
 | --- | --- |
 | `AGENTS.md` | 协作规则；把「文档同步」列为发布/推送必查项 |
-| `CHANGELOG.md` | 用户可见变更的出口；未发版时全部落在 `[Unreleased]` |
+| `CHANGELOG.md` | 用户可见变更的出口；发版前累积在 `[Unreleased]`，发版后转为带日期的正式条目 |
 | `docs/IMPLEMENTATION-PLAN.md` | 里程碑进度 + `VR-Mx-xx` 验证记录的唯一出处 |
 | `server/src/config/docs/announcements.doc.ts` | 面向社区用户的**功能状态唯一真源** |
 | `README.md` / `COPYRIGHT` / `LICENSE*` / `TRADEMARK.md` / `THIRD-PARTY-NOTICES.md` | 许可与版权体系，需互相一致 |
@@ -152,5 +153,6 @@
 4. **数字写死**：测试数、文件数会随开发变化，文档引用时以当次实际输出为准，别复制旧数字。
 5. **协议文档与代码**：新增能力（如通知、改密）后，隐私说明/社区准则若涉及相关描述要跟着核对。
 6. **分离式许可**：新增文档要补进 `LICENSE-docs` 范围；新增源码要带 SPDX 头；品牌资产勿混入 CC/AGPL 授权。
+7. **发版时版本号多处同步**：`README.md` 顶部版本徽章、`README.md` 版本表、四处机器真源（根 / `web` / `server` 的 `package.json` 与 `APP_VERSION`）、`package-lock.json` 四处、`CHANGELOG.md`（`[Unreleased]` 转正）、git tag 与 Release 标题须一致；`docs/*.md` 头部的 `v1.0.0` 是**架构基线标记，故意不改**。
 
 > 一句话：**版本问 package.json（当前别乱 bump），数字问 verify 输出，功能状态问公告真源与代码，推送前 grep 一遍再走。**
