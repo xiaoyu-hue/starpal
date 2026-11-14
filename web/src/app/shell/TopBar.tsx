@@ -33,8 +33,10 @@ export function TopBar({ onOpenMenu }: TopBarProps) {
 
       <Link to="/" className="flex shrink-0 items-center gap-2" aria-label="星聚 STARPAL 首页">
         <StarpalMark size={26} decorative />
-        <span className="hidden text-sm font-semibold tracking-wide text-ink sm:inline">
-          星聚 <span className="font-normal text-faint">STARPAL</span>
+        <span className="text-sm font-semibold tracking-wide text-ink">
+          星聚
+          {/* 窄屏只保留中文两字，为右侧操作区让出宽度；sm 以上再补副标。 */}
+          <span className="ml-2 hidden font-normal text-faint sm:inline">STARPAL</span>
         </span>
       </Link>
 
