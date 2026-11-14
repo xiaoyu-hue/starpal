@@ -197,3 +197,31 @@ export async function listBookmarkedPosts(
   const hasMore = rows.length > limit
   return { rows: rows.slice(0, limit), hasMore }
 }
+
+/**
+ * 当前用户点赞列表：按「点赞时间」倒序（不是帖子创建时间）。
+ *
+ * 与收藏列表同构：JOIN likes 后每个 (user, post) 至多一行（主键约束），不会放大结果集；
+ * 可见性沿用 VISIBLE，游标以 (l.created_at, p.id) 为键集，与 ORDER BY 严格对应。
+ * likes_user_idx (user_id, created_at DESC) 服务于本读取方向（见 010 迁移）。
+ * 可注入 executor，使同一段 SQL 能在 PGlite 内存库里验证。
+ */
+export async function listLikedPosts(
+  userId: string,
+  cursor: { t: string; id: string } | null,
+  limit: number,
+  executor: RowExecutor = pool,
+): Promise<ListResult> {
+  const rows = await queryRows(
+    executor,
+    `SELECT ${PROJECTION}, l.created_at AS liked_at ${FROM_JOINS}
+      JOIN likes l ON l.post_id = p.id AND l.user_id = $1
+      WHERE ${VISIBLE}
+        AND ($2::timestamptz IS NULL OR (l.created_at, p.id) < ($2::timestamptz, $3::bigint))
+      ORDER BY l.created_at DESC, p.id DESC
+      LIMIT $4`,
+    [userId, cursor?.t ?? null, cursor?.id ?? null, limit + 1],
+  )
+  const hasMore = rows.length > limit
+  return { rows: rows.slice(0, limit), hasMore }
+}

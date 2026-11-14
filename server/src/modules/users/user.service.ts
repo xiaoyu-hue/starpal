@@ -18,7 +18,7 @@ import {
   MBTI_VALUES,
   ZODIAC_VALUES,
 } from '../../config/constants.js'
-import { countPostsOf, listBookmarkedPosts, listUserPosts } from '../posts/index.js'
+import { countPostsOf, listBookmarkedPosts, listLikedPosts, listUserPosts } from '../posts/index.js'
 import {
   eraseUser,
   findOwnProfileById,
@@ -187,4 +187,16 @@ export async function getOwnBookmarks(
 ): Promise<UserPostsPage> {
   const cursor = parseCursor(rawCursor)
   return listBookmarkedPosts(userId, cursor)
+}
+
+/**
+ * 本人点赞列表：只查当前登录者的点赞，不接受任何 userId 参数，越权面在入口即收窄。
+ * 与收藏列表共用 parseCursor：非法游标按参数错误拒绝，不静默退回第一页。
+ */
+export async function getOwnLikes(
+  userId: string,
+  rawCursor?: unknown,
+): Promise<UserPostsPage> {
+  const cursor = parseCursor(rawCursor)
+  return listLikedPosts(userId, cursor)
 }

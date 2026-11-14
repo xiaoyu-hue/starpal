@@ -7,6 +7,7 @@ import {
   listAuthorPosts,
   listBookmarkedPosts as listBookmarkedPostsRepo,
   listFeedPosts,
+  listLikedPosts as listLikedPostsRepo,
   listRelatedPosts,
 } from './post.feed.repository.js'
 import {
@@ -248,6 +249,29 @@ export async function listBookmarkedPosts(
     nextCursor:
       hasMore && last?.bookmarkedAt
         ? encodeCursor({ t: last.bookmarkedAt, id: String(last.id) })
+        : null,
+    hasMore,
+  }
+}
+
+/**
+ * 当前用户点赞列表：按点赞时间倒序，仅返回仍可见的帖子。
+ * 与收藏列表同构，viewerId 即 userId：列表项 isLiked 会自然为 true，isBookmarked 按真实收藏补齐。
+ */
+export async function listLikedPosts(
+  userId: string,
+  cursor: { t: string; id: string } | null,
+  limit = FEED_PAGE_SIZE,
+): Promise<PostPage> {
+  const { rows, hasMore } = await listLikedPostsRepo(userId, cursor, limit)
+  const last = rows[rows.length - 1]
+  const items = await attachViewerFlags(rows.map(toListItem), userId)
+  return {
+    items,
+    // 点赞查询必带 liked_at；缺失时宁可不翻页，也不发出语义错误的游标。
+    nextCursor:
+      hasMore && last?.likedAt
+        ? encodeCursor({ t: last.likedAt, id: String(last.id) })
         : null,
     hasMore,
   }

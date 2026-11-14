@@ -60,6 +60,16 @@ describe('关于页未完成清单与公告真源一致', () => {
     assert.match(intro, /我的收藏列表.*已经可用/)
   })
 
+  it('点赞列表已交付：写进已交付能力，且不列入未完成清单', () => {
+    const status = ANNOUNCEMENT_ITEMS.find((item) => item.kind === 'status')!
+    const intro = ABOUT.intro.join('')
+    const available = status.changes.find((line) => line.startsWith('可用：')) ?? ''
+    const pendingLine = status.changes.find((line) => line.startsWith('未完成：')) ?? ''
+    assert.match(intro, /我的点赞列表.*已经可用/)
+    assert.ok(available.includes('我的点赞列表'), '公告 status 的可用能力未列出点赞列表')
+    assert.ok(!pendingLine.includes('点赞列表'), '公告 status 的未完成清单仍含点赞列表')
+  })
+
   it('不再把已交付能力写成未完成', () => {
     const intro = ABOUT.intro.join('')
     for (const stale of ['通知中心仍在路上', '没有自助改密', '帖子暂时不能自己删除']) {

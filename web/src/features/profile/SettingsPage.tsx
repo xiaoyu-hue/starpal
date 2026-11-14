@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bookmark, Check, KeyRound } from 'lucide-react'
+import { Bookmark, Check, Heart, KeyRound } from 'lucide-react'
 import { Avatar, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
@@ -55,6 +55,19 @@ export function SettingsPage() {
         </div>
         <Link to="/bookmarks" className={buttonClass('secondary', 'sm')}>
           查看收藏
+        </Link>
+      </Card>
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-6">
+        <div>
+          <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
+            <Heart size={16} /> 我的点赞
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            点过赞的帖子只有你自己能看到，进帖子详情页可以取消点赞。
+          </p>
+        </div>
+        <Link to="/likes" className={buttonClass('secondary', 'sm')}>
+          查看点赞
         </Link>
       </Card>
       <AboutSection />

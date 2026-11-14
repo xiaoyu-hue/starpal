@@ -6,6 +6,7 @@ import {
   deleteAccountController,
   eraseAccountController,
   myBookmarksController,
+  myLikesController,
   ownProfileController,
   publicPostsController,
   publicProfileController,
@@ -25,6 +26,7 @@ export const userRouter = Router()
 const meRouter = Router()
 meRouter.get('/', ownProfileController)
 meRouter.get('/bookmarks', myBookmarksController)
+meRouter.get('/likes', myLikesController)
 meRouter.patch('/', updateProfileController)
 meRouter.delete('/', deleteAccountController)
 meRouter.post('/erase', eraseAccountController)

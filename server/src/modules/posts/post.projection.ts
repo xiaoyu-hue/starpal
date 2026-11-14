@@ -79,6 +79,8 @@ export type PostRow = QueryResultRow & {
   rank_score?: number
   /** 仅收藏列表查询会返回（JOIN bookmarks 的 created_at）；其余列表为 undefined。 */
   bookmarked_at?: Date
+  /** 仅点赞列表查询会返回（JOIN likes 的 created_at）；其余列表为 undefined。 */
+  liked_at?: Date
 }
 
 /** 作者已注销时统一替换为占位署名并隐去头像，与个人资料投影保持一致（ADR-010）。 */
@@ -110,9 +112,10 @@ export function mapRow(row: PostRow) {
       height: image.height,
     })),
     rankScore: row.rank_score,
-    // 收藏列表按「收藏时间」倒序分页，游标排序键取自 bookmarks.created_at，
-    // 而非帖子创建时间；该字段只在收藏查询里存在，不进入对外列表投影。
+    // 收藏 / 点赞列表按「收藏 / 点赞时间」倒序分页，游标排序键取自关联表 created_at，
+    // 而非帖子创建时间；这两个字段只在对应查询里存在，不进入对外列表投影。
     bookmarkedAt: row.bookmarked_at?.toISOString(),
+    likedAt: row.liked_at?.toISOString(),
     // 互动态由调用方按 viewer 批量补齐（见 interactions/flags.ts）；
     // 这里给出匿名默认值，避免每个调用点都要拼一份完整对象。
     isLiked: false,

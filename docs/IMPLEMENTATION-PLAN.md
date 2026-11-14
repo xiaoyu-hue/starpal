@@ -553,6 +553,8 @@ flowchart LR
 
 | `VR-M4-12` | 我的收藏列表（`M4` 收尾后第 1 步，非 `M4` 功能） | 通过 | `npm run verify` 全绿：`typecheck` / `build` / `check:size`（222 个源文件全部在预算内）/ `lint`（硬规则 0 违规）/ `test`（68 项全通过，含新增 `server/tests/integration/bookmarks-list.test.ts` 5 项）。PGlite 真库断言：只返回本人且仍可见的收藏、按收藏时间倒序（同时间以 id 为第二键）、投影带出收藏时间与已注销作者占位署名、游标编解码往返后翻页不重不漏、他人收藏与空页。`GET /api/users/me/bookmarks` 挂在 `/me` 整组 `requireAuth` 下、只按 `principal.id` 查询；构建产物确认 `BookmarksPage` 独立分包、帖子页面仍独立分包。无头 Chromium 复核首页 / `/bookmarks` / `/settings` 三路由 `id="root"` 正常挂载、无 Uncaught JS 错误、未登录访问受保护路由落到登录页（静态预览无后端，接口错误态属预期）。**登录态下收藏页与卡片收藏按钮的完整交互 E2E 未执行**（需真实后端与登录态），如实标注为未验证 |
 
+| `VR-M4-13` | 我的点赞列表（`M4` 收尾后第 2 步，非 `M4` 功能） | 通过 | `npm run verify` 全绿：`typecheck` / `build`（2317 模块）/ `check:size`（226 个源文件全部在预算内）/ `lint`（硬规则 0 违规）/ `test`（74 项全通过，含新增 `server/tests/integration/likes-list.test.ts` 5 项与 `about-doc.test.ts` 新增 1 项「点赞列表已交付」断言）。新增 `010_likes_user_idx.sql` 补 `likes_user_idx`，PGlite 真库随 `createMigratedDb()` 一并应用，断言：只返回本人且仍可见的点赞、按点赞时间倒序（同时间以 id 为第二键）、投影带出点赞时间与已注销作者占位署名、游标翻页不重不漏、他人点赞与空页。`GET /api/users/me/likes` 挂在 `/me` 整组 `requireAuth` 下、只按 `principal.id` 查询；写入后 `useLikeMutation` 同时失效 `feedKeys`（点赞改变热门排序）与 `likeKeys`。构建产物确认 `LikesPage` 独立分包（1.6K chunk）、`likes-heading` / 空态文案只出现在该 chunk、主包未拖入页面代码。无头 Chromium 复核首页 / `/bookmarks` / `/likes` / `/settings` 四路由 `id="root"` 正常挂载、无 Uncaught JS 错误、未登录访问受保护路由落到登录页（静态预览无后端，接口错误态属预期）。**登录态下点赞页与详情页取消赞的完整交互 E2E 未执行**（需真实后端与登录态），如实标注为未验证 |
+
 **M4 交付物**：点赞 / 收藏 / 评论 API 与前端、计数事务、通知中心、一人一码邀请制、自助改密。
 
 **M4 完成判据**：`AC-07`、`AC-08` 有验证记录；唯一约束在并发下生效；`DoD-01`—`DoD-10` 全部满足。
@@ -567,7 +569,7 @@ flowchart LR
 
 **前置条件**：`M4` 完成。
 
-> **迁移编号口径（M5 / M6 通用）**：`server/src/db/migrations/` 的顺序编号以**目录实际占用**为准。`M4` 收尾时已用到 `009_invite_codes.sql`，因此 `M5` / `M6` 的新迁移一律从下一个可用序号（现为 `010`）起顺编，且只增不改已应用的历史迁移。下表文件名统一用 `NNN_` 占位前缀（`NNN` = 开工时目录里的下一个可用序号，现为 `010`），不再预填具体编号——早期计划中的 `005` / `006` / `007` / `008` 已被 M1–M4 实际占用，照抄会导致文件覆盖或迁移账本冲突。
+> **迁移编号口径（M5 / M6 通用）**：`server/src/db/migrations/` 的顺序编号以**目录实际占用**为准。`M4` 收尾时已用到 `009_invite_codes.sql`，其后「我的点赞」列表又占用 `010_likes_user_idx.sql`，因此 `M5` / `M6` 的新迁移一律从下一个可用序号（现为 `011`）起顺编，且只增不改已应用的历史迁移。下表文件名统一用 `NNN_` 占位前缀（`NNN` = 开工时目录里的下一个可用序号，现为 `011`），不再预填具体编号——早期计划中的 `005` / `006` / `007` / `008` 已被 M1–M4 实际占用，照抄会导致文件覆盖或迁移账本冲突。
 
 #### `M5-S1` 私信（留言式）
 
@@ -794,7 +796,7 @@ flowchart LR
 | 类别 | 内容 | 来源里程碑 |
 | --- | --- | --- |
 | 完整源码 | `web/` 前端、`server/` 后端、`scripts/` 脚本 | `M1`—`M6` |
-| 数据库 schema 与迁移 | `migrations/001…009`（截至 M4）、`seeds/`、`schema_migrations` | `M1`—`M6` |
+| 数据库 schema 与迁移 | `migrations/001…010`（截至 M4 为 `001…009`，其后补 `010_likes_user_idx.sql`）、`seeds/`、`schema_migrations` | `M1`—`M6` |
 | 环境变量文档 | 变量表、示例占位、安全说明 | `M7` |
 | 启动说明 | 开发 / 构建 / 单进程启动 | `M7` |
 | PostgreSQL 配置说明 | 实例准备、迁移、备份与恢复 | `M7` |

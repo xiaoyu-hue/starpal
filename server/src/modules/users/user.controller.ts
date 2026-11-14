@@ -6,6 +6,7 @@ import {
   deleteOwnAccount,
   eraseOwnAccount,
   getOwnBookmarks,
+  getOwnLikes,
   getOwnProfile,
   getPublicPosts,
   getPublicProfile,
@@ -109,6 +110,20 @@ export async function myBookmarksController(
   try {
     const page = await getOwnBookmarks(req.principal!.id, req.query.cursor)
     // 与 /api/posts、/:username/posts 同构：data 为列表，meta 承载游标，前端共用解包逻辑。
+    sendData(res, page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/** 本人点赞列表：登录校验由 /me 路由组统一承担，这里只取 principal.id，不接受用户标识入参。 */
+export async function myLikesController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const page = await getOwnLikes(req.principal!.id, req.query.cursor)
     sendData(res, page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore })
   } catch (error) {
     next(error)

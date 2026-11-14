@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { feedKeys, postKeys } from '../../lib/query-keys'
+import { feedKeys, likeKeys, postKeys } from '../../lib/query-keys'
 import type { PostDetail } from '../../types/api'
 import { profileKeys } from '../profile'
 import {
@@ -118,6 +118,11 @@ export function useDeletePostImageMutation(postId: number) {
  * 为什么用服务端计数而不是本地累加：并发下别人也在点赞，本地 +1 只是猜测。
  * 乐观更新只为让按钮立刻有反馈；服务端返回后立即校正，避免「显示 13 实际 12」。
  * 收藏开关集中到 features/bookmarks（卡片与详情页共用一份实现），此处只保留点赞。
+ *
+ * 与收藏的缓存差异：点赞会改变 like_count，而它参与热门 / 推荐排序，
+ * 所以写入后必须整页失效重取信息流（不能像收藏那样只就地校正列表项，
+ * 否则热门顺序会停在旧值）；点赞列表按点赞时间排序，增删都会改变分页顺序，
+ * 同样失效重取，不本地猜插入位置。
  */
 export function useLikeMutation(id: number) {
   const client = useQueryClient()
@@ -145,8 +150,12 @@ export function useLikeMutation(id: number) {
       )
     },
     onSettled: async () => {
-      // 列表里的计数与热门排序都会变；只标记过期，返回列表时再取，不在详情页强行重排。
-      await client.invalidateQueries({ queryKey: feedKeys.all })
+      // 点赞改变计数与热门排序，信息流必须失效重取（就地校正会让顺序停在旧值）；
+      // 点赞列表按点赞时间排序，增删都改变分页，同样失效重取。
+      await Promise.all([
+        client.invalidateQueries({ queryKey: feedKeys.all }),
+        client.invalidateQueries({ queryKey: likeKeys.all }),
+      ])
     },
   })
 }

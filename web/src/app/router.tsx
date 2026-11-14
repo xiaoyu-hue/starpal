@@ -56,6 +56,9 @@ const NotificationsPage = lazy(() =>
 const BookmarksPage = lazy(() =>
   import('../features/bookmarks/BookmarksPage').then((m) => ({ default: m.BookmarksPage })),
 )
+const LikesPage = lazy(() =>
+  import('../features/likes/LikesPage').then((m) => ({ default: m.LikesPage })),
+)
 const AboutPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.AboutPage })),
 )
@@ -123,6 +126,14 @@ const routes: RouteObject[] = [
         element: (
           <RequireAuth>
             <Suspended><BookmarksPage /></Suspended>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'likes',
+        element: (
+          <RequireAuth>
+            <Suspended><LikesPage /></Suspended>
           </RequireAuth>
         ),
       },

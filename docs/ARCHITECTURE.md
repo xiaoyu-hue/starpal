@@ -422,7 +422,7 @@ server/
 | `users` | 资料读写、公开资料投影、账号删除与擦除 | `users` `user_profiles` |
 | `posts` | 帖子 CRUD、可见性、计数、相关帖子 | `posts` |
 | `comments` | 评论发表、列表、移除 | `comments` |
-| `likes` | 点赞 / 取消、计数维护 | `likes` `posts` |
+| `likes` | 点赞 / 取消、计数维护、我的点赞列表 | `likes` `posts` |
 | `bookmarks` | 收藏 / 取消、收藏列表 | `bookmarks` `posts` |
 | `topics` | 话题查询、筛选、管理 | `topics` |
 | `messages` | 会话与消息 | `conversations` `messages` |
@@ -596,6 +596,7 @@ sequenceDiagram
 | DELETE | `/api/users/me` | 本人 | 软删除账号 |
 | POST | `/api/users/me/erase` | 本人 | 彻底擦除我的数据 |
 | GET | `/api/users/me/bookmarks` | 本人 | 我的收藏列表（按收藏时间倒序、键集游标分页，只返回当前登录者且仍可见的帖子） |
+| GET | `/api/users/me/likes` | 本人 | 我的点赞列表（按点赞时间倒序、键集游标分页，只返回当前登录者且仍可见的帖子；`010` 补 `likes_user_idx` 索引） |
 
 **话题**
 
@@ -1008,13 +1009,14 @@ server/src/db/migrations/
 ├── 003_topics_posts.sql
 ├── 004_post_images.sql
 ├── 005_interactions.sql
-├── 006_messages_notifications.sql
-├── 007_achievements.sql
-├── 008_reports_moderation.sql
-└── 009_views.sql
+├── 006_comment_length.sql
+├── 007_chat_topic.sql
+├── 008_terms_acceptance.sql
+├── 009_invite_codes.sql
+└── 010_likes_user_idx.sql
 ```
 
-明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`。
+明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications` 等属未来里程碑，未落盘，不在此列）。
 
 | 规则 | 内容 |
 | --- | --- |

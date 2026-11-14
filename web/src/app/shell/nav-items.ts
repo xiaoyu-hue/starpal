@@ -6,6 +6,7 @@ import {
   Bookmark,
   Compass,
   FileText,
+  Heart,
   Home,
   Info,
   Megaphone,
@@ -33,11 +34,12 @@ export const DESTINATIONS: Record<string, Destination> = {
   create: { key: 'create', label: '发布', path: '/posts/new', icon: PenLine },
   notifications: { key: 'notifications', label: '通知', path: '/notifications', icon: Bell },
   bookmarks: { key: 'bookmarks', label: '我的收藏', path: '/bookmarks', icon: Bookmark },
+  likes: { key: 'likes', label: '我的点赞', path: '/likes', icon: Heart },
   profile: { key: 'profile', label: '我的', path: '/settings', icon: UserRound },
   messages: { key: 'messages', label: '私信', path: '/messages', icon: MessageSquare },
 }
 
-/** 桌面顶栏与左栏展开的七个目的地。 */
+/** 桌面顶栏与左栏展开的八个目的地（顶栏另过滤掉 create / notifications）。 */
 export const DESKTOP_KEYS = [
   'home',
   'discover',
@@ -45,6 +47,7 @@ export const DESKTOP_KEYS = [
   'create',
   'notifications',
   'bookmarks',
+  'likes',
   'profile',
 ] as const
 

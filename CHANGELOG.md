@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+### 新增（我的点赞列表）
+
+- 数据库新增 `010_likes_user_idx.sql`：为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 已建的 `bookmarks_user_idx` 对称。`005` 中 `likes` 只有按帖子查的 `likes_post_idx`，主键 `(user_id, post_id)` 只能过滤用户、无法直接按时间排序；不补索引会退化为「取出该用户全部点赞再排序」。纯新增索引、不改表结构与历史数据。
+- 后端新增 `GET /api/users/me/likes`：挂在 `/api/users/me` 整组 `requireAuth` 之下，只按登录者 `principal.id` 查询；按 `likes.created_at` 倒序、以 `(点赞时间, 帖子 id)` 为键集游标分页；复用 `PROJECTION` / `VISIBLE` 与 `attachViewerFlags`。投影新增可选 `likedAt`（与 `bookmarkedAt` 同构），仅用于生成点赞游标，不进入对外列表投影。
+- 前端新增 `web/src/features/likes/`：`/likes` 路由（`RequireAuth`）、点赞列表页（复用 `FeedView` 与无限滚动，空态引导回首页）、侧栏 / 移动抽屉 / 设置页三处入口；移动端四个底部 Tab 保持不变。`likeKeys` 加入 `lib/query-keys.ts`。构建产物确认 `LikesPage` 独立分包（1.6K chunk）、主包未拖入页面代码。
+- **与收藏刻意不对称的两处**（讲清取舍，非遗漏）：① 信息流卡片上的点赞保持纯数字、不做按钮——点赞改变 `like_count` 且它参与热门 / 推荐排序，卡片点赞会让正在滚动的列表当场重排跳动；收藏不改排序，当初可安全做成按钮。② 写入开关 `setPostLike` / `useLikeMutation` 保留在 posts 域（详情页是唯一写入口），`features/likes` 只管列表读取，两侧通过 `likeKeys` 协作；`useLikeMutation` 的 `onSettled` 同时失效 `feedKeys`（修正热门排序）与 `likeKeys`（按点赞时间重排）。代价如实标注：点赞列表页不能就地取消赞，需进详情页操作。
+- 验证：新增 `server/tests/integration/likes-list.test.ts`（5 项 PGlite 真库：只返回本人且仍可见的点赞、按点赞时间倒序且同时间以 id 为第二键、投影带出点赞时间与已注销作者占位署名、游标翻页不重不漏、他人点赞与空页），更新 `server/tests/unit/about-doc.test.ts` 增「点赞列表已交付」断言。`npm run verify` 全绿（74 项测试、lint 硬规则 0 违规、226 文件在行数预算内）；无头 Chromium 复核首页 / `/bookmarks` / `/likes` / `/settings` 四路由正常挂载、无 Uncaught JS 错误、未登录守卫生效。**登录态下点赞页与详情页取消赞的完整交互 E2E 未执行**（需真实后端与登录态），如实标注为未验证。
+
+### 更正（迁移编号与架构迁移树）
+
+- 本次占用 `010` 后，把上一批写的「现到 `009`、新迁移从 `010` 起」同步为「现到 `010`、从 `011` 起」：`AGENTS.md`、`docs/DOC_SYNC.md`、`docs/IMPLEMENTATION-PLAN.md` 的 M5/M6 迁移编号口径，以及 README 三处 `001`–`009` 范围与 §7 交付物清单。不改会让下次按文档新建迁移时覆盖 `010_likes_user_idx.sql`。
+- `docs/ARCHITECTURE.md` §7.5 迁移树的 `006`–`009` 原为早期计划名（`messages_notifications` / `achievements` / `reports_moderation` / `views`），与磁盘真实文件（`comment_length` / `chat_topic` / `terms_acceptance` / `invite_codes`）不符；按目录实际占用订正，并登记 `010_likes_user_idx.sql`，补一句明细说明。§5 模块表 `likes` 职责、§6 端点表补 `/api/users/me/likes`。
+
 ### 新增（我的收藏列表）
 
 - 后端新增 `GET /api/users/me/bookmarks`：挂在 `/api/users/me` 整组 `requireAuth` 之下，只按登录者 `principal.id` 查询，不接受任何用户标识入参；按 `bookmarks.created_at` 倒序、以 `(收藏时间, 帖子 id)` 为键集游标分页；复用 `PROJECTION` / `VISIBLE` 统一可见性口径与 `attachViewerFlags` 补齐互动态。无需新迁移（`bookmarks` 表与 `bookmarks_user_idx` 已存在）。
