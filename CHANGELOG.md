@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+### 新增（M3-S3 图片存储 · 读写通道）
+
+- 新建 `server/src/storage`：`StorageAdapter` 接口（`put` / `get` / `remove`）与 `postgres-bytea` 实现，单例注入点收敛到 `storage/index.ts`，不建工厂或注册机制。实现接受 `Pool | PoolClient`，使上传流程能在调用方事务内写字节，失败整体回滚。
+- `put` 携带 `imageId`：`image_blobs` 以 `image_id` 为主键并外键引用 `post_images`，写字节前必须已有元数据行；对象存储实现会忽略该字段，接口仍可替换（已写入架构 §8.2）。
+- `remove` 只删字节、保留元数据行，供上传回滚与存储迁移使用；正常删除仍走 `post_images` 级联。
+- 新建 `modules/images`：`GET /api/images/:key` 经适配器返回字节，`Content-Type` 取自落库值，携带 `Cache-Control: public, max-age=31536000, immutable`、`X-Content-Type-Options: nosniff` 与 `Content-Disposition: inline`。
+- 畸形键（非 32 位小写 hex）在服务层直接按 `NOT_FOUND` 处理，不触达数据库；未知键与路径穿越均返回统一错误包络。
+- 实测：真实 PNG 写入事务后读回字节完全一致（SHA-256 相同）；同键重复写入被拒；704.5 KB 样本写入 19 ms、读取 6 ms；700 KB 图片 HTTP 单次 6–8 ms、10 并发全部 200。
+
 ### 新增（M3 内容域 · 进行中）
 
 - **存储决策落地（`ADR-014`）**：图片二进制改为存 PostgreSQL `image_blobs.data`，不再写本地磁盘。依据：部署于 Vercel Serverless，无可写持久目录，且函数请求体硬上限 4.5 MB；候选对象存储中 Cloudflare R2 需绑卡、Supabase Storage 免费层闲置 7 天即暂停。

@@ -395,7 +395,8 @@ server/
 │   │   ├── topics/     ├── comments/     ├── likes/
 │   │   ├── bookmarks/  ├── messages/     ├── notifications/
 │   │   ├── achievements/ ├── reports/    ├── moderation/
-│   │   ├── uploads/    ├── search/       └── export/
+│   │   ├── uploads/    ├── search/       ├── images/
+│   │   ├── export/
 │   │   └── admin/      # 薄聚合层：仅组合上述模块的管理视图
 │   ├── shared/
 │   │   ├── errors.ts           # 领域错误与错误码
@@ -1062,26 +1063,41 @@ sequenceDiagram
 ### 8.2 存储适配器
 
 ```ts
-// server/src/storage/adapter.ts —— 接口定义（示意）
-export interface StorageRef {
-  key: string;        // 存储键；postgres-bytea 下为 32 位随机 hex，兼作缓存键
+// server/src/storage/adapter.ts —— 接口定义（与实现一致）
+export type StoredImage = {
+  key: string;        // 32 位随机 hex，兼作缓存键；写入后内容与键均不变
   mimeType: string;
   width: number;
   height: number;
   byteSize: number;
-}
+};
+
+export type StoragePutInput = {
+  key: string;        // 由上传管线生成：必须先于元数据插入确定，故不由适配器生成
+  buffer: Buffer;
+  mimeType: string;
+  width: number;
+  height: number;
+  imageId: number;    // 归属的 post_images.id；对象存储实现忽略此字段
+};
 
 export interface StorageAdapter {
-  put(buffer: Buffer, meta: { mimeType: string }): Promise<StorageRef>;
-  get(key: string): Promise<Buffer | null>;
+  put(input: StoragePutInput): Promise<StoredImage>;
+  get(key: string): Promise<{ buffer: Buffer; mimeType: string } | null>;
   remove(key: string): Promise<void>;
 }
 ```
 
-- 当前提供 `postgres-bytea.ts` 一个实现，注入点位于 `app.ts`，**不建立工厂或注册机制**。
+- 当前提供 `postgres-bytea.ts` 一个实现，单例注入点位于 `server/src/storage/index.ts`，
+  **不建立工厂或注册机制**。实现接受 `Pool | PoolClient`，使上传流程能在调用方事务内写字节。
+- `put` 携带 `imageId`：`image_blobs` 以 `image_id` 为主键并外键引用 `post_images`，
+  写字节前必须已有元数据行。对象存储实现忽略该字段，接口仍可替换；若改为以 `storage_key`
+  直接关联，可移除该字段而不影响调用方语义。
+- `remove` 只删字节、保留元数据行，用于上传事务回滚与存储迁移；正常删除走 `post_images` 级联。
 - `local-disk.ts` 不再提供：Serverless 运行环境无可写持久目录，实现即失效。
 - 读取经受控路由 `GET /api/images/:key` 返回，携带 `Cache-Control: public, max-age=31536000, immutable`
   与 `X-Content-Type-Options: nosniff`；`storage_key` 随机且内容不可变，可长期缓存。
+  畸形键（非 32 位小写 hex）在服务层直接按 `NOT_FOUND` 处理，不触达数据库。
 
 ### 8.3 校验规则
 

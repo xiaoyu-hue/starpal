@@ -389,8 +389,10 @@ flowchart LR
 | `VR-M3-10` | 前端内容域（`M3-S5`） | 通过 | 真实 Chromium 走完整用户路径：登录 → 信息流 20 条 → 话题页 9 个 → 话题详情标题「游戏」→ 界面发帖（标题 / 单选话题 / 多行正文）→ 跳转 `/posts/28` → 详情标题与正文段落空行保留、编辑入口可见、同话题相关区块出现；浏览器控制台无脚本错误（仅 1 条 `/api/auth/me` 未登录时的 401，属预期探测） |
 | `VR-M3-11` | 自然语言字段校验缺陷修复 | 通过 | 修复前 `title` / `body` / `displayName` / `biography` 共用「禁止内部空白」规则，导致含空格的标题与多行正文被 `400` 拒绝（`{"field":"title","constraint":"不得包含空白字符"}`）；改为对四类自然语言字段显式 `allowInnerWhitespace`，`username` / `inviteCode` 仍禁空白。修复后含空格标题、含 `\n\n` 正文均正常创建且换行在详情页保留 |
 | `VR-M3-12` | 游标翻页一致性（补测） | 通过 | 25 条内容 `limit=20`：首页 20 条 `hasMore=true`，次页 5 条 `hasMore=false`，两页 ID 集合无交集、整体严格递减；个人页 `?cursor=bad-cursor` 返回 `400`（不静默回退第一页，避免无限滚动死循环） |
+| `VR-M3-13` | 存储适配器（`M3-S3-T1`） | 通过 | 本地 PostgreSQL 16 空库迁移后，用真实 PNG 走 `withTransaction` 写入：事务内先插 `post_images` 再 `put` 字节，提交后经适配器读回**字节完全一致**（SHA-256 相同）、`mimeType` 正确；`byteSize` 与实际字节数相等；未知键返回 `null`；同键重复写入被主键拒绝（内容不可变）；畸形键（`../../etc/passwd`）在适配器层即返回 `null`，不触达数据库。真实尺寸样本 704.5 KB：事务写入 19 ms、读取 6 ms |
+| `VR-M3-14` | 受控读取路由（`M3-S3-T5`） | 通过 | `GET /api/images/:key` 返回 `200`，响应头 `Content-Type: image/png`、`Content-Length: 164`、`Cache-Control: public, max-age=31536000, immutable`、`X-Content-Type-Options: nosniff`、`Content-Disposition: inline`；下载字节与源文件 SHA-256 一致。负向：未知键、路径穿越（`..%2F..%2Fetc%2Fpasswd`）、大写短键均 `404`，包络为 `{"error":{"code":"NOT_FOUND",...}}`，不泄露键是否存在。700 KB 图单次 6–8 ms，10 并发全部 `200`（最慢 40 ms）。`remove` 后读回 `null`，元数据行保留（符合「只删字节」语义） |
 
-**M3 进度**：`M3-S1`（数据模型）、`M3-S2`（帖子 API）、`M3-S4`（话题域，读侧）与 `M3-S5`（前端内容域，除图片外）✅ 完成；`M3-S3`（图片上传）待做。用户现可在浏览器里完成「浏览信息流 → 挑话题 → 发帖 → 看详情 → 编辑 / 删除」全流程。帖子列表能力已并入 `modules/posts`，原 `modules/feed` 退役——同一 URL 前缀由同一模块拥有，避免游标规则与可见性判定分处两地。话题目录（`GET /api/topics`）由 `modules/topics` 提供，仅含读侧；管理端增删改与留痕随 `moderation_logs` 一并延后。
+**M3 进度**：`M3-S1`（数据模型）、`M3-S2`（帖子 API）、`M3-S4`（话题域，读侧）与 `M3-S5`（前端内容域，除图片外）✅ 完成；`M3-S3`（图片上传）**读写通道已通**（`T1` 存储适配器、`T5` 受控读取），上传管线（`T2`—`T4`、`T6`—`T7`）待做。用户现可在浏览器里完成「浏览信息流 → 挑话题 → 发帖 → 看详情 → 编辑 / 删除」全流程。帖子列表能力已并入 `modules/posts`，原 `modules/feed` 退役——同一 URL 前缀由同一模块拥有，避免游标规则与可见性判定分处两地。话题目录（`GET /api/topics`）由 `modules/topics` 提供，仅含读侧；管理端增删改与留痕随 `moderation_logs` 一并延后。
 
 ---
 
@@ -421,15 +423,15 @@ flowchart LR
 | `M3-S2-T6` | 相关帖子 | 同话题近期帖子，限量返回 | posts 仓储 | 结果仅含同话题 |
 | `M3-S2-T7` | 路由挂载 | 在 `routes.ts` 注册 `/api/posts`；读端点挂 `optionalAuth`（匿名可读、登录者可见草稿），写端点挂 `requireAuth` | `server/src/routes.ts`、`middleware/optional-auth.ts` | 端点清单与架构 §6.2 一致 |
 
-#### `M3-S3` 图片上传管线
+#### `M3-S3` 图片上传管线（⚠ 读写通道已通，上传管线未做）
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M3-S3-T1` | 存储接口 | 定义 `StorageAdapter` 与 `postgres-bytea` 实现（`ADR-014`），注入点集中于 `app.ts` | `server/src/storage/adapter.ts`、`postgres-bytea.ts` | 仅一个实现，无工厂 / 注册机制 |
+| `M3-S3-T1` | 存储接口 | ✅ `StorageAdapter`（`put` / `get` / `remove`）与 `postgres-bytea` 实现（`ADR-014`），单例注入点集中于 `storage/index.ts`；实现接受 `Pool \| PoolClient`，可参与调用方事务 | `server/src/storage/` | `VR-M3-13` 有记录；仅一个实现，无工厂 / 注册机制 |
 | `M3-S3-T2` | 上传中间件 | 显式请求体与文件大小上限、内存缓冲、不先落盘 | `modules/uploads/` | 超限被拒且不产生文件 |
 | `M3-S3-T3` | 管线校验 | 魔术字节判定真实类型、白名单、重新编码、剥离元数据、随机文件名 | `image-pipeline.ts` | 伪造扩展名 / MIME 被拒；EXIF 不保留（`AC-06`） |
 | `M3-S3-T4` | 元数据入库 | 同一事务写入 `post_images` 与 `image_blobs`，失败整体回滚 | `uploads` 服务 | `post_images` 与 `image_blobs` 行数一致 |
-| `M3-S3-T5` | 受控读取 | 图片路由携带禁止类型嗅探响应头；目录位于 Web 根外且无执行权限 | `app.ts`、部署配置 | 响应头存在，目录不可执行 |
+| `M3-S3-T5` | 受控读取 | ✅ `GET /api/images/:key` 经适配器取字节；`Content-Type` 取自落库值；携带 `Cache-Control: immutable` 与 `X-Content-Type-Options: nosniff`；畸形键不触达数据库。字节存于数据库，无静态目录暴露面 | `modules/images/` | `VR-M3-14` 有记录：响应头、字节一致性、404 语义逐项验证 |
 | `M3-S3-T6` | 前端上传 | 选图、预览、进度、失败提示、排序、移除 | `web/src/features/post/` | 无横向溢出，图片按断点缩放 |
 | `M3-S3-T7` | 渲染优化 | 宽高比预留、懒加载、`alt` 文本 | 帖子卡片 / 详情 | 无布局抖动 |
 
