@@ -120,7 +120,7 @@ npm run verify           # 类型检查 + 构建 + 体积检查
 node scripts/build-standalone.mjs   # 生成 web/dist/starpal-preview.html
 ```
 
-> 健康检查：`GET /api/health`；社区准则：`GET /api/meta/guidelines`；隐私：`GET /api/meta/privacy`；关于：`GET /api/meta/about`；信息流：`GET /api/posts?tab=latest|popular|recommended`（可加 `topic=<slug>` 按话题筛选）；帖子：`POST /api/posts`、`GET|PATCH|DELETE /api/posts/:id`、`GET /api/posts/:id/related`；话题目录：`GET /api/topics`；个人页内容：`GET /api/users/:username/posts`；图片读取：`GET /api/images/:key`（长缓存 + 禁止嗅探）；图片上传：`POST /api/posts/:id/images`（multipart，字段名 `image`）；图片删除：`DELETE /api/posts/:id/images/:imageId`。上传与删除均需作者或管理员。`seed` / `init:admin` / `export:check` 已在 DoD-01 落地。
+> 健康检查：`GET /api/health`；社区准则：`GET /api/meta/guidelines`；隐私：`GET /api/meta/privacy`；关于：`GET /api/meta/about`；信息流：`GET /api/posts?tab=latest|popular|recommended`（可加 `topic=<slug>` 按话题筛选）；帖子：`POST /api/posts`、`GET|PATCH|DELETE /api/posts/:id`、`GET /api/posts/:id/related`；话题目录：`GET /api/topics`；个人页内容：`GET /api/users/:username/posts`；图片读取：`GET /api/images/:key`（1 小时缓存 + 禁止嗅探）；图片上传：`POST /api/posts/:id/images`（multipart，字段名 `image`）；图片删除：`DELETE /api/posts/:id/images/:imageId`。上传与删除均需作者或管理员。`seed` / `init:admin` / `export:check` 已在 DoD-01 落地。
 
 ---
 

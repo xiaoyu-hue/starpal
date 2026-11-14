@@ -1115,8 +1115,10 @@ export interface StorageAdapter {
   `sort_order` 留空位不重排——重排会与 `(post_id, sort_order)` 唯一约束冲突，而追加取
   `MAX(sort_order) + 1`，空位不影响顺序。
 - `local-disk.ts` 不再提供：Serverless 运行环境无可写持久目录，实现即失效。
-- 读取经受控路由 `GET /api/images/:key` 返回，携带 `Cache-Control: public, max-age=31536000, immutable`
-  与 `X-Content-Type-Options: nosniff`；`storage_key` 随机且内容不可变，可长期缓存。
+- 读取经受控路由 `GET /api/images/:key` 返回，携带 `Cache-Control: public, max-age=3600`
+  与 `X-Content-Type-Options: nosniff`。**不设一年 `immutable`**：键随机且内容不可变，但
+  可用性会因作者删图而改变，长缓存会让已删除的图片在 CDN 与浏览器里继续可读。
+  一小时既覆盖一次浏览内的重复请求，也让删除及时生效。
   畸形键（非 32 位小写 hex）在服务层直接按 `NOT_FOUND` 处理，不触达数据库。
 
 ### 8.3 校验规则

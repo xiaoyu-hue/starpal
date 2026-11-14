@@ -1,8 +1,15 @@
 import type { NextFunction, Request, Response } from 'express'
 import { loadImage } from './image.service.js'
 
-/** 一年：键随机且内容不可变，可安全长期缓存（ARCHITECTURE.md §8.2）。 */
-const IMMUTABLE_MAX_AGE = 'public, max-age=31536000, immutable'
+/**
+ * 缓存策略：1 小时公共缓存。
+ *
+ * 图片键随机、内容不可变，本可设一年 `immutable`；但**键不可变不代表可用性不可变**——
+ * 作者删图后，长缓存会让旧 URL 在 CDN 与浏览器里继续可读，等于「删了还在」。
+ * 一小时足以覆盖一次浏览内的重复请求（正常滚动每张图只取一次），又让删除在可接受时间内生效。
+ * 若将来图片量增长到需要更强缓存，提高此值即可，但须同时接受删除延迟。
+ */
+const IMAGE_CACHE_CONTROL = 'public, max-age=3600'
 
 /**
  * 图片读取控制器：直接返回二进制，不套 `{ data }` 包络。
@@ -19,7 +26,7 @@ export async function imageReadController(
     // Content-Type 取自重编码后落库的值，绝不采信客户端上送的类型。
     res.setHeader('Content-Type', mimeType)
     res.setHeader('Content-Length', String(buffer.byteLength))
-    res.setHeader('Cache-Control', IMMUTABLE_MAX_AGE)
+    res.setHeader('Cache-Control', IMAGE_CACHE_CONTROL)
     // 显式声明，不依赖全局中间件：本路由是唯一直接输出用户上传字节的出口。
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('Content-Disposition', 'inline')
