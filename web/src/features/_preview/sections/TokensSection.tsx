@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { COLOR_GROUPS, RADII, SPACING, TYPE_SCALE } from '../preview-data'
 
 export function TokensSection() {

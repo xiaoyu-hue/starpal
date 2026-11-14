@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { imageUrl } from '../../config/content-constants'
 import { cn } from '../../lib/cn'
 import type { PostImage } from '../../types/api'

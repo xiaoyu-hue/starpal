@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import * as DialogPrimitive from '@radix-ui/react-dialog'

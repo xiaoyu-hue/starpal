@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { NextFunction, Request, Response } from 'express'
 
 /** 安全响应头：禁止类型嗅探、限制内嵌、收紧来源信息。 */

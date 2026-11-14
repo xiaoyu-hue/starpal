@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 关于页正文：站点自述、技术构成、致谢与反馈渠道。
  *

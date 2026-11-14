@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 图片存储适配器接口（ARCHITECTURE.md §8.2，决策见 ADR-007 / ADR-014）。
  *

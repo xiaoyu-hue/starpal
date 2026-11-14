@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { createApp } from './app.js'
 import { validateEnv, appEnv } from './config/env.js'
 import { assertDatabase, closePool } from './db/pool.js'

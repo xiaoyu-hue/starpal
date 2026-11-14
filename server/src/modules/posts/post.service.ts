@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { FEED_PAGE_SIZE, POST_EXCERPT_MAX } from '../../config/constants.js'
 import { DomainError } from '../../shared/errors.js'
 import { encodeCursor } from '../../shared/pagination.js'

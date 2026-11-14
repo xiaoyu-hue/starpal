@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { StarpalMark, StarpalWordmark } from '../../../components/brand/StarpalLogo'
 import { GlassPanel } from '../../../components/layout/GlassPanel'
 

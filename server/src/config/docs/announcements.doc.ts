@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 社区公告条目：按时间倒序，最新在前。
  *

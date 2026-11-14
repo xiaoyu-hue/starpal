@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Primitives'
 import { DocHeader, Section, StaticPage, StatusLine } from './StaticPage'

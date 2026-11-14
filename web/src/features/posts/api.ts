@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { apiDelete, apiGet, apiPatch, apiPost, apiPut, apiUpload } from '../../lib/api-client'
 import type { CommentItem, CommentPage, FeedPost, PostDetail, UploadedImage } from '../../types/api'
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { NextFunction, Request, Response } from 'express'
 import { APP_VERSION } from '../../config/constants.js'
 import { pool } from '../../db/pool.js'

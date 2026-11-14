@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // 文件预算检查：防止单文件膨胀为难以维护的巨型文件。
 // 规则：.ts / .tsx ≤ 300 行，.css ≤ 400 行；超出即失败。
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs'

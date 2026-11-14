@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useState } from 'react'
 
 /** 响应式断点（与 ARCHITECTURE §4.9 一致）：1280 / 1024 / 768。 */

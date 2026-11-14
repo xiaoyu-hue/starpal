@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 内容域前端常量：与 server/src/config/constants.ts 的 POST_TITLE_MAX / POST_BODY_MAX /
  * POST_IMAGES_MAX、以及 MAX_UPLOAD_BYTES 对齐。

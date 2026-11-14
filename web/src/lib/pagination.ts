@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { FeedPost, PageMeta } from '../types/api'
 
 /** 按 ID 去重，保证快速翻页不出现重复条目。 */

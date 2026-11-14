@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Request } from 'express'
 
 /** 请求上下文：由 request-id 中间件挂载，贯穿日志与错误响应。 */

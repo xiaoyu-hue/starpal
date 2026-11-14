@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 话题对外类型：只暴露界面需要的字段，不出现 created_by 等内部列。
  * 与前端 `web/src/types/api.ts` 的 Topic 保持一致。

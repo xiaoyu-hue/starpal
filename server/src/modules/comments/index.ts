@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 评论模块对外出口（barrel）。
  * 两个路由前缀不同：评论读写挂在帖子下（`/api/posts/:postId/comments`），

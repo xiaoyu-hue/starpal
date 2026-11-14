@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Card } from '../../components/ui/Primitives'
 import { StarpalMark } from '../../components/brand/StarpalLogo'
 import { StaticPage, StatusLine } from './StaticPage'

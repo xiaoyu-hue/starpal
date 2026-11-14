@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import express, { type Express } from 'express'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'

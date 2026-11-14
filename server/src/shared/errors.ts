@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** 领域错误码与 HTTP 状态映射，集中定义；控制器只抛领域错误。 */
 export const ERROR_STATUS = {
   VALIDATION_FAILED: 400,

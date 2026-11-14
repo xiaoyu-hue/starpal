@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { listTopics as selectTopics } from './topic.repository.js'
 import type { TopicSummary } from './topic.types.js'
 

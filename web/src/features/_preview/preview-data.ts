@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** 预览页静态数据。示例内容统一标注「示例」，不冒充真实用户或真实内容。 */
 
 export type Swatch = { name: string; token: string }

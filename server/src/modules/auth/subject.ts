@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { createHmac } from 'node:crypto'
 import type { Request } from 'express'
 import { appEnv } from '../../config/env.js'

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { NavLink } from 'react-router-dom'
 import { cn } from '../../lib/cn'
 import { DESTINATIONS, MOBILE_TAB_KEYS } from './nav-items'

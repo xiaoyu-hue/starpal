@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 export { PrivacyPage } from './PrivacyPage'
 export { GuidelinesPage } from './GuidelinesPage'
 export { TermsPage } from './TermsPage'

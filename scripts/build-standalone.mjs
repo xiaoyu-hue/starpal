@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 生成可脱离服务、可直接双击打开的自包含预览 HTML。
  * 主构建使用路由懒加载（多分包），动态 import 在 file:// 下无法解析，

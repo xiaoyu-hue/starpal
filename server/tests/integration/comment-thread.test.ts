@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { after, before, describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import type { PGlite } from '@electric-sql/pglite'

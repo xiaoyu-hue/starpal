@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api-client'
 import type {
   FeedPost,

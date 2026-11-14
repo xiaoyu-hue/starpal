@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Router } from 'express'
 import { healthController } from './modules/health/health.controller.js'
 import {

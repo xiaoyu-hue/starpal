@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Bookmark, Heart, MessageCircle, Share2 } from 'lucide-react'
 import { Avatar, Badge, Card } from '../../../components/ui/Primitives'
 import { SAMPLE_POST } from '../preview-data'

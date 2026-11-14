@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomBytes, createHmac } from 'node:crypto'
 import { pool, withTransaction } from '../../db/pool.js'
 import { appEnv } from '../../config/env.js'

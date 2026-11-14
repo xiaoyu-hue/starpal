@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 一次性创建初始管理员（M2-S3-T3 / FR-AUTH-17 / AC-18）。
  *

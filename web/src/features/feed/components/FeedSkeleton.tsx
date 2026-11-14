@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { PostCardSkeleton } from '../../../components/ui/Skeleton'
 
 /** 加载态骨架屏：复用基础组件，避免重复实现相同视觉。 */

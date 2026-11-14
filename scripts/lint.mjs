@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 静态检查门（DoD-01 / M1-S3-T2 / IR-06）。
  * 零依赖，贴合本仓库 scripts/*.mjs 既有质量门约定。

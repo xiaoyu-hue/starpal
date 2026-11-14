@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** 服务端统一响应契约，与 ARCHITECTURE.md §5.6 一致。 */
 export type PageMeta = {
   nextCursor: string | null

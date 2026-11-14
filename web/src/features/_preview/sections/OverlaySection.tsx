@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react'
 import { Modal } from '../../../components/ui/Dialog'
 import { Menu } from '../../../components/ui/DropdownMenu'

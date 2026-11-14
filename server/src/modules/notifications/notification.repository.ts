@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 最小执行器接口：与 comment.repository 保持一致的签名，
  * 使同一段 SQL 能在测试的内存库上直测，不必为测试另写「近似」实现。

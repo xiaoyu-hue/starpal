@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { apiGet } from '../../lib/api-client'
 import type { Topic } from '../../types/api'
 

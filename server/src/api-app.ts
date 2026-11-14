@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import express, { type Express } from 'express'
 import { requestId } from './middleware/request-id.js'
 import { securityHeaders } from './middleware/security-headers.js'

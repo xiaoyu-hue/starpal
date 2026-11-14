@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomBytes } from 'node:crypto'
 import { POST_IMAGES_MAX } from '../../config/constants.js'
 import { withTransaction } from '../../db/pool.js'

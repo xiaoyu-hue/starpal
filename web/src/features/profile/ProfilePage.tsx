@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Pencil, Users } from 'lucide-react'
 import { Avatar, Badge, Card } from '../../components/ui/Primitives'

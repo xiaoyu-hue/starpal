@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Router } from 'express'
 import { ROLE_ADMIN } from '../../config/constants.js'
 import { requireAuth } from '../../middleware/require-auth.js'

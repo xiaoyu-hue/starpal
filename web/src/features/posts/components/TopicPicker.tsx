@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { cn } from '../../../lib/cn'
 import type { Topic } from '../../../types/api'
 

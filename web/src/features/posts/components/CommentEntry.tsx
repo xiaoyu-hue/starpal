@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Trash2 } from 'lucide-react'
 import { Avatar, Badge } from '../../../components/ui/Primitives'
 import { Button } from '../../../components/ui/Button'

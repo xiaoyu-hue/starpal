@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { applyTheme, readTheme, type Theme } from '../lib/theme'
 

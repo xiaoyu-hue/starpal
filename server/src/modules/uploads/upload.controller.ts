@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { NextFunction, Request, Response } from 'express'
 import { DomainError } from '../../shared/errors.js'
 import { parseImageIdParam, parsePostIdParam } from './upload.schema.js'

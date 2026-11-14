@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { createHash } from 'node:crypto'
 import type { Pool, PoolClient } from 'pg'
 import { pool } from '../db/pool.js'

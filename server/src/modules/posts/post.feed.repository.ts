@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import {
   FEED_FRESHNESS_DECAY_DAYS,
   FEED_HOT_LOG_SCALE,

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { ArrowLeft, Construction } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge, Card } from '../../components/ui/Primitives'

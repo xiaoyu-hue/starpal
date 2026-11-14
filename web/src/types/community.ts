@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** 社区互动相关类型：通知与邀请码。拆出是为让 api.ts 回落到行数预算内。 */
 
 /** 单条通知：target 字段随类型扩展，当前仅 comment 一种。 */

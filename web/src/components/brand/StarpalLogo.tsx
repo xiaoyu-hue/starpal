@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** 中心主星代表个体，四颗环绕小星代表不同兴趣与社区。
     使用 currentColor，自动适配浅深两套文本色。 */
 const STAR_PATH =

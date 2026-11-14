@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import type { Role } from '../config/constants.js'
 import { DomainError } from '../shared/errors.js'

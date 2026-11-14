@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import * as MenuPrimitive from '@radix-ui/react-dropdown-menu'
 import { ChevronDown } from 'lucide-react'
 import { buttonClass } from './Button'

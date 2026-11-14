@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Config } from 'tailwindcss'
 
 // 所有取值均来自 web/src/styles/tokens.css 的 CSS 变量，令牌为唯一来源。

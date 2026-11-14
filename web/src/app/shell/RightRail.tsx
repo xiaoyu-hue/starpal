@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link } from 'react-router-dom'
 import { Megaphone, TrendingUp, Bookmark } from 'lucide-react'
 import type { ReactNode } from 'react'

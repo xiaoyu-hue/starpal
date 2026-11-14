@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // 开发期双进程启动：前端开发服务器 + 后端 API 进程。
 // 使用 Node 内置能力，不引入 concurrently 之类额外依赖。
 import { spawn } from 'node:child_process'

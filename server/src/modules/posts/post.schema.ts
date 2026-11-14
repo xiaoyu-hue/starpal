@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import {
   FEED_MAX_PAGE_SIZE,
   FEED_PAGE_SIZE,

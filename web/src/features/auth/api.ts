@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { apiGet, apiPost } from '../../lib/api-client'
 import type { LoginPayload, PublicUser, RegisterPayload } from '../../types/api'
 

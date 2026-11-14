@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { pool } from '../../db/pool.js'
 import { DomainError } from '../../shared/errors.js'
 import { encodeCursor } from '../../shared/pagination.js'

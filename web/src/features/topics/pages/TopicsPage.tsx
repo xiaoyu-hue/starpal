@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link, useNavigate } from 'react-router-dom'
 import { Layers3 } from 'lucide-react'
 import { Badge } from '../../../components/ui/Primitives'

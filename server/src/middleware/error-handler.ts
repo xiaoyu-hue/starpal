@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { NextFunction, Request, Response } from 'express'
 import { isDomainError } from '../shared/errors.js'
 import { sendError } from '../shared/response.js'

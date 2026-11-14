@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { PRIVACY_RIGHTS_SECTIONS } from './privacy-rights.doc.js'
 import type { DocMeta, DocSection } from './types.js'
 

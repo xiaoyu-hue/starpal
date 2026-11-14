@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { ApiEnvelope, ApiErrorBody } from '../types/api'
 
 /** 领域错误：由传输层归一化，UI 只处理 code / message。 */

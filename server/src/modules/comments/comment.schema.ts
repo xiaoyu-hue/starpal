@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import {
   COMMENT_BODY_MAX,
   COMMENT_BODY_MIN,

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 资料可选字段枚举（前端展示值）。
  * 与服务端 server/src/config/constants.ts 的 ZODIAC_VALUES / MBTI_VALUES / AGE_BAND_VALUES

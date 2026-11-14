@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Request, Response } from 'express'
 import { sendError } from '../shared/response.js'
 import { requestIdOf } from '../shared/types.js'

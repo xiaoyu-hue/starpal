@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** 应用级常量：限制阈值、状态枚举、排序权重集中于此，禁止散落业务代码。 */
 import { ANNOUNCEMENT_ITEMS } from './docs/announcements.doc.js'
 import { ABOUT_DOC } from './docs/about.doc.js'

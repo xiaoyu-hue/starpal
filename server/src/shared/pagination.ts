@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** 游标编码/解码：仅承载排序键与主键，不透明给客户端。 */
 export type CursorPayload = { t: string; id: string }
 

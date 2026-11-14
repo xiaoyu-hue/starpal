@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { lazy, Suspense, type ReactNode } from 'react'
 import {
   createBrowserRouter,

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * 信息流模块出口。
  * 不在此导出 HomePage：路由层按具体路径懒加载它，经 barrel 静态导出会

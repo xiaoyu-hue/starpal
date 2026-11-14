@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { AlertCircle, PenLine, RefreshCw } from 'lucide-react'
 import { Button } from '../ui/Button'
 

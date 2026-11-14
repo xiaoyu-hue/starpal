@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * auth 模块公共出口（barrel）。
  * 其他模块需要复用本模块能力时，必须经此公共表面，不得穿透到内部文件，
