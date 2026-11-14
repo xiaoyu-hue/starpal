@@ -34,6 +34,9 @@ const PrivacyPage = lazy(() =>
 const GuidelinesPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.GuidelinesPage })),
 )
+const AnnouncementsPage = lazy(() =>
+  import('../features/_static').then((m) => ({ default: m.AnnouncementsPage })),
+)
 const AboutPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.AboutPage })),
 )
@@ -111,6 +114,7 @@ const routes: RouteObject[] = [
       { path: 'register', element: <Suspended><AuthPage mode="register" /></Suspended> },
       { path: 'achievements', element: placeholder('成就时间线', 'M5', '成就与每周热门将在 M5 里程碑交付。') },
       { path: 'guidelines', element: <Suspended><GuidelinesPage /></Suspended> },
+      { path: 'announcements', element: <Suspended><AnnouncementsPage /></Suspended> },
       { path: 'privacy', element: <Suspended><PrivacyPage /></Suspended> },
       { path: 'about', element: <Suspended><AboutPage /></Suspended> },
       { path: '*', element: placeholder('页面不存在', '—', '请求的地址不存在，可返回首页继续浏览。') },

@@ -207,3 +207,10 @@ export type MetaAbout = {
   version: string
   launchDate: string
 }
+
+/** 社区公告：与后端 ANNOUNCEMENTS 一致，条目按时间倒序。 */
+export type MetaAnnouncements = {
+  version: string
+  title: string
+  items: { date: string; title: string; body: string }[]
+}

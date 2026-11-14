@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { StarpalMark } from '../../components/brand/StarpalLogo'
 import { buttonClass } from '../../components/ui/Button'
-import { DESTINATIONS, DESKTOP_KEYS } from './nav-items'
+import { ABOUT_LINKS, DESTINATIONS, DESKTOP_KEYS } from './nav-items'
 
 type MobileMenuProps = {
   open: boolean
@@ -16,7 +16,8 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="sp-overlay sp-enter" />
-        <DialogPrimitive.Content className="sp-glass sp-dialog sp-enter left-0 top-0 h-full w-[min(82vw,300px)] translate-x-0 translate-y-0 rounded-none p-5">
+        {/* overflow-y-auto：入口从 7 项增至 11 项，矮屏（如 iPhone SE 667px）需可滚动，否则底部四项被裁掉。 */}
+        <DialogPrimitive.Content className="sp-glass sp-dialog sp-enter left-0 top-0 h-full w-[min(82vw,300px)] translate-x-0 translate-y-0 overflow-y-auto rounded-none p-5">
           <div className="mb-5 flex items-center justify-between">
             <span className="flex items-center gap-2">
               <StarpalMark size={22} decorative />
@@ -53,6 +54,27 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               <DESTINATIONS.messages.icon size={17} /> 私信
             </Link>
           </nav>
+
+          {/* 说明页入口：移动端此前完全没有入口，公告更是只存在于桌面右栏。 */}
+          <div className="mt-4 border-t border-line pt-3">
+            <p className="mb-1 px-4 text-xs font-medium text-faint">关于</p>
+            <nav aria-label="关于与说明" className="flex flex-col gap-0.5">
+              {ABOUT_LINKS.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.key}
+                    to={item.path}
+                    onClick={() => onOpenChange(false)}
+                    className="sp-transition inline-flex h-9 items-center gap-2 rounded-md px-4 text-sm text-muted hover:bg-subtle hover:text-ink"
+                  >
+                    <Icon size={15} /> {item.label}
+                  </Link>
+                )
+              })}
+            </nav>
+          </div>
+
           <DialogPrimitive.Description className="sr-only">
             选择要前往的页面
           </DialogPrimitive.Description>

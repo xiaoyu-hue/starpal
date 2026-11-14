@@ -1,9 +1,9 @@
 import { Link, NavLink } from 'react-router-dom'
-import { BookOpen, Flame, Layers3 } from 'lucide-react'
+import { Layers3 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Card } from '../../components/ui/Primitives'
 import { useTopicsQuery } from '../../features/topics'
-import { DESKTOP_KEYS, DESTINATIONS } from './nav-items'
+import { ABOUT_LINKS, DESKTOP_KEYS, DESTINATIONS } from './nav-items'
 
 /** 侧栏导航项：左对齐带图标，与标准居中按钮视觉意图不同，故单独定义。 */
 function navItemClass(isActive: boolean): string {
@@ -83,13 +83,31 @@ export function Sidebar() {
         </Link>
       </Card>
 
-      <Card className="p-4 text-xs leading-relaxed text-muted">
-        <p className="mb-2 flex items-center gap-1.5 font-medium text-ink">
-          <BookOpen size={14} /> 社区准则
-        </p>
-        <p>尊重每一位成员，围绕兴趣与知识展开讨论。账号仅收集用户名与密码哈希。</p>
-        <p className="mt-2 flex items-center gap-1.5 text-faint">
-          <Flame size={13} /> 热门榜单将在 M5 接入真实数据。
+      {/* 说明页入口：原先是不可点击的静态文案卡片，写着「社区准则」却点不进去。 */}
+      <Card className="p-3">
+        <h2 className="mb-2 px-1 text-sm font-semibold text-ink">关于星聚</h2>
+        <ul className="space-y-0.5 text-sm">
+          {ABOUT_LINKS.map((item) => {
+            const Icon = item.icon
+            return (
+              <li key={item.key}>
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    cn(
+                      'sp-transition flex items-center gap-2 rounded-sm px-2 py-1.5',
+                      isActive ? 'bg-subtle text-ink' : 'text-muted hover:bg-subtle hover:text-ink',
+                    )
+                  }
+                >
+                  <Icon size={15} /> {item.label}
+                </NavLink>
+              </li>
+            )
+          })}
+        </ul>
+        <p className="mt-3 border-t border-line px-2 pt-3 text-xs leading-relaxed text-faint">
+          尊重每一位成员，围绕兴趣与知识展开讨论。
         </p>
       </Card>
     </aside>

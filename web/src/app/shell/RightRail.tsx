@@ -3,6 +3,7 @@ import { Megaphone, TrendingUp, Bookmark } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Card } from '../../components/ui/Primitives'
 import { useTopicsQuery } from '../../features/topics'
+import { useAnnouncementsQuery } from '../../features/_static/meta.queries'
 
 function RailCard({
   title,
@@ -32,6 +33,8 @@ const PLACEHOLDER = 'rounded-sm border border-line bg-subtle px-3 py-4 text-cent
  */
 export function RightRail() {
   const topicsQuery = useTopicsQuery()
+  const announcementsQuery = useAnnouncementsQuery()
+  const latest = announcementsQuery.data?.items[0]
   const hot = [...(topicsQuery.data ?? [])]
     .filter((topic) => topic.postCount > 0)
     .sort((a, b) => b.postCount - a.postCount)
@@ -68,10 +71,27 @@ export function RightRail() {
         )}
       </RailCard>
 
+      {/* 公告文案改由 /api/meta/announcements 下发：原先硬编码在此，与公告页会各说一套。 */}
       <RailCard title="社区公告" icon={<Megaphone size={15} />}>
-        <p className="text-xs leading-relaxed text-muted">
-          星聚 STARPAL 正在建设中，发帖、话题与个人主页已可用。评论、图片与私信按里程碑逐步交付。
-        </p>
+        {announcementsQuery.isPending ? (
+          <div className="space-y-2" role="status" aria-label="正在加载公告">
+            <div className="sp-skeleton h-4 w-full rounded-sm" />
+            <div className="sp-skeleton h-4 w-2/3 rounded-sm" />
+          </div>
+        ) : !latest ? (
+          <p className={PLACEHOLDER}>暂无公告</p>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-ink">{latest.title}</p>
+            <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-muted">{latest.body}</p>
+            <Link
+              to="/announcements"
+              className="sp-transition mt-2 inline-block text-xs text-accent hover:underline"
+            >
+              查看全部公告 →
+            </Link>
+          </>
+        )}
       </RailCard>
 
       <RailCard title="为你推荐" icon={<Bookmark size={15} />}>

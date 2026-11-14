@@ -1,9 +1,13 @@
 import {
   Bell,
+  BookOpen,
   Compass,
   Home,
+  Info,
+  Megaphone,
   MessageSquare,
   PenLine,
+  ShieldCheck,
   UserRound,
   Layers3,
   type LucideIcon,
@@ -39,3 +43,15 @@ export const DESKTOP_KEYS = [
 
 /** 移动端底部四项 Tab：话题并入发现，通知移至顶栏，发布为中央凸起按钮。 */
 export const MOBILE_TAB_KEYS = ['home', 'discover', 'messages', 'profile'] as const
+
+/**
+ * 说明页入口：桌面侧栏与移动抽屉共用同一份定义。
+ * 这三个页面此前只有「个人页底部」一个入口，手机端几乎不可达；
+ * 收成一处配置，两端就不存在「加了一边忘了另一边」的可能。
+ */
+export const ABOUT_LINKS = [
+  { key: 'announcements', label: '社区公告', path: '/announcements', icon: Megaphone },
+  { key: 'guidelines', label: '社区准则', path: '/guidelines', icon: BookOpen },
+  { key: 'privacy', label: '隐私说明', path: '/privacy', icon: ShieldCheck },
+  { key: 'about', label: '关于星聚', path: '/about', icon: Info },
+] as const
