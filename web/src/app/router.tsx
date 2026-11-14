@@ -26,6 +26,15 @@ const ProfilePage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('../features/profile').then((m) => ({ default: m.SettingsPage })),
 )
+const PrivacyPage = lazy(() =>
+  import('../features/_static').then((m) => ({ default: m.PrivacyPage })),
+)
+const GuidelinesPage = lazy(() =>
+  import('../features/_static').then((m) => ({ default: m.GuidelinesPage })),
+)
+const AboutPage = lazy(() =>
+  import('../features/_static').then((m) => ({ default: m.AboutPage })),
+)
 
 function ShellRoute() {
   return (
@@ -73,9 +82,9 @@ const routes: RouteObject[] = [
       { path: 'login', element: <Suspended><AuthPage mode="login" /></Suspended> },
       { path: 'register', element: <Suspended><AuthPage mode="register" /></Suspended> },
       { path: 'achievements', element: placeholder('成就时间线', 'M5', '成就与每周热门将在 M5 里程碑交付。') },
-      { path: 'guidelines', element: placeholder('社区准则', 'M2', '完整准则页面将在 M2 里程碑交付。') },
-      { path: 'privacy', element: placeholder('隐私说明', 'M2', '隐私说明与账号注销将在 M2 里程碑交付。') },
-      { path: 'about', element: placeholder('关于', 'M7', '关于页面将在 M7 里程碑交付。') },
+      { path: 'guidelines', element: <Suspended><GuidelinesPage /></Suspended> },
+      { path: 'privacy', element: <Suspended><PrivacyPage /></Suspended> },
+      { path: 'about', element: <Suspended><AboutPage /></Suspended> },
       { path: '*', element: placeholder('页面不存在', '—', '请求的地址不存在，可返回首页继续浏览。') },
     ],
   },

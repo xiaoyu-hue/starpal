@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { healthController } from './modules/health/health.controller.js'
-import { metaController } from './modules/meta/meta.controller.js'
+import { aboutController, metaController, privacyController } from './modules/meta/meta.controller.js'
 import { feedRouter } from './modules/feed/feed.routes.js'
 import { authRouter } from './modules/auth/auth.routes.js'
 import { adminRouter } from './modules/admin/admin.routes.js'
@@ -11,6 +11,8 @@ export const apiRouter = Router()
 
 apiRouter.get('/health', healthController)
 apiRouter.get('/meta/guidelines', metaController)
+apiRouter.get('/meta/privacy', privacyController)
+apiRouter.get('/meta/about', aboutController)
 apiRouter.use('/auth', authRouter)
 apiRouter.use('/admin', adminRouter)
 apiRouter.use('/users', userRouter)

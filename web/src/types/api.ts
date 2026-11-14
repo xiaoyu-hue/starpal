@@ -113,3 +113,26 @@ export type UserPostsPage = {
   nextCursor: string | null
   hasMore: boolean
 }
+
+/** 元信息（说明页文案）：只读常量经 /api/meta/* 下发，与后端 config/constants 一致。 */
+
+/** 社区准则：与 server/src/config/constants.ts 的 GUIDELINES 一致。 */
+export type MetaGuidelines = {
+  version: string
+  title: string
+  principles: string[]
+}
+
+/** 隐私说明：分节文案，与后端 PRIVACY 一致。 */
+export type MetaPrivacy = {
+  version: string
+  title: string
+  sections: { heading: string; paragraphs: string[] }[]
+}
+
+/** 关于页：站点名称、当前版本、建站日期。 */
+export type MetaAbout = {
+  siteName: string
+  version: string
+  launchDate: string
+}
