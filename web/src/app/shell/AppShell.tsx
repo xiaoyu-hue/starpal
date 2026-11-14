@@ -4,6 +4,7 @@ import { BottomTabBar } from './BottomTabBar'
 import { MobileMenu } from './MobileMenu'
 import { RightRail } from './RightRail'
 import { Sidebar } from './Sidebar'
+import { SiteFooter } from './SiteFooter'
 import { TopBar } from './TopBar'
 
 /**
@@ -18,7 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <TopBar onOpenMenu={() => setMenuOpen(true)} />
       <MobileMenu open={menuOpen} onOpenChange={setMenuOpen} />
 
-      <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-5 px-4 pb-24 pt-5 md:px-6 md:pb-8 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_280px]">
+      <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-5 px-4 pb-2 pt-5 md:px-6 md:pb-2 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_280px]">
         <div className="hidden lg:block">
           <Sidebar />
         </div>
@@ -32,6 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
+      <SiteFooter />
       <BottomTabBar />
     </div>
   )

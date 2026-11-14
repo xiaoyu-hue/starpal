@@ -549,6 +549,8 @@ flowchart LR
 
 | `VR-M4-10` | 自助改密真实浏览器与端到端行为（`M4-S6`） | 通过 | 本地真实 PostgreSQL + 真实 Express + 真实 HTTP，15 项断言全过：管理员生成邀请码 → 注册测试用户 → 双会话登录；未登录改密 `401 AUTH_REQUIRED`、旧密码错 `401 INVALID_CREDENTIALS`、新密码太短 `400 VALIDATION_FAILED`、正确改密 `200 {"changed":true}`；改密后当前会话 `/api/auth/me` 仍 `200`、其它会话 `401`；旧密码登录被拒、新密码登录成功；连续错误旧密码第 5 次触发 `429 RATE_LIMITED`。另 6 项 PGlite 集成测试覆盖哈希更新、只撤销其它会话、不影响他人会话、Argon2id 往返与损坏哈希容错（测试数 51→57）。前端 390 px 无头 Chromium：`/settings` 显示「修改密码」分区（当前 / 新 / 确认三次输入、提示、保存按钮），无横向溢出；真实提交后出现「密码已修改成功，其它设备需重新登录」，控制台 0 错误 |
 
+| `VR-M4-11` | 站内许可与源码入口（`M4` 收尾后的合规补充，非 `M4` 功能） | 通过 | `npm run verify` 全绿：`typecheck` / `build` / `check:size` / `lint`（0 违规、行数预算内）/ `test`（62 项全通过，含新增 `server/tests/unit/about-doc.test.ts` 5 项）。`/api/meta/about` 新增 `licensing` 字段（三类许可 + `sourceUrl` + `sourceNote`），`MetaAbout` 同步；「关于」页渲染许可卡片，页脚「源码」链接复用同一地址，不另写一份。断言覆盖：三类许可顺序与内容、源码地址为 https 且含索取兜底、文案不含「已公开 / 尚未公开 / 私有仓库」等会随仓库可见性漂移的表述、未完成四项与公告 `status` 真源一致、已交付能力不再被写成未完成。另用 Chromium 窄视口（实测 485×757，底部导航可见）+ 只读静态服务喂编译后的真实 `ABOUT` 常量验证 `/about`：许可卡片、三类许可名、仓库地址均渲染；页脚 8 个链接（7 个说明页 + 「源码」）、`sourceHref` 为 `https://github.com/xiaoyu-hue/starpal`；无过时文案；以**内容底边**判定，滚动到底时链接列表 / 许可标注的视口 y 为 629 / 661，底部导航顶边 692，均未被遮挡；无横向溢出（`scrollWidth == clientWidth == 485`） |
+
 **M4 交付物**：点赞 / 收藏 / 评论 API 与前端、计数事务、通知中心、一人一码邀请制、自助改密。
 
 **M4 完成判据**：`AC-07`、`AC-08` 有验证记录；唯一约束在并发下生效；`DoD-01`—`DoD-10` 全部满足。

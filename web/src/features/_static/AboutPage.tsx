@@ -67,6 +67,33 @@ export function AboutPage() {
             ))}
           </Card>
 
+          <Card className="space-y-3 p-5">
+            <h2 className="text-base font-semibold text-ink">{data.licensing.heading}</h2>
+            <p className="text-sm leading-relaxed text-muted">{data.licensing.intro}</p>
+            <dl className="space-y-2">
+              {data.licensing.items.map((item) => (
+                <div key={item.label} className="rounded-sm border border-line bg-subtle px-3 py-2">
+                  <dt className="text-sm font-medium text-ink">
+                    {item.label} · <span className="text-accent">{item.license}</span>
+                  </dt>
+                  <dd className="mt-1 text-xs leading-relaxed text-muted">{item.note}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="text-sm leading-relaxed text-muted">
+              源码仓库：
+              <a
+                href={data.licensing.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent hover:underline"
+              >
+                {data.licensing.sourceUrl.replace('https://', '')}
+              </a>
+            </p>
+            <p className="text-xs leading-relaxed text-faint">{data.licensing.sourceNote}</p>
+          </Card>
+
           <Card className="space-y-2 p-5">
             <h2 className="text-base font-semibold text-ink">{data.credits.heading}</h2>
             {data.credits.paragraphs.map((p, i) => (

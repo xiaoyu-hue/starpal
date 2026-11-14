@@ -4,7 +4,22 @@
 
 ## [Unreleased]
 
-（暂无未发布变更；后续变更累积于此。）
+### 新增（站内许可与源码入口）
+
+- 「关于」页新增「许可与源码」区块（`server/src/config/docs/about.doc.ts`）：按分离式授权写清源代码 AGPL-3.0-or-later、文档与文字 CC BY-NC-SA 4.0、名称与标识商标保留三类适用范围，并给出源码仓库地址与 AGPL-3.0 第 13 条的源码索取途径；`/api/meta/about` 响应与 `MetaAbout` 类型同步扩展，前端 `AboutPage.tsx` 渲染。
+- 新增站点页脚 `web/src/app/shell/SiteFooter.tsx`：说明页入口 + 「源码」外链 + 许可标注。「源码」地址取自 `/api/meta/about` 的 `licensing.sourceUrl`，与「关于」页同源（README 部署章节此前承诺该链接真实可用）；外链带 `noopener noreferrer`，取不到数据时只省略外链、不影响其余链接。
+- `AppShell.tsx` 挂载页脚，并把主区底部留白交给页脚承担，避免移动端底部 Tab 遮挡链接。
+
+### 更正（关于页文案与代码漂移）
+
+- `about.doc.ts` 自述原写「通知中心仍在路上、帖子暂时不能自己删除、没有自助改密」，与公告 `status` 真源及实际代码不符；改为与公告一致的四项未完成能力（私信、搜索、收藏列表界面、举报与申诉入口），并补列已交付的通知中心、一人一码邀请制、自助改密、自行删除帖子。
+- 致谢段把依赖许可由「主要为 MIT 与 ISC」更正为「主要为 MIT、ISC、Apache-2.0 等」，与 `THIRD-PARTY-NOTICES.md` 口径一致。
+- `README.md` 的 AGPL 网络义务说明改为不依赖仓库可见性的表述，写明站内两处获取途径与共用同一地址的机制。
+
+### 测试
+
+- 新增 `server/tests/unit/about-doc.test.ts`（5 项）：三类许可齐全、源码途径存在、许可文案不写死仓库公开状态、未完成清单与公告真源一致、已交付能力不再写成未完成。测试数 57 → 62。
+- `npm run verify` 全绿（typecheck / build / check:size / lint / test），`lint` 0 违规、行数预算内。
 
 ## [1.2.0] - 2026-11-14
 

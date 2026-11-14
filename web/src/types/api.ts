@@ -250,6 +250,14 @@ export type MetaAbout = {
   intro: string[]
   whatWeDo: { title: string; body: string }[]
   stack: { group: string; items: { name: string; role: string }[] }[]
+  /** 分离式许可与源码获取途径，与后端 ABOUT.licensing 一致。 */
+  licensing: {
+    heading: string
+    intro: string
+    items: { label: string; license: string; note: string }[]
+    sourceUrl: string
+    sourceNote: string
+  }
   credits: { heading: string; paragraphs: string[] }
   feedback: { heading: string; paragraphs: string[] }
 }
