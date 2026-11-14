@@ -50,12 +50,17 @@ export async function createUser(input: {
   displayName: string
   passwordHash: string
   subjectHash: string
+  /** 已勾选同意用户协议时写入版本与时间；未传则两列留空，不伪造同意记录。 */
+  acceptedTermsVersion: string | null
 }): Promise<{ id: string; username: string; displayName: string }> {
   return withTransaction(async (client: PoolClient) => {
     const inserted = await client.query<{ id: string }>(
-      `INSERT INTO users (username, display_name, password_hash)
-       VALUES ($1, $2, $3) RETURNING id`,
-      [input.username, input.displayName, input.passwordHash],
+      `INSERT INTO users (username, display_name, password_hash, terms_accepted_at, terms_version)
+       VALUES ($1, $2, $3,
+         CASE WHEN $4::text IS NULL THEN NULL ELSE now() END,
+         $4::text)
+       RETURNING id`,
+      [input.username, input.displayName, input.passwordHash, input.acceptedTermsVersion],
     )
     const id = inserted.rows[0]!.id
     await client.query('INSERT INTO user_profiles (user_id) VALUES ($1)', [id])

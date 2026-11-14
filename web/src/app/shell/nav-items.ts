@@ -2,6 +2,7 @@ import {
   Bell,
   BookOpen,
   Compass,
+  FileText,
   Home,
   Info,
   Megaphone,
@@ -52,6 +53,7 @@ export const MOBILE_TAB_KEYS = ['home', 'discover', 'messages', 'profile'] as co
 export const ABOUT_LINKS = [
   { key: 'announcements', label: '社区公告', path: '/announcements', icon: Megaphone },
   { key: 'guidelines', label: '社区准则', path: '/guidelines', icon: BookOpen },
+  { key: 'terms', label: '用户协议', path: '/terms', icon: FileText },
   { key: 'privacy', label: '隐私说明', path: '/privacy', icon: ShieldCheck },
   { key: 'about', label: '关于星聚', path: '/about', icon: Info },
 ] as const

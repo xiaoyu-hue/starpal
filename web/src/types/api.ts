@@ -121,6 +121,8 @@ export type RegisterPayload = {
   password: string
   displayName?: string
   inviteCode: string
+  /** 已阅读并同意用户协议：服务端据此留存同意版本与时间。 */
+  acceptTerms?: boolean
   /** 蜜罐字段：真人不可见，随请求体提交；命中后由服务端静默丢弃。 */
   website?: string
 }
@@ -215,6 +217,12 @@ export type MetaGuidelines = DocMeta & {
 
 /** 隐私说明：与后端 PRIVACY 一致。 */
 export type MetaPrivacy = DocMeta & {
+  version: string
+  sections: DocSection[]
+}
+
+/** 用户协议：与后端 TERMS 一致。结构与准则、隐私说明相同。 */
+export type MetaTerms = DocMeta & {
   version: string
   sections: DocSection[]
 }

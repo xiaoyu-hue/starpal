@@ -1,5 +1,11 @@
 import { apiGet } from '../../lib/api-client'
-import type { MetaAbout, MetaAnnouncements, MetaGuidelines, MetaPrivacy } from '../../types/api'
+import type {
+  MetaAbout,
+  MetaAnnouncements,
+  MetaGuidelines,
+  MetaPrivacy,
+  MetaTerms,
+} from '../../types/api'
 
 /** 说明页元信息接口：只描述路径，传输与错误归一化由 api-client 统一承担。 */
 
@@ -24,5 +30,11 @@ export async function fetchPrivacy(): Promise<MetaPrivacy> {
 /** 关于页：消费 /api/meta/about，版本号与建站日期读自后端。 */
 export async function fetchAbout(): Promise<MetaAbout> {
   const envelope = await apiGet<MetaAbout>('meta/about')
+  return envelope.data
+}
+
+/** 用户协议：消费 /api/meta/terms，注册勾选同意指向同一份内容。 */
+export async function fetchTerms(): Promise<MetaTerms> {
+  const envelope = await apiGet<MetaTerms>('meta/terms')
   return envelope.data
 }

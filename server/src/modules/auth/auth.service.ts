@@ -1,3 +1,4 @@
+import { APP_VERSION } from '../../config/constants.js'
 import { DomainError } from '../../shared/errors.js'
 import {
   createUser,
@@ -64,6 +65,8 @@ export async function register(input: {
   displayName: string
   inviteCode: string
   subjectHash: string
+  /** 是否勾选了同意用户协议。仅用于留存同意记录，不作为准入条件。 */
+  acceptedTerms: boolean
 }): Promise<PublicUser> {
   await enforceRateLimit('register', input.subjectHash)
   if (!inviteCodeMatches(input.inviteCode)) {
@@ -78,6 +81,7 @@ export async function register(input: {
       displayName: input.displayName,
       passwordHash,
       subjectHash: input.subjectHash,
+      acceptedTermsVersion: input.acceptedTerms ? APP_VERSION : null,
     })
     const row = await findUserById(created.id)
     if (!row) throw new DomainError('INTERNAL_ERROR', '注册结果读取失败')

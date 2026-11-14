@@ -35,6 +35,12 @@ function parseRegisterBody(body: Record<string, unknown>) {
     inviteCode: requireString(body.inviteCode, {
       field: 'inviteCode', min: 1, max: 128,
     }),
+    /**
+     * 同意条款：只认严格的 true，其余一律视为未同意。
+     * 不作为准入条件（前端已强制勾选，服务端再拒会误伤脚本化注册与回归测试），
+     * 但传了就必须留下记录——否则日后无法证明用户同意过哪一版协议。
+     */
+    acceptedTerms: body.acceptTerms === true,
   }
 }
 

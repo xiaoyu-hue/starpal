@@ -34,6 +34,9 @@ const PrivacyPage = lazy(() =>
 const GuidelinesPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.GuidelinesPage })),
 )
+const TermsPage = lazy(() =>
+  import('../features/_static').then((m) => ({ default: m.TermsPage })),
+)
 const AnnouncementsPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.AnnouncementsPage })),
 )
@@ -116,6 +119,7 @@ const routes: RouteObject[] = [
       { path: 'guidelines', element: <Suspended><GuidelinesPage /></Suspended> },
       { path: 'announcements', element: <Suspended><AnnouncementsPage /></Suspended> },
       { path: 'privacy', element: <Suspended><PrivacyPage /></Suspended> },
+      { path: 'terms', element: <Suspended><TermsPage /></Suspended> },
       { path: 'about', element: <Suspended><AboutPage /></Suspended> },
       { path: '*', element: placeholder('页面不存在', '—', '请求的地址不存在，可返回首页继续浏览。') },
     ],

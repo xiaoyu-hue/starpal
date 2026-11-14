@@ -2,6 +2,7 @@
 import { ABOUT_DOC } from './docs/about.doc.js'
 import { GUIDELINES_META, GUIDELINES_SECTIONS } from './docs/guidelines.doc.js'
 import { PRIVACY_META, PRIVACY_SECTIONS } from './docs/privacy.doc.js'
+import { TERMS_META, TERMS_SECTIONS } from './docs/terms.doc.js'
 
 export const APP_VERSION = '1.1.0'
 
@@ -153,6 +154,17 @@ export const ABOUT = {
   version: APP_VERSION,
   launchDate: SITE_LAUNCH_DATE,
   ...ABOUT_DOC,
+}
+
+/**
+ * 用户协议：正文见 docs/terms.doc.ts。
+ * 与社区准则为主从关系——准则构成本协议的一部分，违反准则即违反本协议，
+ * 避免两处规则各自演进后互相打架。
+ */
+export const TERMS = {
+  version: APP_VERSION,
+  ...TERMS_META,
+  sections: TERMS_SECTIONS,
 }
 
 // ── M2 认证与账户约束 ────────────────────────────────────────────────

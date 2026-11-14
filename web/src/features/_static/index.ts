@@ -1,4 +1,5 @@
 export { PrivacyPage } from './PrivacyPage'
 export { GuidelinesPage } from './GuidelinesPage'
+export { TermsPage } from './TermsPage'
 export { AnnouncementsPage } from './AnnouncementsPage'
 export { AboutPage } from './AboutPage'

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express'
-import { ABOUT, ANNOUNCEMENTS, GUIDELINES, PRIVACY } from '../../config/constants.js'
+import { ABOUT, ANNOUNCEMENTS, GUIDELINES, PRIVACY, TERMS } from '../../config/constants.js'
 import { sendData } from '../../shared/response.js'
 
 /** 社区准则：只读常量，不依赖数据库。长文正文在 config/docs 下。 */
@@ -20,4 +20,9 @@ export function privacyController(_req: Request, res: Response): void {
 /** 关于页：站点自述、技术构成、致谢与反馈渠道，随代码版本化。 */
 export function aboutController(_req: Request, res: Response): void {
   sendData(res, ABOUT)
+}
+
+/** 用户协议：注册时勾选同意的就是这一份。 */
+export function termsController(_req: Request, res: Response): void {
+  sendData(res, TERMS)
 }

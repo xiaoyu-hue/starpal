@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { ApiError } from '../../lib/api-client'
@@ -48,6 +48,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // 同意条款：注册前必须勾选。不预勾选——默认勾选等于没问过。
+  const [agreed, setAgreed] = useState(false)
 
   function setField(key: keyof FormValues, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }))
@@ -92,6 +94,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
       return
     }
 
+    if (isRegister && !agreed) {
+      setFormError('请先阅读并勾选同意《用户协议》与《隐私说明》')
+      return
+    }
+
     setFieldErrors({})
     setFormError(null)
     setSubmitting(true)
@@ -101,6 +108,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           username: values.username.trim(),
           password: values.password,
           inviteCode: values.inviteCode.trim(),
+          acceptTerms: agreed,
           website: values.website,
         }
         if (values.displayName.trim()) payload.displayName = values.displayName.trim()
@@ -193,6 +201,29 @@ export function AuthForm({ mode }: { mode: Mode }) {
           hint="星聚目前为邀请制，请向邀请人索取"
           disabled={submitting}
         />
+      ) : null}
+
+      {/* 同意条款：仅注册页出现。链接用新标签打开，避免用户点开条款后填了一半的表单被清空。 */}
+      {isRegister ? (
+        <label className="flex items-start gap-2 text-xs leading-relaxed text-muted">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(event) => setAgreed(event.target.checked)}
+            disabled={submitting}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--sp-accent)]"
+          />
+          <span>
+            我已阅读并同意
+            <Link to="/terms" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+              《用户协议》
+            </Link>
+            与
+            <Link to="/privacy" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+              《隐私说明》
+            </Link>
+          </span>
+        </label>
       ) : null}
 
       {/* 蜜罐：移出视野、读屏不可见、键盘不可达；真人不会填，脚本填了由服务端静默丢弃。 */}
