@@ -83,39 +83,40 @@ export function ImageLightbox({ images, title, index, onIndexChange, onClose }: 
             alt={`${title} 配图 ${(index ?? 0) + 1}`}
             width={current.width}
             height={current.height}
-            className="max-h-[88vh] max-w-full select-none rounded-sm object-contain shadow-lg"
+            className="max-h-[78vh] max-w-full select-none rounded-sm object-contain shadow-lg"
             draggable={false}
           />
 
           <DialogPrimitive.Close
             aria-label="关闭大图"
-            className="sp-transition absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/12 text-white hover:bg-white/22"
+            className="sp-transition absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--sp-scrim-control)] text-[var(--sp-on-accent)] hover:bg-[var(--sp-scrim-control-hover)]"
           >
             <X size={20} />
           </DialogPrimitive.Close>
 
+          {/* 切换与计数放在底部一行：压在图片左右两侧会盖住画面，且手机上两侧边距只剩几像素，拇指也够不着。 */}
           {count > 1 && (
-            <>
+            <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-2">
               <button
                 type="button"
                 aria-label="上一张"
                 onClick={() => step(-1)}
-                className="sp-transition absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/12 text-white hover:bg-white/22 sm:left-4"
+                className="sp-transition flex h-11 w-11 items-center justify-center rounded-full bg-[var(--sp-scrim-control)] text-[var(--sp-on-accent)] hover:bg-[var(--sp-scrim-control-hover)]"
               >
                 <ChevronLeft size={22} />
               </button>
+              <span className="min-w-[64px] rounded-full bg-[var(--sp-scrim-control)] px-3 py-2 text-center text-xs text-[var(--sp-on-accent)]">
+                {(index ?? 0) + 1} / {count}
+              </span>
               <button
                 type="button"
                 aria-label="下一张"
                 onClick={() => step(1)}
-                className="sp-transition absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/12 text-white hover:bg-white/22 sm:right-4"
+                className="sp-transition flex h-11 w-11 items-center justify-center rounded-full bg-[var(--sp-scrim-control)] text-[var(--sp-on-accent)] hover:bg-[var(--sp-scrim-control-hover)]"
               >
                 <ChevronRight size={22} />
               </button>
-              <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-xs text-white/85">
-                {(index ?? 0) + 1} / {count}
-              </p>
-            </>
+            </div>
           )}
         </DialogPrimitive.Content>
           </>
