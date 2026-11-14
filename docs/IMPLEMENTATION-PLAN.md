@@ -391,11 +391,13 @@ flowchart LR
 | `VR-M3-12` | 游标翻页一致性（补测） | 通过 | 25 条内容 `limit=20`：首页 20 条 `hasMore=true`，次页 5 条 `hasMore=false`，两页 ID 集合无交集、整体严格递减；个人页 `?cursor=bad-cursor` 返回 `400`（不静默回退第一页，避免无限滚动死循环） |
 | `VR-M3-13` | 存储适配器（`M3-S3-T1`） | 通过 | 本地 PostgreSQL 16 空库迁移后，用真实 PNG 走 `withTransaction` 写入：事务内先插 `post_images` 再 `put` 字节，提交后经适配器读回**字节完全一致**（SHA-256 相同）、`mimeType` 正确；`byteSize` 与实际字节数相等；未知键返回 `null`；同键重复写入被主键拒绝（内容不可变）；畸形键（`../../etc/passwd`）在适配器层即返回 `null`，不触达数据库。真实尺寸样本 704.5 KB：事务写入 19 ms、读取 6 ms |
 | `VR-M3-17` | 生产环境真实上传（`M3-S3` 全链路） | 通过 | 部署后在 `starpal.cc.cd` 用临时账号真实上传 1200×900 JPEG：返回 `image/webp`、`900×1200`（方向已校正）、7968 字节，证明 `sharp` 在 Vercel 函数内实际执行了重编码而非仅加载成功；读回 200 且 `Content-Type=image/webp`。**同时暴露一处真实缺陷**：删除图片后旧 URL 仍被 CDN 以一年缓存返回 200，加查询串绕开缓存键后才是 `404`。已将缓存头改为 `max-age=3600`，复验为 `public, max-age=3600`。验证结束后临时账号与帖子已物理清理（users 3→2、posts 1→0、`post_images` / `image_blobs` 均 0） |
+| `VR-M3-18` | 移动端导航与品牌标识 | 通过 | 真实 Chromium 在 320 / 360 / 390 / 412 四档视口复测：`scrollWidth` 均等于视口宽度（无横向溢出）；顶栏「星聚」四档均可见，`STARPAL` 副标仍在 ≥ 640 px 出现；最窄 320 px 下品牌区与右侧操作区仍余 16 px。抽屉菜单顶部渲染星形标志 + 「星聚 STARPAL」，`aria-labelledby` 继续指向 `sr-only` 的「导航」，读屏播报不变；导航项 `justify-content` 计算值由 `center` 变为 `flex-start`，与桌面侧栏一致。`npm run verify` 全绿 |
+| `VR-M3-19` | 版本号显示与一致性 | 通过 | 设置页「关于」的版本号改由构建期注入后显示 `1.1.0`，与 `GET /api/health` 的 `version` 一致（此前硬编码 `0.1.0`，自 `v1.0.0` 起即脱节）。`scripts/lint.mjs` 新增硬规则 `R4` 并做反向验证：把 `APP_VERSION` 临时改为 `1.0.9` 后 `lint` 失败并逐项报出四处取值，恢复 `1.1.0` 后通过 |
 | `VR-M3-16` | 图片前端与渲染（`M3-S3-T6/T7`） | 通过 | 本地 PostgreSQL 16 空库迁移后接口层 24 项断言全通过：上传两张后详情 `images` 为对象数组（含 `id` / `width` / `height`）、按 `sort_order` 升序，列表接口形状一致；读取 200 且 `Content-Type=image/webp`、字节为真 WebP；删除越权 `403`、未登录 `401`、不存在 `404`、非法 id `400`；作者删除 200 后详情剩 1 张、被删图 404、另一张仍 200；删除后追加仍 201（`MAX(sort_order)+1` 不与空位冲突）；`post_images=2` / `image_blobs=2` / 缺字节 0。真实 Chromium：发帖页选两张图（预览 2 张）→ 发布自动跳详情 → 两张图 `naturalWidth` 分别 900 / 300 → 编辑页显示 2 张、点叉后剩 1 张 → 首页卡片封面加载成功（alt 为「标题 配图」）→ 移动端 390 px 无横向溢出；控制台 0 错误 |
 | `VR-M3-15` | 上传管线（`M3-S3-T2/T3/T4`） | 通过 | 本地 PostgreSQL 16 空库迁移后 20 项断言全通过：带 EXIF + `Orientation=6` 的 1200×900 JPEG 上传得 201，重编码为 WebP 且尺寸变为 900×1200（方向已校正）、读回 `exif=false`；透明 PNG 正常；WebP 作为输入可再上传。负向：文本伪装 `.jpg` 与 SVG 均 `415`、3.6 MB 单文件 `413`、字段名错误 `400`、未登录 `401`、他人帖子 `403`、不存在帖子 `404`、第 10 张 `409`。事务一致性：`post_images=9` / `image_blobs=9` / 缺字节元数据 0。并发 3 张同帖上传后排序位为 0–5 连续无重复（事务级 advisory lock 生效） |
-| `VR-M3-14` | 受控读取路由（`M3-S3-T5`） | 通过 | `GET /api/images/:key` 返回 `200`，响应头 `Content-Type: image/png`、`Content-Length: 164`、`Cache-Control: public, max-age=31536000, immutable`、`X-Content-Type-Options: nosniff`、`Content-Disposition: inline`；下载字节与源文件 SHA-256 一致。负向：未知键、路径穿越（`..%2F..%2Fetc%2Fpasswd`）、大写短键均 `404`，包络为 `{"error":{"code":"NOT_FOUND",...}}`，不泄露键是否存在。700 KB 图单次 6–8 ms，10 并发全部 `200`（最慢 40 ms）。`remove` 后读回 `null`，元数据行保留（符合「只删字节」语义） |
+| `VR-M3-14` | 受控读取路由（`M3-S3-T5`） | 通过 | `GET /api/images/:key` 返回 `200`，响应头 `Content-Type: image/png`、`Content-Length: 164`、`Cache-Control: public, max-age=31536000, immutable`（后续调整为 `max-age=3600`，见 `VR-M3-17`）、`X-Content-Type-Options: nosniff`、`Content-Disposition: inline`；下载字节与源文件 SHA-256 一致。负向：未知键、路径穿越（`..%2F..%2Fetc%2Fpasswd`）、大写短键均 `404`，包络为 `{"error":{"code":"NOT_FOUND",...}}`，不泄露键是否存在。700 KB 图单次 6–8 ms，10 并发全部 `200`（最慢 40 ms）。`remove` 后读回 `null`，元数据行保留（符合「只删字节」语义） |
 
-**M3 进度**：`M3-S1`（数据模型）、`M3-S2`（帖子 API）、`M3-S3`（图片上传，含前端选图与渲染）、`M3-S4`（话题域，读侧）与 `M3-S5`（前端内容域）✅ 完成。用户现可在浏览器里完成「浏览信息流 → 挑话题 → 写正文 → 选图 → 发布 → 看详情 → 编辑 / 删图 / 删除」全流程，图片经服务端校验真实类型、重编码为 WebP 并剥离 EXIF/GPS。M3 仅剩 `M3-S4` 的写侧（管理端话题增删改与 `moderation_logs` 留痕），按计划随管理后台一并交付。帖子列表能力已并入 `modules/posts`，原 `modules/feed` 退役——同一 URL 前缀由同一模块拥有，避免游标规则与可见性判定分处两地。话题目录（`GET /api/topics`）由 `modules/topics` 提供，仅含读侧；管理端增删改与留痕随 `moderation_logs` 一并延后。
+**M3 进度**：`M3-S1`（数据模型）、`M3-S2`（帖子 API）、`M3-S3`（图片上传，含前端选图与渲染）、`M3-S4`（话题域，读侧）与 `M3-S5`（前端内容域）✅ 完成，并随 **`v1.1.0`** 发布。用户现可在浏览器里完成「浏览信息流 → 挑话题 → 写正文 → 选图 → 发布 → 看详情 → 编辑 / 删图 / 删除」全流程，图片经服务端校验真实类型、重编码为 WebP 并剥离 EXIF/GPS。M3 仅剩 `M3-S4` 的写侧（管理端话题增删改与 `moderation_logs` 留痕），按计划随管理后台一并交付。帖子列表能力已并入 `modules/posts`，原 `modules/feed` 退役——同一 URL 前缀由同一模块拥有，避免游标规则与可见性判定分处两地。话题目录（`GET /api/topics`）由 `modules/topics` 提供，仅含读侧；管理端增删改与留痕随 `moderation_logs` 一并延后。
 
 ---
 
@@ -426,7 +428,7 @@ flowchart LR
 | `M3-S2-T6` | 相关帖子 | 同话题近期帖子，限量返回 | posts 仓储 | 结果仅含同话题 |
 | `M3-S2-T7` | 路由挂载 | 在 `routes.ts` 注册 `/api/posts`；读端点挂 `optionalAuth`（匿名可读、登录者可见草稿），写端点挂 `requireAuth` | `server/src/routes.ts`、`middleware/optional-auth.ts` | 端点清单与架构 §6.2 一致 |
 
-#### `M3-S3` 图片上传管线（⚠ 后端闭环完成，前端选图未做）
+#### `M3-S3` 图片上传管线（✅ 已完成，含前端选图与渲染）
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
@@ -447,12 +449,12 @@ flowchart LR
 | `M3-S4-T3` | 话题详情 | ✅ 描述 + 筛选后的真实帖子流（三 Tab 可切换）；⏳ 待做：每周热门入口占位 | `web/src/features/topics/` | 筛选结果仅含该话题 |
 | `M3-S4-T4` | 管理动作留痕 | ⏳ 待做：话题变更写入 `moderation_logs` | `moderation` 服务（预留调用） | 日志行生成 |
 
-#### `M3-S5` 前端内容域（✅ 完成，图片例外）
+#### `M3-S5` 前端内容域（✅ 已完成）
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M3-S5-T1` | 创建 / 编辑页 | ✅ 标题、正文、话题单选、字数与字段级校验、服务端错误回显；⏳ 图片附加待 `M3-S3` | `web/src/features/posts/` | 提交后跳转详情且内容完整（`VR-M3-10`） |
-| `M3-S5-T2` | 详情页 | ✅ 完整正文（保留段落换行）、作者与时间、话题、相关帖子、作者操作、评论区占位；⏳ 图片待 `M3-S3` | 同上 | 刷新后内容仍在（`AC-05`） |
+| `M3-S5-T1` | 创建 / 编辑页 | ✅ 标题、正文、话题单选、字数与字段级校验、服务端错误回显；✅ 选图与上传（先建帖后逐张上传，按张回报进度） | `web/src/features/posts/` | 提交后跳转详情且内容完整（`VR-M3-10`） |
+| `M3-S5-T2` | 详情页 | ✅ 完整正文（保留段落换行）、作者与时间、话题、相关帖子、作者操作、评论区占位；✅ 图文混排与图片删除 | 同上 | 刷新后内容仍在（`AC-05`） |
 | `M3-S5-T3` | 信息流接入 | ✅ 真实 API、三 Tab、游标哨兵、话题筛选；⏳「有新帖」提示未做 | `web/src/features/feed/` | 快速翻页无重复 / 跳项（`VR-M3-12`） |
 | `M3-S5-T4` | 滚动恢复 | ✅ 从详情返回恢复列表位置（`sessionStorage`，按 Tab / 话题分键） | `web/src/hooks/useScrollRestore.ts` | 位置一致 |
 | `M3-S5-T5` | 空态校准 | ✅ 无真实内容时展示引导空态；离线预览单独提示，不冒充数据 | `FeedView` / `EmptyState` | `AC-17` 前置 |
