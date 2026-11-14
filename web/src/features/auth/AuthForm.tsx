@@ -215,11 +215,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
           />
           <span>
             我已阅读并同意
-            <Link to="/terms" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+            <Link to="/terms" target="_blank" rel="noreferrer" className="whitespace-nowrap text-accent hover:underline">
               《用户协议》
             </Link>
             、
-            <Link to="/privacy" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+            <Link to="/privacy" target="_blank" rel="noreferrer" className="whitespace-nowrap text-accent hover:underline">
               《隐私说明》
             </Link>
             与
@@ -227,7 +227,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
               to="/disclaimer"
               target="_blank"
               rel="noreferrer"
-              className="text-accent hover:underline"
+              className="whitespace-nowrap text-accent hover:underline"
             >
               《免责声明》
             </Link>
