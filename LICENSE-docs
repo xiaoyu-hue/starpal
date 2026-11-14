@@ -16,11 +16,19 @@ International**（知识共享 署名—非商业性使用—相同方式共享 
 
 - `docs/` 目录下的全部文档：`PRD.md`、`ARCHITECTURE.md`、`IMPLEMENTATION-PLAN.md`、`DEPLOYMENT.md`
 - 根目录说明性文档：`README.md`、`CHANGELOG.md`、`THIRD-PARTY-NOTICES.md`
-- 根目录项目文档：`星聚STARPAL-规格确认书.md`、`星聚STARPAL-开源生态调研报告.md`
 - 上述文档中的插图、示意图与表格
 
-**不适用于源代码。** 源代码位于 `web/`、`server/`、`scripts/`、`api/` 等目录，
-采用 **AGPL-3.0-or-later** 许可，全文见 [`LICENSE`](./LICENSE)。
+**不适用于源代码与品牌资产。**
+
+- **源代码**位于 `web/`、`server/`、`scripts/`、`api/` 等目录，采用
+  **AGPL-3.0-or-later** 许可，全文见 [`LICENSE`](./LICENSE)。
+- **品牌名称、标志与应用图标**（含 `brand/` 目录下的高分辨率 PNG、
+  `web/public/favicon.svg`、代码内嵌的 `web/src/components/brand/StarpalLogo.tsx`）
+  为**商标与品牌标识**，**不**在本许可范围内，其使用受
+  [`TRADEMARK.md`](./TRADEMARK.md)（商标与品牌标识政策）约束。
+
+> 说明：`星聚STARPAL-规格确认书.md` 与 `星聚STARPAL-开源生态调研报告.md`
+> 为本地过程资料，未纳入版本库（见 `.gitignore`），其版权另行约定，不依本许可对外授权。
 
 # 许可授予
 

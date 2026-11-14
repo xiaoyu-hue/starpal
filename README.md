@@ -260,11 +260,14 @@ npm run verify
 | --- | --- | --- |
 | **源代码**（`web/`、`server/`、`scripts/`、`api/`） | **AGPL-3.0-or-later** | GNU Affero 通用公共许可证 v3 或更高版本，含网络服务条款。全文见 [`LICENSE`](./LICENSE)。 |
 | **文档与文字内容**（`docs/`、`README.md`、`CHANGELOG.md` 及其它说明性 Markdown） | **CC BY-NC-SA 4.0** | 署名—非商业性使用—相同方式共享 4.0 国际。全文与链接见 [`LICENSE-docs`](./LICENSE-docs)。 |
+| **名称、标志与应用图标（品牌资产）** | **商标保留** | STARPAL 星聚的名称 / Logo / 图标为商标，不通过 AGPL 或 CC 授权；仅允许指名性合理使用。见 [`TRADEMARK.md`](./TRADEMARK.md)。 |
 | **第三方组件与开发依赖** | 各自原有许可证 | 见 [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md)；分发时保留各依赖的版权与许可声明。 |
 
 > **AGPL-3.0 的网络义务**：通过网络提供本软件服务的运营者，须向用户提供对应的完整源码。本项目源码与许可证一并在本仓库公开；部署方上线对外服务时，须确保该源码获取途径对用户真实可用（例如在页脚提供"源码"链接）。
 >
 > **代码与文档许可相互独立**：代码允许商业使用（但衍生作品与网络服务须开源），文档本身**不允许商业性使用**（NC）。由于含 NC 条件，文档许可**不属于**"自由文化/开源"许可，准确表述为"采用 CC BY-NC-SA 4.0"。
+>
+> **商标与品牌资产单独保留**：AGPL 与 CC 均为著作权许可证，**不授予商标权**。STARPAL 星聚的名称、Logo、应用图标为商标，其使用受 [`TRADEMARK.md`](./TRADEMARK.md) 约束，不随代码或文档的开源而开放。
 >
 > 文档中提及的 Lemmy、Discuit、shadcn/ui、ALTCHA、sharp 等开源项目仅作设计思路与技术资料参考，未引入其代码或品牌资产。全部第三方依赖均为 MIT / ISC / Apache-2.0 / BSD / MPL-2.0 等宽松或弱传染许可，与 AGPL-3.0 兼容。
 
