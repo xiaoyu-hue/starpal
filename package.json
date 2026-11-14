@@ -19,9 +19,12 @@
     "migrate": "npm run migrate --workspace server",
     "migrate:prod": "npm run migrate:prod --workspace server",
     "init:admin": "node scripts/init-admin.mjs",
+    "lint": "node scripts/lint.mjs",
+    "seed": "node scripts/seed.mjs",
+    "export:check": "node scripts/export-check.mjs",
     "typecheck": "npm run typecheck --workspace web && npm run typecheck --workspace server",
     "preview": "npm run preview --workspace web",
     "check:size": "node scripts/check-file-size.mjs",
-    "verify": "npm run typecheck && npm run build && npm run check:size"
+    "verify": "npm run typecheck && npm run build && npm run check:size && npm run lint"
   }
 }

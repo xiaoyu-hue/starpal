@@ -4,7 +4,7 @@ import { Check } from 'lucide-react'
 import { Avatar, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
-import { useAuth } from '../auth/AuthProvider'
+import { useAuth } from '../auth'
 import { useOwnProfileQuery } from './queries'
 import { updateOwnProfile } from './api'
 import {

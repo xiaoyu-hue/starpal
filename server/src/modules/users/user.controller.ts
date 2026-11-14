@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express'
 import { sendData } from '../../shared/response.js'
-import { clearSessionCookie } from '../../modules/auth/session.js'
+import { clearSessionCookie } from '../../modules/auth/index.js'
 import {
   deleteOwnAccount,
   eraseOwnAccount,

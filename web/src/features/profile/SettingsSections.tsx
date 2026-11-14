@@ -4,7 +4,7 @@ import { Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
 import { useTheme } from '../../hooks/useTheme'
-import { useAuth } from '../auth/AuthProvider'
+import { useAuth } from '../auth'
 import { deleteOwnAccount, eraseOwnAccount } from './api'
 
 const APP_VERSION = '0.1.0'

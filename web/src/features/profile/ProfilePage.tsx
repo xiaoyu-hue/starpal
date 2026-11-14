@@ -4,7 +4,7 @@ import { Avatar, Badge, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { EmptyState, ErrorState } from '../../components/feedback/States'
 import { ApiError } from '../../lib/api-client'
-import { useAuth } from '../auth/AuthProvider'
+import { useAuth } from '../auth'
 import { usePublicProfileQuery, useUserPostsQuery } from './queries'
 
 /** 公开个人页：头像、显示名、用户名、简介、注册日期与帖子占位。 */

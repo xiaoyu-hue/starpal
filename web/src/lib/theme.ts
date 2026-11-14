@@ -26,5 +26,9 @@ export function applyTheme(theme: Theme): void {
   root.style.colorScheme = resolved
   window.localStorage.setItem(STORAGE_KEY, theme)
   const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute('content', resolved === 'dark' ? '#10131C' : '#FAF9F7')
+  if (meta) {
+    // 主题配色取自令牌单一来源（CSS 变量），避免页面硬编码色值（M1-S3-T2）。
+    const bg = getComputedStyle(root).getPropertyValue('--sp-bg').trim()
+    meta.setAttribute('content', bg || (resolved === 'dark' ? '#10131C' : '#FAF9F7'))
+  }
 }
