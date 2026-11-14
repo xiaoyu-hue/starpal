@@ -1,12 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { feedKeys } from '../feed'
 import { profileKeys } from '../profile'
+import type { PostDetail } from '../../types/api'
 import {
   createPost,
   deletePost,
   deletePostImage,
   fetchPostDetail,
   fetchRelatedPosts,
+  setPostBookmark,
+  setPostLike,
   updatePost,
   uploadPostImage,
   type CreatePostPayload,
@@ -106,6 +109,72 @@ export function useDeletePostImageMutation(postId: number) {
     mutationFn: (imageId: number) => deletePostImage(postId, imageId),
     onSuccess: async () => {
       await invalidate(postId)
+    },
+  })
+}
+
+/**
+ * 点赞 / 收藏：乐观更新详情缓存，失败回滚，成功以服务端返回的计数为准。
+ *
+ * 为什么用服务端计数而不是本地累加：并发下别人也在点赞，本地 +1 只是猜测。
+ * 乐观更新只为让按钮立刻有反馈；服务端返回后立即校正，避免「显示 13 实际 12」。
+ */
+export function useLikeMutation(id: number) {
+  const client = useQueryClient()
+  const key = postKeys.detail(id)
+  return useMutation({
+    mutationFn: (on: boolean) => setPostLike(id, on),
+    onMutate: async (on: boolean) => {
+      await client.cancelQueries({ queryKey: key })
+      const previous = client.getQueryData<PostDetail>(key)
+      if (previous) {
+        client.setQueryData<PostDetail>(key, {
+          ...previous,
+          isLiked: on,
+          likeCount: Math.max(previous.likeCount + (on ? 1 : -1), 0),
+        })
+      }
+      return { previous }
+    },
+    onError: (_error, _on, context) => {
+      if (context?.previous) client.setQueryData(key, context.previous)
+    },
+    onSuccess: (state) => {
+      client.setQueryData<PostDetail>(key, (prev) =>
+        prev ? { ...prev, isLiked: state.liked, likeCount: state.likeCount } : prev,
+      )
+    },
+    onSettled: async () => {
+      // 列表里的计数与热门排序都会变；只标记过期，返回列表时再取，不在详情页强行重排。
+      await client.invalidateQueries({ queryKey: feedKeys.all })
+    },
+  })
+}
+
+export function useBookmarkMutation(id: number) {
+  const client = useQueryClient()
+  const key = postKeys.detail(id)
+  return useMutation({
+    mutationFn: (on: boolean) => setPostBookmark(id, on),
+    onMutate: async (on: boolean) => {
+      await client.cancelQueries({ queryKey: key })
+      const previous = client.getQueryData<PostDetail>(key)
+      if (previous) {
+        client.setQueryData<PostDetail>(key, {
+          ...previous,
+          isBookmarked: on,
+          bookmarkCount: Math.max(previous.bookmarkCount + (on ? 1 : -1), 0),
+        })
+      }
+      return { previous }
+    },
+    onError: (_error, _on, context) => {
+      if (context?.previous) client.setQueryData(key, context.previous)
+    },
+    onSuccess: (state) => {
+      client.setQueryData<PostDetail>(key, (prev) =>
+        prev ? { ...prev, isBookmarked: state.bookmarked, bookmarkCount: state.bookmarkCount } : prev,
+      )
     },
   })
 }

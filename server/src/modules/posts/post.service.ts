@@ -13,6 +13,7 @@ import {
   softDeletePost,
   updatePost as persistPost,
 } from './post.repository.js'
+import { attachViewerFlags } from '../interactions/index.js'
 import type { PostRecord } from './post.projection.js'
 import type {
   CreatePostInput,
@@ -44,6 +45,9 @@ function toListItem(record: PostRecord): PostListItem {
     author: record.author,
     likeCount: record.likeCount,
     commentCount: record.commentCount,
+    bookmarkCount: record.bookmarkCount,
+    isLiked: record.isLiked,
+    isBookmarked: record.isBookmarked,
     images: record.images,
     createdAt: record.createdAt,
   }
@@ -96,7 +100,8 @@ export async function getPostDetail(id: number, viewer: Viewer): Promise<PostDet
   const record = await findPostById(id)
   if (record === null) throw new DomainError('NOT_FOUND', '帖子不存在')
   const { isAuthor } = authorize(record, viewer)
-  return toDetail(record, isAuthor)
+  const [detail] = await attachViewerFlags([toDetail(record, isAuthor)], viewer?.id ?? null)
+  return detail!
 }
 
 /** 编辑：作者或管理员；他人请求返回 FORBIDDEN（已确认存在，故与 NOT_FOUND 区分）。 */
@@ -166,11 +171,12 @@ function nextCursorOf(last: PostRecord, tab: FeedQuery['tab']): string | null {
   return encodeCursor({ t: String(last.rankScore), id: String(last.id) })
 }
 
-export async function listFeed(query: FeedQuery): Promise<PostPage> {
+export async function listFeed(query: FeedQuery, viewer: Viewer = null): Promise<PostPage> {
   const { rows, hasMore } = await listFeedPosts(query)
   const last = rows[rows.length - 1]
+  const items = await attachViewerFlags(rows.map(toListItem), viewer?.id ?? null)
   return {
-    items: rows.map(toListItem),
+    items,
     nextCursor: hasMore && last ? nextCursorOf(last, query.tab) : null,
     hasMore,
   }
@@ -182,7 +188,7 @@ export async function listRelated(id: number, viewer: Viewer): Promise<PostListI
   if (record === null) throw new DomainError('NOT_FOUND', '帖子不存在')
   authorize(record, viewer)
   const rows = await listRelatedPosts(record.id, record.topicId)
-  return rows.map(toListItem)
+  return attachViewerFlags(rows.map(toListItem), viewer?.id ?? null)
 }
 
 /** 公开个人页帖子：仅已发布内容，按时间倒序游标分页。 */
@@ -190,11 +196,13 @@ export async function listUserPosts(
   authorId: string,
   cursor: { t: string; id: string } | null,
   limit = FEED_PAGE_SIZE,
+  viewerId: string | null = null,
 ): Promise<PostPage> {
   const { rows, hasMore } = await listAuthorPosts(authorId, cursor, limit)
   const last = rows[rows.length - 1]
+  const items = await attachViewerFlags(rows.map(toListItem), viewerId)
   return {
-    items: rows.map(toListItem),
+    items,
     nextCursor: hasMore && last ? encodeCursor({ t: last.createdAt, id: String(last.id) }) : null,
     hasMore,
   }

@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Heart, MessageCircle, X } from 'lucide-react'
+import { ArrowLeft, MessageCircle, X } from 'lucide-react'
 import { Avatar, Badge, Card } from '../../../components/ui/Primitives'
 import { EmptyState, ErrorState } from '../../../components/feedback/States'
 import { ApiError } from '../../../lib/api-client'
 import type { PostStatus } from '../../../types/api'
 import { PostActions } from '../components/PostActions'
+import { PostInteractions } from '../components/PostInteractions'
 import { PostImages } from '../../../components/content/PostImages'
 import { RelatedPosts } from '../components/RelatedPosts'
 import { usePostDetailQuery } from '../queries'
@@ -140,11 +141,9 @@ export function PostDetailPage() {
           <PostImages images={post.images} title={post.title} />
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-            <div className="flex items-center gap-5 text-xs text-muted" aria-label="帖子统计">
-              <span className="inline-flex items-center gap-1.5">
-                <Heart size={15} aria-hidden="true" /> {post.likeCount} 点赞
-              </span>
-              <span className="inline-flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <PostInteractions post={post} />
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted">
                 <MessageCircle size={15} aria-hidden="true" /> {post.commentCount} 评论
               </span>
             </div>
@@ -154,9 +153,9 @@ export function PostDetailPage() {
       </article>
 
       <Card className="p-5 text-center">
-        <p className="text-sm font-medium text-ink">评论功能尚未开放</p>
+        <p className="text-sm font-medium text-ink">评论功能即将开放</p>
         <p className="mt-1 text-xs text-muted">
-          评论与点赞将在接下来的里程碑接入。当前页面的计数来自真实数据，但暂不可交互。
+          点赞与收藏已可交互。评论区正在开发中，届时这里会直接显示评论列表。
         </p>
       </Card>
 

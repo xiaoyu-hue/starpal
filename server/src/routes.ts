@@ -4,6 +4,7 @@ import { aboutController, metaController, privacyController } from './modules/me
 import { authRouter } from './modules/auth/auth.routes.js'
 import { adminRouter } from './modules/admin/admin.routes.js'
 import { userRouter } from './modules/users/user.routes.js'
+import { interactionRouter } from './modules/interactions/index.js'
 import { postRouter } from './modules/posts/index.js'
 import { topicRouter } from './modules/topics/index.js'
 import { imageRouter } from './modules/images/index.js'
@@ -29,6 +30,7 @@ apiRouter.use('/auth', authRouter)
 apiRouter.use('/admin', adminRouter)
 apiRouter.use('/users', userRouter)
 apiRouter.use('/posts/:postId/images', imageUploadRouter)
+apiRouter.use('/posts', interactionRouter)
 apiRouter.use('/posts', postRouter)
 apiRouter.use('/topics', topicRouter)
 apiRouter.use('/images', imageRouter)

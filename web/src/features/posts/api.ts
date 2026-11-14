@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost, apiUpload } from '../../lib/api-client'
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut, apiUpload } from '../../lib/api-client'
 import type { FeedPost, PostDetail, UploadedImage } from '../../types/api'
 
 /** 帖子写读接口：只描述路径与载荷，传输与错误归一化由 api-client 统一承担。 */
@@ -53,6 +53,30 @@ export async function uploadPostImage(postId: number, file: File): Promise<Uploa
   const form = new FormData()
   form.append('image', file, file.name)
   const envelope = await apiUpload<UploadedImage>(`posts/${postId}/images`, form)
+  return envelope.data
+}
+
+/**
+ * 点赞 / 收藏：`PUT` 建立、`DELETE` 撤销，均为幂等。
+ * 不提供「切换」接口：显式动作在重放时不会把「赞」翻成「取消赞」。
+ */
+export async function setPostLike(
+  id: number,
+  on: boolean,
+): Promise<{ liked: boolean; likeCount: number }> {
+  const envelope = on
+    ? await apiPut<{ liked: boolean; likeCount: number }>(`posts/${id}/like`)
+    : await apiDelete<{ liked: boolean; likeCount: number }>(`posts/${id}/like`)
+  return envelope.data
+}
+
+export async function setPostBookmark(
+  id: number,
+  on: boolean,
+): Promise<{ bookmarked: boolean; bookmarkCount: number }> {
+  const envelope = on
+    ? await apiPut<{ bookmarked: boolean; bookmarkCount: number }>(`posts/${id}/bookmark`)
+    : await apiDelete<{ bookmarked: boolean; bookmarkCount: number }>(`posts/${id}/bookmark`)
   return envelope.data
 }
 

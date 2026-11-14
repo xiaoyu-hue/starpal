@@ -15,6 +15,7 @@ export const PROJECTION = `
   p.status,
   p.like_count,
   p.comment_count,
+  p.bookmark_count,
   p.created_at,
   p.updated_at,
   p.author_id,
@@ -61,6 +62,7 @@ export type PostRow = QueryResultRow & {
   status: string
   like_count: number
   comment_count: number
+  bookmark_count: number
   created_at: Date
   updated_at: Date
   author_id: string
@@ -88,6 +90,7 @@ export function mapRow(row: PostRow) {
     status: row.status,
     likeCount: row.like_count,
     commentCount: row.comment_count,
+    bookmarkCount: row.bookmark_count,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     authorId: Number(row.author_id),
@@ -105,6 +108,10 @@ export function mapRow(row: PostRow) {
       height: image.height,
     })),
     rankScore: row.rank_score,
+    // 互动态由调用方按 viewer 批量补齐（见 interactions/flags.ts）；
+    // 这里给出匿名默认值，避免每个调用点都要拼一份完整对象。
+    isLiked: false,
+    isBookmarked: false,
   }
 }
 

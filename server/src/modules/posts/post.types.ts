@@ -43,6 +43,14 @@ export type PostListItem = {
   author: PostAuthorBrief
   likeCount: number
   commentCount: number
+  bookmarkCount: number
+  /**
+   * 当前读者是否已点赞 / 收藏。匿名读者恒为 false。
+   * 这两项不是帖子的固有属性，而是「读者 × 帖子」的关系，故由服务层按 viewer 补齐，
+   * 不放进帖子表的投影子查询，避免同一份 SQL 因参数位置不同而产生多个变体。
+   */
+  isLiked: boolean
+  isBookmarked: boolean
   images: PostImage[]
   createdAt: string
 }

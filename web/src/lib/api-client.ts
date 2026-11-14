@@ -112,6 +112,15 @@ export async function apiPatch<T>(path: string, body?: unknown): Promise<ApiEnve
   })
 }
 
+/** 幂等建立关系：PUT 语义，无请求体（点赞 / 收藏等开关型资源）。 */
+export async function apiPut<T>(path: string): Promise<ApiEnvelope<T>> {
+  assertOnline()
+  return send<T>(buildUrl(path), {
+    method: 'PUT',
+    headers: { Accept: 'application/json' },
+  })
+}
+
 /** 删除资源：DELETE 语义，不携带请求体。 */
 export async function apiDelete<T>(path: string): Promise<ApiEnvelope<T>> {
   assertOnline()

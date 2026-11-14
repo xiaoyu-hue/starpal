@@ -35,7 +35,7 @@ export async function publicPostsController(
     const username = String(req.params.username ?? '')
     // 先确认用户存在，不存在按 NOT_FOUND 处理，与公开投影保持一致。
     await getPublicProfile(username)
-    const page = await getPublicPosts(username, req.query.cursor)
+    const page = await getPublicPosts(username, req.query.cursor, req.principal?.id ?? null)
     // 与 /api/posts 同构：data 为列表，meta 承载游标，前端两处共用同一解包逻辑。
     sendData(res, page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore })
   } catch (error) {

@@ -52,6 +52,10 @@ export type FeedPost = {
   author: { username: string; displayName: string; avatarUrl: string | null }
   likeCount: number
   commentCount: number
+  bookmarkCount: number
+  /** 当前读者是否已点赞 / 收藏；匿名读者恒为 false。 */
+  isLiked: boolean
+  isBookmarked: boolean
   images: PostImage[]
   createdAt: string
 }

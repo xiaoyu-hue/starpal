@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { optionalAuth } from '../../middleware/optional-auth.js'
 import { requireAuth } from '../../middleware/require-auth.js'
 import {
   deleteAccountController,
@@ -26,5 +27,5 @@ meRouter.delete('/', deleteAccountController)
 meRouter.post('/erase', eraseAccountController)
 
 userRouter.use('/me', requireAuth, meRouter)
-userRouter.get('/:username/posts', publicPostsController)
+userRouter.get('/:username/posts', optionalAuth, publicPostsController)
 userRouter.get('/:username', publicProfileController)

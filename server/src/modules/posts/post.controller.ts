@@ -25,7 +25,7 @@ export async function feedController(
 ): Promise<void> {
   try {
     const query = parseFeedQuery(req.query as Record<string, unknown>)
-    const page = await listFeed(query)
+    const page = await listFeed(query, viewerOf(req.principal))
     sendData(res, page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore })
   } catch (error) {
     next(error)

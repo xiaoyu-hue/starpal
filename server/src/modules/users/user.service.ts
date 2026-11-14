@@ -78,11 +78,12 @@ export async function getOwnProfile(userId: string): Promise<OwnProfile> {
 export async function getPublicPosts(
   username: string,
   rawCursor?: unknown,
+  viewerId: string | null = null,
 ): Promise<UserPostsPage> {
   const row = await findPublicProfileByUsername(username)
   if (!row) throw new DomainError('NOT_FOUND', '用户不存在')
   const cursor = parseCursor(rawCursor)
-  return listUserPosts(row.id, cursor)
+  return listUserPosts(row.id, cursor, undefined, viewerId)
 }
 
 function parseCursor(raw: unknown): { t: string; id: string } | null {
