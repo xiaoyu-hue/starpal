@@ -416,6 +416,8 @@ server/
 
 ### 5.3 模块清单（v1.0 冻结）
 
+> 本表是架构设计阶段的模块划分，含 M5 / M6 / M7 规划项（`messages`、`achievements`、`search`、`export`、`moderation` 等尚未实现）。当前已落地的举报 / 申诉端点见 §6.2 末尾的「当前已落地」小表。
+
 | 模块 | 主要职责 | 主要表 |
 | --- | --- | --- |
 | `auth` | 注册、登录、登出、会话、邀请码、自助改密、失败限次 | `users` `sessions` `security_events` |
@@ -428,7 +430,7 @@ server/
 | `messages` | 会话与消息 | `conversations` `messages` |
 | `notifications` | 通知生成与已读 | `notifications` |
 | `achievements` | 成就定义、解锁、每周热门只读聚合 | `achievements` `user_achievements` |
-| `reports` | 举报提交与目标校验 | `reports` |
+| `reports` | 举报 / 申诉提交、目标可见性校验、我的提交、管理队列与决策（当前仅最小闭环，不含处置） | `reports` |
 | `moderation` | 处置动作、封禁、审核日志 | `reports` `moderation_logs` `users` `posts` `comments` |
 | `uploads` | 上传校验、重编码、存储与清理 | `post_images` |
 | `search` | 帖子与话题检索 | `posts` `topics` |
@@ -545,6 +547,8 @@ sequenceDiagram
 | 处置举报 | 更新举报状态 + 目标状态 + 写审核日志 |
 | 彻底擦除数据 | 用户相关内容置为擦除态 + 清理图片引用 + 写审计记录 |
 
+> 本表为设计基线，其中「发送消息」「处置举报」两行属未来里程碑规划。当前已落地的举报决策（`011_reports.sql`）只在同一条 `UPDATE` 里改 `reports` 的状态、答复、决策人与时间，**不**改目标内容状态、不写审核日志。
+
 事务由服务层开启并提交；仓储接收连接/客户端参数，不自行提交。计数列与明细在同一事务内保持一致。
 
 ### 5.9 配置与密钥管理
@@ -650,12 +654,14 @@ sequenceDiagram
 | GET | `/api/search` | 公开 | `q` + `type` 搜索 |
 | GET | `/api/export` | 登录 | `format=md|json` 导出本人数据 |
 
-**举报与管理**
+**举报与管理（v1.0 规划基线，多数未实现）**
+
+> 下表是架构设计阶段的端点清单。除后面「当前已落地」四个端点外，其余（用户 / 帖子 / 评论管理、审核日志、公开脱敏视图、统计）属 M6 及以后的计划，尚未实现。保留历史基线但不改写它，**不要把它当成现状**。
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
 | POST | `/api/reports` | 登录 | 提交举报 |
-| GET | `/api/me/reports` | 登录 | 我提交的举报 |
+| GET | `/api/me/reports` | 登录 | 我提交的举报（规划路径；实际实现为 `/api/reports/mine`） |
 | GET | `/api/admin/stats` | 管理员 | 基础统计 |
 | GET | `/api/admin/users` | 管理员 | 用户列表 |
 | PATCH | `/api/admin/users/:id/status` | 管理员 | 停用 / 恢复 |
@@ -667,6 +673,17 @@ sequenceDiagram
 | PATCH | `/api/admin/reports/:id` | 管理员 | 复核 / 处置 / 驳回 |
 | GET | `/api/admin/logs` | 管理员 | 完整审核日志 |
 | GET | `/api/moderation/public-log` | 公开 | 脱敏公开审核记录 |
+
+**当前已落地：举报 + 申诉最小闭环（2026-11-15，迁移 `011_reports.sql`）**
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| POST | `/api/reports` | 登录 | 提交举报或申诉；身份由会话判定，请求体不含用户标识 |
+| GET | `/api/reports/mine` | 登录 | 「我的提交」：只按登录者过滤，按提交时间倒序、键集游标分页，含状态与答复 |
+| GET | `/api/admin/reports` | 管理员 | 处理队列：按状态筛选，JOIN 提交人供运营者定位 |
+| POST | `/api/admin/reports/:id/decision` | 管理员 | 标记「已处理 / 已驳回」并写答复；`WHERE status = 'pending'` 条件更新保证终态不可重决，不做内容处置 |
+
+> 用户侧 `/api/reports` 整组挂 `requireAuth`；管理侧复用 `adminRouter` 已有的 `requireAuth + requireRole(ROLE_ADMIN)`，不另起一套角色校验。举报目标存在性与可见性由服务层参数化查询校验（草稿、已移除、已删除、停用作者的内容按不存在处理），多态目标不建外键。决策只改 `reports` 表的状态与答复字段，不写 `moderation_logs`、不改内容可见性、不停用账号。
 
 ### 6.3 关键请求 / 响应示例
 
@@ -958,6 +975,8 @@ erDiagram
 
 #### `reports`
 
+> **2026-11-15 订正**：下表是 v1.0 规划稿，与已落地的 `011_reports.sql` 不一致，保留仅供追溯；**实际结构以紧随其后的「实际落地」表为准**。规划中的 `user` 目标、`reviewing` 状态、`handled_by`、`updated_at` 均未实现。本节其余表定义同为 v1.0 冻结基线，含未来里程碑规划。
+
 | 字段 | 类型 | 约束 | 说明 |
 | --- | --- | --- | --- |
 | `id` | `BIGSERIAL` | PK | — |
@@ -971,7 +990,26 @@ erDiagram
 | `resolution_note` | `TEXT` | NULL | 内部备注 |
 | `created_at` / `updated_at` / `resolved_at` | `TIMESTAMPTZ` | — | 时间 |
 
-#### `moderation_logs`
+**实际落地（`011_reports.sql`）**
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| `id` | `BIGSERIAL` | PK | — |
+| `kind` | `VARCHAR(16)` | NOT NULL, CHECK IN (`report`, `appeal`) | 举报 / 申诉 |
+| `reporter_id` | `BIGINT` | FK → `users.id` ON DELETE CASCADE, NOT NULL | 提交人 |
+| `target_type` | `VARCHAR(16)` | NULL | `post` / `comment`；举报必填，申诉必须为 NULL |
+| `target_id` | `BIGINT` | NULL | 目标 ID，服务层校验存在性与可见性 |
+| `reason` | `VARCHAR(32)` | NOT NULL | 举报原因枚举；申诉固定 `appeal` |
+| `detail` | `TEXT` | NOT NULL | 具体情况 / 申诉说明（5–1000 字） |
+| `status` | `VARCHAR(16)` | NOT NULL, DEFAULT `pending`, CHECK IN (`pending`, `resolved`, `dismissed`) | 三态，终态不可再改 |
+| `resolution_note` | `TEXT` | NULL | 运营者答复（≤ 500 字） |
+| `resolved_by` | `BIGINT` | FK → `users.id` ON DELETE SET NULL, NULL | 决策人 |
+| `resolved_at` | `TIMESTAMPTZ` | NULL | 决策时间 |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | 提交时间 |
+
+> 两条跨字段约束：`reports_target_valid` 要求举报必须带目标、申诉必须无目标；`reports_resolution_valid` 要求 `pending` 时决策人与时间为空、终态时时间非空。多态目标不建外键。索引见 §7.4。
+
+#### `moderation_logs`（v1.0 规划，尚未落盘）
 
 | 字段 | 类型 | 约束 | 说明 |
 | --- | --- | --- | --- |
@@ -993,7 +1031,9 @@ erDiagram
 | 作者帖子列表 | `posts (author_id, created_at DESC)` |
 | 热门排序 | `posts (like_count DESC, created_at DESC)` |
 | 评论列表 | `comments (post_id, created_at)` |
-| 举报队列 | `reports (status, created_at DESC)` |
+| 举报队列 | `reports_queue_idx (status, created_at DESC, id DESC)`（`011` 落地） |
+| 我的提交 | `reports_mine_idx (reporter_id, created_at DESC, id DESC)`（`011` 落地） |
+| 待处理去重 | `reports_pending_target_idx (reporter_id, target_type, target_id) WHERE kind='report' AND status='pending'`（`011` 落地，UNIQUE） |
 | 通知列表 | `notifications (user_id, is_read, created_at DESC)` |
 | 消息列表 | `messages (conversation_id, created_at)` |
 | 安全事件窗口统计 | `security_events (kind, subject_hash, created_at DESC)` |
@@ -1013,10 +1053,11 @@ server/src/db/migrations/
 ├── 007_chat_topic.sql
 ├── 008_terms_acceptance.sql
 ├── 009_invite_codes.sql
-└── 010_likes_user_idx.sql
+├── 010_likes_user_idx.sql
+└── 011_reports.sql
 ```
 
-明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications` 等属未来里程碑，未落盘，不在此列）。
+明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。`011_reports.sql` 建 `reports` 表（用 `kind` 区分举报 / 申诉，CHECK 约束钉死目标形态与终态字段）及 `reports_mine_idx` / `reports_queue_idx` / 带 `WHERE` 条件的 `reports_pending_target_idx`；这一版不含 `moderation_logs`。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications`、M6 计划中的 `NNN_reports_moderation.sql` / `NNN_views.sql` 等属未来里程碑，未落盘，不在此列）。
 
 | 规则 | 内容 |
 | --- | --- |

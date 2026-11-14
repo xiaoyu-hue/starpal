@@ -33,3 +33,10 @@ export const likeKeys = {
   all: ['likes'] as const,
   list: ['likes', 'list'] as const,
 }
+
+/** 举报 / 申诉：提交与决策都会改变本人列表、管理队列与待处理数量。 */
+export const reportKeys = {
+  all: ['reports'] as const,
+  mine: ['reports', 'mine'] as const,
+  queue: (status: string | null) => ['reports', 'queue', status ?? 'all'] as const,
+}

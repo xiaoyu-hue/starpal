@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Trash2 } from 'lucide-react'
+import { Flag, Trash2 } from 'lucide-react'
 import { Avatar, Badge } from '../../../components/ui/Primitives'
 import { Button } from '../../../components/ui/Button'
 import { Modal } from '../../../components/ui/Dialog'
+import { ReportButton } from '../../reports'
 import type { CommentItem } from '../../../types/api'
 
 function formatTime(iso: string): string {
@@ -45,31 +46,53 @@ export function CommentEntry({ comment, removing, onRemove }: Props) {
         </p>
       </div>
 
-      {comment.canRemove && !removed && (
-        <Modal
-          title="删除这条评论？"
-          description="删除后评论立即消失，且无法恢复。"
-          trigger={
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label="删除评论"
-              icon={<Trash2 size={14} />}
-              className="shrink-0"
-            >
-              <span className="sr-only">删除</span>
-            </Button>
-          }
-        >
-          <Button
-            variant="danger"
-            loading={removing}
-            onClick={() => onRemove(comment.id)}
+      <div className="flex shrink-0 items-start gap-1">
+        {!removed && (
+          <ReportButton
+            kind="report"
+            targetType="comment"
+            targetId={comment.id}
+            label="举报"
+            hideWhenGuest
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="举报这条评论"
+                icon={<Flag size={14} />}
+                className="shrink-0"
+              >
+                <span className="sr-only">举报</span>
+              </Button>
+            }
+          />
+        )}
+        {comment.canRemove && !removed && (
+          <Modal
+            title="删除这条评论？"
+            description="删除后评论立即消失，且无法恢复。"
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="删除评论"
+                icon={<Trash2 size={14} />}
+                className="shrink-0"
+              >
+                <span className="sr-only">删除</span>
+              </Button>
+            }
           >
-            确认删除
-          </Button>
-        </Modal>
-      )}
+            <Button
+              variant="danger"
+              loading={removing}
+              onClick={() => onRemove(comment.id)}
+            >
+              确认删除
+            </Button>
+          </Modal>
+        )}
+      </div>
     </li>
   )
 }

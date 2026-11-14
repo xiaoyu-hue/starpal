@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+### 新增（举报 + 申诉最小闭环）
+
+- 数据库新增 `011_reports.sql`：一张 `reports` 表用 `kind` 区分举报 / 申诉，CHECK 约束钉死「举报必须指向 `post` / `comment` 目标、申诉不得带目标」与「`pending` 无答复人、终态必须有处理时间」；建 `reports_mine_idx` / `reports_queue_idx` 与带 `WHERE` 条件的 `reports_pending_target_idx`（同一人对同一目标在待处理期间只能有一条）。举报目标不建外键，由服务层校验存在性与可见性。
+- 后端新增 `server/src/modules/reports/`：`POST /api/reports`、`GET /api/reports/mine` 挂在 `/api/reports` 整组 `requireAuth` 下；`GET /api/admin/reports`、`POST /api/admin/reports/:id/decision` 挂在 `adminRouter` 已有的 `requireAuth + requireRole(ROLE_ADMIN)` 下。列表用键集游标分页、与信息流同口径；决策用 `WHERE status = 'pending'` 条件更新，终态不可重复决策。说明 5–1000 字、答复 ≤ 500 字。
+- 前端新增 `web/src/features/reports/`：`/reports`（`RequireAuth`，「我的提交」+ 提交申诉）、`/admin/reports`（`RequireRole`）、`ReportButton`（帖子详情页与评论条目复用同一份表单）、决策对话框；侧栏 / 移动抽屉 /「设置」三处入口，管理员从「设置 → 运营管理」进入队列。`RequireRole` 同时补到 `/invite-codes`。
+- **刻意不做的部分**（讲清取舍，非遗漏）：不做自动处置、不改内容可见性、不停用账号、不做六分区后台与审核日志；管理员只能标记「已处理 / 已驳回」并写答复，实际处置仍由运营者人工判断。这一版解决的是「没有站内入口、只能靠留言」，不是「治理自动化」。
+- 验证：新增 `server/tests/integration/reports.test.ts`（PGlite 真库权限矩阵与状态流转），`npm run verify` 全绿；测试数、扫描文件数等数字以 `docs/IMPLEMENTATION-PLAN.md` 的 `VR-M4-14` 实测输出为准，不写死在本文。构建分包与无头浏览器静态路由复核结论见同条记录。**登录态下举报 / 申诉完整 HTTP 端到端未执行**，如实标注为未验证。
+
+### 更正（文档同步）
+
+- 公告 `status` 条、关于页自述、README 的未完成清单由三项改为两项（移除「举报与申诉入口」），并把「举报与申诉最小闭环」补入可用能力；新增一条功能公告说明入口、可见范围与「只标记状态、不自动处置」的边界。
+- 协议 / 说明文档（`privacy-rights`、`guidelines`、`disclaimer`、`disclaimer-liability`、`product-scope`、`terms`、`about`）删去「没有举报按钮 / 只能私信或公告帖留言」等旧口径，改为站内入口；同时如实保留「通知—删除仍由人工判断」「停用账号仍需数据库操作」「申诉答复不等于处置生效」「忘记密码仍无邮件找回」。
+- 占用 `011` 后，把「现到 `010`、从 `011` 起」同步为「现到 `011`、从 `012` 起」：`AGENTS.md`、`docs/DOC_SYNC.md`、`docs/IMPLEMENTATION-PLAN.md` 的 M5 / M6 迁移编号口径与 §7 交付物清单、README 的迁移范围；`docs/ARCHITECTURE.md` §7.5 迁移树登记 `011_reports.sql`，§6.2 端点表把四个真实端点与 v1.0 规划基线分开列。
+- `server/tests/unit/about-doc.test.ts`：未完成清单断言改为两项，新增「举报与申诉已交付」断言。
+
 ### 新增（我的点赞列表）
 
 - 数据库新增 `010_likes_user_idx.sql`：为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 已建的 `bookmarks_user_idx` 对称。`005` 中 `likes` 只有按帖子查的 `likes_post_idx`，主键 `(user_id, post_id)` 只能过滤用户、无法直接按时间排序；不补索引会退化为「取出该用户全部点赞再排序」。纯新增索引、不改表结构与历史数据。

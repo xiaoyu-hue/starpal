@@ -13,7 +13,7 @@ import { ANNOUNCEMENT_ITEMS } from '../../src/config/docs/announcements.doc.js'
  */
 
 /** 当前对社区用户公示的未完成能力，公告 status 条与关于页自述必须逐条一致。 */
-const PENDING_GAPS = ['私信', '搜索', '举报与申诉入口'] as const
+const PENDING_GAPS = ['私信', '搜索'] as const
 
 describe('关于页许可与源码信息', () => {
   it('三类许可齐全，且各自写明适用对象与范围', () => {
@@ -68,6 +68,17 @@ describe('关于页未完成清单与公告真源一致', () => {
     assert.match(intro, /我的点赞列表.*已经可用/)
     assert.ok(available.includes('我的点赞列表'), '公告 status 的可用能力未列出点赞列表')
     assert.ok(!pendingLine.includes('点赞列表'), '公告 status 的未完成清单仍含点赞列表')
+  })
+
+  it('举报与申诉最小闭环已交付：不再列为未完成，且写进已交付能力', () => {
+    const status = ANNOUNCEMENT_ITEMS.find((item) => item.kind === 'status')!
+    const intro = ABOUT.intro.join('')
+    const available = status.changes.find((line) => line.startsWith('可用：')) ?? ''
+    const pendingLine = status.changes.find((line) => line.startsWith('未完成：')) ?? ''
+    assert.match(intro, /举报与申诉的最小闭环.*都已经可用/)
+    assert.ok(available.includes('举报与申诉最小闭环'), '公告 status 的可用能力未列出举报与申诉')
+    assert.ok(!pendingLine.includes('举报与申诉'), '公告 status 的未完成清单仍含举报与申诉')
+    assert.ok(!intro.includes('举报与申诉入口仍在路上'), '关于页仍把举报与申诉列为未完成')
   })
 
   it('不再把已交付能力写成未完成', () => {

@@ -9,6 +9,7 @@ import {
   listInviteCodesController,
   revokeInviteCodeController,
 } from '../invite/index.js'
+import { adminReportsController, decideReportController } from '../reports/index.js'
 
 /**
  * 管理路由组（挂载于 /api/admin）。
@@ -24,3 +25,5 @@ adminRouter.get('/whoami', adminWhoamiController)
 adminRouter.get('/invite-codes', listInviteCodesController)
 adminRouter.post('/invite-codes', createInviteCodesController)
 adminRouter.post('/invite-codes/:id/revoke', revokeInviteCodeController)
+adminRouter.get('/reports', adminReportsController)
+adminRouter.post('/reports/:id/decision', decideReportController)

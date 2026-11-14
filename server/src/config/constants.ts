@@ -278,3 +278,5 @@ export type AgeBand = (typeof AGE_BAND_VALUES)[number]
 
 /** 软删除后用于署名的占位显示名，与公开投影层替换逻辑保持一致。 */
 export const DELETED_DISPLAY_NAME = '已注销用户'
+
+// 举报 / 申诉常量见 ./report-constants.ts（保持本文件在行数预算内）。

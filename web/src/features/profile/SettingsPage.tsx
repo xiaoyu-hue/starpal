@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bookmark, Check, Heart, KeyRound } from 'lucide-react'
+import { Bookmark, Check, Flag, Heart, KeyRound } from 'lucide-react'
 import { Avatar, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
@@ -70,6 +70,19 @@ export function SettingsPage() {
           查看点赞
         </Link>
       </Card>
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-6">
+        <div>
+          <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
+            <Flag size={16} /> 我的提交
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            举报与申诉的处理状态、运营者答复；也可以在这里提交申诉。只有你和运营者能看到。
+          </p>
+        </div>
+        <Link to="/reports" className={buttonClass('secondary', 'sm')}>
+          查看提交
+        </Link>
+      </Card>
       <AboutSection />
       {user?.role === 'admin' && (
         <Card className="space-y-3 p-6">
@@ -77,11 +90,16 @@ export function SettingsPage() {
             <KeyRound size={16} /> 运营管理
           </h2>
           <p className="text-sm leading-relaxed text-muted">
-            生成与撤销邀请码，控制谁能注册。邀请码一人一码、用完即失效。
+            生成与撤销邀请码，控制谁能注册；查看并处理社区里的举报与申诉。
           </p>
-          <Link to="/invite-codes" className={buttonClass('secondary', 'sm')}>
-            邀请码管理
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/invite-codes" className={buttonClass('secondary', 'sm')}>
+              邀请码管理
+            </Link>
+            <Link to="/admin/reports" className={buttonClass('secondary', 'sm')}>
+              举报与申诉
+            </Link>
+          </div>
         </Card>
       )}
       <AccountSection onDeleted={() => { void refresh(); navigate('/') }} />

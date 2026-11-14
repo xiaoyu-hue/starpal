@@ -11,7 +11,7 @@ import { FeedSkeleton } from '../features/feed/components/FeedSkeleton'
 import { PlaceholderPage } from '../features/placeholder'
 // 话题目录是外壳级共享数据（左右栏都在读），必然进主包，故静态导入而非假装懒加载。
 import { TopicPage, TopicsPage } from '../features/topics'
-import { RequireAuth } from './guards'
+import { RequireAuth, RequireRole } from './guards'
 
 // 路由级懒加载边界：首页与设计系统预览页独立分包。
 const HomePage = lazy(() =>
@@ -58,6 +58,12 @@ const BookmarksPage = lazy(() =>
 )
 const LikesPage = lazy(() =>
   import('../features/likes/LikesPage').then((m) => ({ default: m.LikesPage })),
+)
+const MyReportsPage = lazy(() =>
+  import('../features/reports/MyReportsPage').then((m) => ({ default: m.MyReportsPage })),
+)
+const AdminReportsPage = lazy(() =>
+  import('../features/reports/AdminReportsPage').then((m) => ({ default: m.AdminReportsPage })),
 )
 const AboutPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.AboutPage })),
@@ -137,6 +143,22 @@ const routes: RouteObject[] = [
           </RequireAuth>
         ),
       },
+      {
+        path: 'reports',
+        element: (
+          <RequireAuth>
+            <Suspended><MyReportsPage /></Suspended>
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/reports',
+        element: (
+          <RequireRole role="admin">
+            <Suspended><AdminReportsPage /></Suspended>
+          </RequireRole>
+        ),
+      },
       { path: 'messages', element: placeholder('私信', 'M5', '留言式私信将在 M5 里程碑交付。') },
       {
         path: 'settings',
@@ -149,9 +171,9 @@ const routes: RouteObject[] = [
       {
         path: 'invite-codes',
         element: (
-          <RequireAuth>
+          <RequireRole role="admin">
             <Suspended><InviteCodesPage /></Suspended>
-          </RequireAuth>
+          </RequireRole>
         ),
       },
       { path: 'u/:username', element: <ProfilePage /> },

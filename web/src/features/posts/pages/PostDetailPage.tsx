@@ -11,6 +11,7 @@ import { PostActions } from '../components/PostActions'
 import { PostInteractions } from '../components/PostInteractions'
 import { PostImages } from '../../../components/content/PostImages'
 import { RelatedPosts } from '../components/RelatedPosts'
+import { ReportButton } from '../../reports'
 import { usePostDetailQuery } from '../queries'
 
 const STATUS_LABEL: Record<PostStatus, string> = {
@@ -149,7 +150,10 @@ export function PostDetailPage() {
                 <MessageCircle size={15} aria-hidden="true" /> {post.commentCount} 评论
               </span>
             </div>
-            <PostActions post={post} />
+            <div className="flex flex-wrap items-center gap-2">
+              <ReportButton kind="report" targetType="post" targetId={post.id} label="举报" />
+              <PostActions post={post} />
+            </div>
           </div>
         </Card>
       </article>

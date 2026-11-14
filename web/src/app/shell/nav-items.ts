@@ -14,6 +14,7 @@ import {
   Package,
   PenLine,
   ShieldCheck,
+  Flag,
   UserRound,
   Layers3,
   type LucideIcon,
@@ -35,11 +36,12 @@ export const DESTINATIONS: Record<string, Destination> = {
   notifications: { key: 'notifications', label: '通知', path: '/notifications', icon: Bell },
   bookmarks: { key: 'bookmarks', label: '我的收藏', path: '/bookmarks', icon: Bookmark },
   likes: { key: 'likes', label: '我的点赞', path: '/likes', icon: Heart },
+  reports: { key: 'reports', label: '我的提交', path: '/reports', icon: Flag },
   profile: { key: 'profile', label: '我的', path: '/settings', icon: UserRound },
   messages: { key: 'messages', label: '私信', path: '/messages', icon: MessageSquare },
 }
 
-/** 桌面顶栏与左栏展开的八个目的地（顶栏另过滤掉 create / notifications）。 */
+/** 桌面顶栏与左栏展开的九个目的地（顶栏另过滤掉 create / notifications）。 */
 export const DESKTOP_KEYS = [
   'home',
   'discover',
@@ -48,6 +50,7 @@ export const DESKTOP_KEYS = [
   'notifications',
   'bookmarks',
   'likes',
+  'reports',
   'profile',
 ] as const
 

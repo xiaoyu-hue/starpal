@@ -12,6 +12,7 @@ import {
 } from './modules/meta/meta.controller.js'
 import { authRouter } from './modules/auth/auth.routes.js'
 import { adminRouter } from './modules/admin/admin.routes.js'
+import { reportRouter } from './modules/reports/index.js'
 import { notificationRouter } from './modules/notifications/index.js'
 import { userRouter } from './modules/users/user.routes.js'
 import { interactionRouter } from './modules/interactions/index.js'
@@ -43,6 +44,7 @@ apiRouter.get('/meta/disclaimer', disclaimerController)
 apiRouter.get('/meta/product', productController)
 apiRouter.use('/auth', authRouter)
 apiRouter.use('/admin', adminRouter)
+apiRouter.use('/reports', reportRouter)
 apiRouter.use('/notifications', notificationRouter)
 apiRouter.use('/users', userRouter)
 apiRouter.use('/posts/:postId/images', imageUploadRouter)
