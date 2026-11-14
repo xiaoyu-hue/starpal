@@ -68,7 +68,7 @@ export const DISCLAIMER_LIABILITY_SECTIONS: DocSection[] = [
       },
       {
         kind: 'note',
-        text: '本站没有支付、打赏、交易功能，也没有私信以外的私下联络渠道，未成年使用者不会在本站产生金钱往来。',
+        text: '本站没有支付、打赏、交易功能，也不提供私下联络渠道（私信尚未上线），未成年使用者不会在本站产生金钱往来。',
       },
     ],
   },
