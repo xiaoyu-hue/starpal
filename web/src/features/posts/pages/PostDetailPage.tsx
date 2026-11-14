@@ -1,0 +1,134 @@
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Heart, MessageCircle } from 'lucide-react'
+import { Avatar, Badge, Card } from '../../../components/ui/Primitives'
+import { EmptyState, ErrorState } from '../../../components/feedback/States'
+import { ApiError } from '../../../lib/api-client'
+import type { PostStatus } from '../../../types/api'
+import { PostActions } from '../components/PostActions'
+import { RelatedPosts } from '../components/RelatedPosts'
+import { usePostDetailQuery } from '../queries'
+
+const STATUS_LABEL: Record<PostStatus, string> = {
+  published: '已发布',
+  draft: '草稿 · 仅自己可见',
+  removed: '已被管理员移除',
+  deleted: '已删除',
+}
+
+function formatTime(iso: string): string {
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('zh-CN')
+}
+
+/** 帖子详情页：完整正文 + 作者与时间 + 作者操作 + 同话题内容 + 评论区占位。 */
+export function PostDetailPage() {
+  const { id: rawId = '' } = useParams<{ id: string }>()
+  const id = Number(rawId)
+  const navigate = useNavigate()
+  const query = usePostDetailQuery(id)
+
+  if (!Number.isInteger(id) || id < 1) {
+    return (
+      <EmptyState
+        title="帖子不存在"
+        description="地址中的编号无效，可能已被删除。"
+        actionLabel="返回首页"
+        onAction={() => navigate('/')}
+      />
+    )
+  }
+
+  if (query.isPending) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-3" role="status" aria-live="polite">
+        <div className="sp-skeleton h-6 w-24 rounded-sm" />
+        <div className="sp-skeleton h-72 w-full rounded-md" />
+      </div>
+    )
+  }
+
+  if (query.isError) {
+    const notFound = query.error instanceof ApiError && query.error.code === 'NOT_FOUND'
+    return notFound ? (
+      <EmptyState
+        title="帖子不存在"
+        description="该内容可能已被删除，或你没有查看权限。"
+        actionLabel="返回首页"
+        onAction={() => navigate('/')}
+      />
+    ) : (
+      <ErrorState title="内容加载失败" onRetry={() => void query.refetch()} />
+    )
+  }
+
+  const post = query.data
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-4">
+      <Link
+        to="/"
+        className="sp-transition inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"
+      >
+        <ArrowLeft size={15} /> 返回信息流
+      </Link>
+
+      <article aria-labelledby="post-heading">
+        <Card className="p-6">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Link to={`/topics/${post.topic.slug}`}>
+              <Badge variant="topic">{post.topic.nameZh}</Badge>
+            </Link>
+            {post.status !== 'published' && (
+              <Badge variant="neutral">{STATUS_LABEL[post.status]}</Badge>
+            )}
+          </div>
+
+          <h1 id="post-heading" className="text-2xl font-semibold leading-snug text-ink">
+            {post.title}
+          </h1>
+
+          <div className="mt-4 flex items-center gap-2.5 border-b border-line pb-4">
+            <Avatar name={post.author.displayName} src={post.author.avatarUrl} size={38} />
+            <div className="min-w-0 flex-1">
+              <Link
+                to={`/u/${post.author.username}`}
+                className="sp-transition block truncate text-sm font-medium text-ink hover:text-accent"
+              >
+                {post.author.displayName}
+              </Link>
+              <p className="text-xs text-faint">
+                发布于 {formatTime(post.createdAt)}
+                {post.updatedAt !== post.createdAt && ` · 编辑于 ${formatTime(post.updatedAt)}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-ink">
+            {post.body}
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+            <div className="flex items-center gap-5 text-xs text-muted" aria-label="帖子统计">
+              <span className="inline-flex items-center gap-1.5">
+                <Heart size={15} aria-hidden="true" /> {post.likeCount} 点赞
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <MessageCircle size={15} aria-hidden="true" /> {post.commentCount} 评论
+              </span>
+            </div>
+            <PostActions post={post} />
+          </div>
+        </Card>
+      </article>
+
+      <Card className="p-5 text-center">
+        <p className="text-sm font-medium text-ink">评论功能尚未开放</p>
+        <p className="mt-1 text-xs text-muted">
+          评论与点赞将在接下来的里程碑接入。当前页面的计数来自真实数据，但暂不可交互。
+        </p>
+      </Card>
+
+      <RelatedPosts postId={post.id} />
+    </div>
+  )
+}

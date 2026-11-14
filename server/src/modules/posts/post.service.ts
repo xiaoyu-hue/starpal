@@ -52,6 +52,7 @@ function toListItem(record: PostRecord): PostListItem {
 function toDetail(record: PostRecord, isAuthor: boolean): PostDetail {
   return {
     ...toListItem(record),
+    topicId: record.topicId,
     body: record.body,
     status: record.status as PostStatus,
     updatedAt: record.updatedAt,

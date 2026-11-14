@@ -4,6 +4,8 @@ import { Avatar, Badge, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { EmptyState, ErrorState } from '../../components/feedback/States'
 import { ApiError } from '../../lib/api-client'
+import { mergeFeedPages } from '../../lib/pagination'
+import { PostCard } from '../feed'
 import { useAuth } from '../auth'
 import { usePublicProfileQuery, useUserPostsQuery } from './queries'
 
@@ -16,6 +18,7 @@ export function ProfilePage() {
   const postsQuery = useUserPostsQuery(username)
 
   const isSelf = Boolean(user) && user!.username === username
+  const posts = mergeFeedPages(postsQuery.data?.pages ?? [])
 
   if (profileQuery.isPending) {
     return (
@@ -99,13 +102,38 @@ export function ProfilePage() {
         </h2>
         {postsQuery.isPending ? (
           <div className="sp-skeleton h-24 w-full rounded-md" />
-        ) : (
+        ) : posts.length === 0 ? (
           <EmptyState
             title="这里还没有发布任何内容"
             description="当该成员发布内容后，会显示在这里。"
             actionLabel={isSelf ? '去发布' : '返回首页'}
             onAction={() => (isSelf ? navigate('/posts/new') : navigate('/'))}
           />
+        ) : (
+          <>
+            <div className="space-y-3">
+              {posts.map((post, index) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  position={index + 1}
+                  total={posts.length}
+                />
+              ))}
+            </div>
+            {postsQuery.hasNextPage && (
+              <div className="mt-3 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => void postsQuery.fetchNextPage()}
+                  disabled={postsQuery.isFetchingNextPage}
+                  className={buttonClass('secondary', 'sm')}
+                >
+                  {postsQuery.isFetchingNextPage ? '加载中…' : '加载更多'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
 

@@ -201,14 +201,14 @@ web/
     │       ├── BottomTabBar.tsx
     │       └── MobileMenu.tsx
     ├── features/
-    │   ├── auth/        # 登录、注册、登出、邀请码
-    │   ├── feed/        # 信息流、Tab、游标分页、帖子卡片
-    │   ├── post/        # 创建、编辑、详情、相关帖子
-    │   ├── topic/       # 发现、详情、筛选
+    │   ├── auth/        # 登录、注册、登出、邀请码（已实现）
+    │   ├── feed/        # 信息流、三 Tab、游标分页、帖子卡片（已实现）
+    │   ├── posts/       # 创建、编辑、详情、相关帖子（已实现）
+    │   ├── topics/      # 话题目录、话题详情与筛选（已实现）
     │   ├── comment/     # 评论列表与发表
     │   ├── message/     # 会话与消息（留言式）
     │   ├── notification/
-    │   ├── profile/     # 公开页、资料编辑、可选资料
+    │   ├── profile/     # 公开页、资料编辑、可选资料（已实现）
     │   ├── achievement/ # 成就时间线、每周热门
     │   ├── search/
     │   ├── report/      # 举报提交
@@ -392,8 +392,8 @@ server/
 │   │   └── error-handler.ts
 │   ├── modules/
 │   │   ├── auth/       ├── users/        ├── posts/
-│   │   ├── comments/   ├── likes/        ├── bookmarks/
-│   │   ├── topics/     ├── messages/     ├── notifications/
+│   │   ├── topics/     ├── comments/     ├── likes/
+│   │   ├── bookmarks/  ├── messages/     ├── notifications/
 │   │   ├── achievements/ ├── reports/    ├── moderation/
 │   │   ├── uploads/    ├── search/       └── export/
 │   │   └── admin/      # 薄聚合层：仅组合上述模块的管理视图

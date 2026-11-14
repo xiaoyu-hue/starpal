@@ -1,4 +1,5 @@
 import { DomainError } from '../../shared/errors.js'
+import { decodeCursor } from '../../shared/pagination.js'
 import {
   requireBoolean,
   requireEnum,
@@ -69,11 +70,35 @@ export async function getOwnProfile(userId: string): Promise<OwnProfile> {
   }
 }
 
-/** 公开个人页帖子：仅已发布内容，与信息流同一可见性口径。 */
-export async function getPublicPosts(username: string): Promise<UserPostsPage> {
+/**
+ * 公开个人页帖子：仅已发布内容，与信息流同一可见性口径。
+ * 游标由本层解码：非法游标按参数错误拒绝，而不是静默退回第一页
+ * （静默退回会让无限滚动陷入重复取首屏的死循环）。
+ */
+export async function getPublicPosts(
+  username: string,
+  rawCursor?: unknown,
+): Promise<UserPostsPage> {
   const row = await findPublicProfileByUsername(username)
   if (!row) throw new DomainError('NOT_FOUND', '用户不存在')
-  return listUserPosts(row.id, null)
+  const cursor = parseCursor(rawCursor)
+  return listUserPosts(row.id, cursor)
+}
+
+function parseCursor(raw: unknown): { t: string; id: string } | null {
+  if (raw === undefined || raw === '') return null
+  if (typeof raw !== 'string') {
+    throw new DomainError('VALIDATION_FAILED', 'cursor 参数格式非法', [
+      { field: 'cursor', constraint: 'base64url 编码的游标' },
+    ])
+  }
+  const decoded = decodeCursor(raw)
+  if (decoded === null) {
+    throw new DomainError('VALIDATION_FAILED', 'cursor 参数格式非法', [
+      { field: 'cursor', constraint: 'base64url 编码的游标' },
+    ])
+  }
+  return decoded
 }
 
 /**
@@ -93,6 +118,7 @@ export async function updateOwnProfile(
       min: DISPLAY_NAME_MIN,
       max: DISPLAY_NAME_MAX,
       trim: true,
+      allowInnerWhitespace: true,
     })
   }
   if ('avatarUrl' in body) {
@@ -108,6 +134,7 @@ export async function updateOwnProfile(
             min: 0,
             max: BIOGRAPHY_MAX,
             trim: true,
+            allowInnerWhitespace: true,
           })
   }
   if ('zodiac' in body) {

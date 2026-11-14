@@ -252,7 +252,7 @@ server {
 
     # TLS 证书由部署方配置
 
-    client_max_body_size 6m;   # 与 MAX_BODY_BYTES 保持一致
+    client_max_body_size 4m;   # 与 MAX_BODY_BYTES（4194304）保持一致
 
     location / {
         proxy_pass http://127.0.0.1:3000;

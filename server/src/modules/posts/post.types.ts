@@ -35,6 +35,11 @@ export type PostListItem = {
 
 /** 详情：列表字段 + 正文全文 + 状态 + 是否本人（供前端决定是否展示编辑入口）。 */
 export type PostDetail = PostListItem & {
+  /**
+   * 当前话题主键。详情页本身已确认读者能看到该帖，暴露分类 ID 不构成越权信息；
+   * 编辑页需要它把话题单选初始化为「当前话题」，否则要从 slug 反查，多一次请求。
+   */
+  topicId: number
   body: string
   status: PostStatus
   updatedAt: string

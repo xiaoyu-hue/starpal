@@ -1,7 +1,8 @@
-import { NavLink } from 'react-router-dom'
-import { BookOpen, Flame, Layers3, Sparkles } from 'lucide-react'
+import { Link, NavLink } from 'react-router-dom'
+import { BookOpen, Flame, Layers3 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Card } from '../../components/ui/Primitives'
+import { useTopicsQuery } from '../../features/topics'
 import { DESKTOP_KEYS, DESTINATIONS } from './nav-items'
 
 /** 侧栏导航项：左对齐带图标，与标准居中按钮视觉意图不同，故单独定义。 */
@@ -13,16 +14,18 @@ function navItemClass(isActive: boolean): string {
   )
 }
 
-const TOPIC_LINKS = [
-  { label: '技术与数字', slug: 'technology' },
-  { label: '游戏', slug: 'gaming' },
-  { label: '动漫与文化', slug: 'anime' },
-  { label: '学习成长', slug: 'learning' },
-  { label: '生活方式', slug: 'lifestyle' },
-]
+/** 侧栏最多列出的话题数：超过后交给「全部话题」页，避免长列表淹没导航。 */
+const SIDEBAR_TOPIC_LIMIT = 6
 
-/** 左栏：导航目的地与话题分类；话题分类为静态目录入口，不伪造热度数据。 */
+/**
+ * 左栏：导航目的地 + 话题分类。
+ * 话题取自真实目录（`/api/topics`），不再维护一份会与数据库漂移的硬编码标签表；
+ * 数量与名称以服务端为准，侧栏只决定展示前几个。
+ */
 export function Sidebar() {
+  const topicsQuery = useTopicsQuery()
+  const topics = (topicsQuery.data ?? []).slice(0, SIDEBAR_TOPIC_LIMIT)
+
   return (
     <aside aria-label="侧边导航" className="space-y-4">
       <Card className="p-3">
@@ -48,22 +51,36 @@ export function Sidebar() {
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
           <Layers3 size={15} /> 话题分类
         </h2>
-        <ul className="space-y-0.5 text-sm">
-          {TOPIC_LINKS.map((topic) => (
-            <li key={topic.slug}>
-              <NavLink
-                to={`/topics/${topic.slug}`}
-                className="sp-transition block rounded-sm px-2 py-1.5 text-muted hover:bg-subtle hover:text-ink"
-              >
-                {topic.label}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-3 flex items-start gap-1.5 border-t border-line pt-3 text-xs leading-relaxed text-faint">
-          <Sparkles size={13} className="mt-0.5 shrink-0" />
-          话题目录将在 M3 接入真实数据。
-        </p>
+
+        {topicsQuery.isPending ? (
+          <div className="space-y-2" role="status" aria-label="正在加载话题">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="sp-skeleton h-4 w-20 rounded-sm" />
+            ))}
+          </div>
+        ) : topicsQuery.isError ? (
+          <p className="text-xs leading-relaxed text-faint">话题暂时无法加载，稍后刷新重试。</p>
+        ) : (
+          <ul className="space-y-0.5 text-sm">
+            {topics.map((topic) => (
+              <li key={topic.id}>
+                <NavLink
+                  to={`/topics/${topic.slug}`}
+                  className="sp-transition block rounded-sm px-2 py-1.5 text-muted hover:bg-subtle hover:text-ink"
+                >
+                  {topic.nameZh}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <Link
+          to="/topics"
+          className="sp-transition mt-3 block border-t border-line pt-3 text-xs text-muted hover:text-ink"
+        >
+          全部话题 →
+        </Link>
       </Card>
 
       <Card className="p-4 text-xs leading-relaxed text-muted">

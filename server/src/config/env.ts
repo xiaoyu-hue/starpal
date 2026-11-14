@@ -27,9 +27,10 @@ const DEFAULTS = {
   RATE_LIMIT_MAX: '20',
   LOGIN_FAIL_MAX: '5',
   SECURITY_EVENT_RETENTION_DAYS: '30',
-  UPLOAD_DIR: './server/uploads',
-  MAX_UPLOAD_BYTES: '5242880',
-  MAX_BODY_BYTES: '6291456',
+  // 图片与请求体上限：与 ARCHITECTURE.md ADR-014 / DEPLOYMENT.md 一致。
+  // 单图 3 MB，请求体 4 MB（Vercel 平台硬上限 4.5 MB，留出包头余量）。
+  MAX_UPLOAD_BYTES: '3145728',
+  MAX_BODY_BYTES: '4194304',
   PUBLIC_DIR: './server/public',
 } as const
 
@@ -91,7 +92,6 @@ function env() {
     rateLimitMax: positiveInt('RATE_LIMIT_MAX'),
     loginFailMax: positiveInt('LOGIN_FAIL_MAX'),
     securityEventRetentionDays: positiveInt('SECURITY_EVENT_RETENTION_DAYS'),
-    uploadDir: resolve(REPO_ROOT, read('UPLOAD_DIR')),
     maxUploadBytes: positiveInt('MAX_UPLOAD_BYTES'),
     maxBodyBytes: positiveInt('MAX_BODY_BYTES'),
     publicDir: resolve(REPO_ROOT, read('PUBLIC_DIR')),

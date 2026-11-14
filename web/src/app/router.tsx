@@ -8,6 +8,8 @@ import {
 import { AppShell } from './shell/AppShell'
 import { FeedSkeleton } from '../features/feed/components/FeedSkeleton'
 import { PlaceholderPage } from '../features/placeholder'
+// 话题目录是外壳级共享数据（左右栏都在读），必然进主包，故静态导入而非假装懒加载。
+import { TopicPage, TopicsPage } from '../features/topics'
 import { RequireAuth } from './guards'
 
 // 路由级懒加载边界：首页与设计系统预览页独立分包。
@@ -34,6 +36,16 @@ const GuidelinesPage = lazy(() =>
 )
 const AboutPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.AboutPage })),
+)
+// 内容域按 feature 分包：详情与发帖编辑独立成 chunk，首页不加载它们。
+const ComposePage = lazy(() =>
+  import('../features/posts').then((m) => ({ default: m.ComposePage })),
+)
+const PostDetailPage = lazy(() =>
+  import('../features/posts').then((m) => ({ default: m.PostDetailPage })),
+)
+const EditPostPage = lazy(() =>
+  import('../features/posts').then((m) => ({ default: m.EditPostPage })),
 )
 
 function ShellRoute() {
@@ -63,10 +75,26 @@ const routes: RouteObject[] = [
     element: <ShellRoute />,
     children: [
       { index: true, element: <Suspended><HomePage /></Suspended> },
-      { path: 'discover', element: placeholder('发现', 'M3', '话题发现与热门内容将在 M3 里程碑交付。') },
-      { path: 'topics', element: placeholder('话题', 'M3', '话题列表与详情将在 M3 里程碑交付。') },
-      { path: 'topics/:slug', element: placeholder('话题详情', 'M3', '按话题筛选的帖子流将在 M3 里程碑交付。') },
-      { path: 'posts/new', element: placeholder('发布内容', 'M3', '发帖与图片上传将在 M3 里程碑交付。') },
+      { path: 'discover', element: placeholder('发现', 'M3', '热门与最新话题的聚合视图将在 M3 后续交付。') },
+      { path: 'topics', element: <Suspended><TopicsPage /></Suspended> },
+      { path: 'topics/:slug', element: <Suspended><TopicPage /></Suspended> },
+      {
+        path: 'posts/new',
+        element: (
+          <RequireAuth>
+            <Suspended><ComposePage /></Suspended>
+          </RequireAuth>
+        ),
+      },
+      { path: 'posts/:id', element: <Suspended><PostDetailPage /></Suspended> },
+      {
+        path: 'posts/:id/edit',
+        element: (
+          <RequireAuth>
+            <Suspended><EditPostPage /></Suspended>
+          </RequireAuth>
+        ),
+      },
       { path: 'notifications', element: placeholder('通知', 'M5', '通知中心将在 M5 里程碑交付。') },
       { path: 'messages', element: placeholder('私信', 'M5', '留言式私信将在 M5 里程碑交付。') },
       {

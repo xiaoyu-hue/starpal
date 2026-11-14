@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import {
   fetchOwnProfile,
   fetchPublicProfile,
@@ -9,6 +9,8 @@ import {
 export const profileKeys = {
   public: (username: string) => ['profile', 'public', username] as const,
   posts: (username: string) => ['profile', 'posts', username] as const,
+  /** 帖子写入后按前缀整体失效，无需逐个用户名列举。 */
+  postsAll: () => ['profile', 'posts'] as const,
   own: () => ['profile', 'own'] as const,
 }
 
@@ -20,10 +22,13 @@ export function usePublicProfileQuery(username: string) {
   })
 }
 
+/** 个人页帖子：与主信息流同一游标规则，滚动到底继续取。 */
 export function useUserPostsQuery(username: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: profileKeys.posts(username),
-    queryFn: ({ signal }) => fetchUserPosts(username),
+    queryFn: ({ pageParam, signal }) => fetchUserPosts(username, pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
     enabled: Boolean(username),
   })
 }

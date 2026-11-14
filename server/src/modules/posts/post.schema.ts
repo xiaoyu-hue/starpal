@@ -55,12 +55,25 @@ export function parsePostId(raw: unknown): number {
 }
 
 function parseTitle(value: unknown): string {
-  return requireString(value, { field: 'title', min: 1, max: POST_TITLE_MAX, trim: true })
+  // 标题是自然语言：允许内部空格（「M3 前端 内容域」是正常写法）。
+  return requireString(value, {
+    field: 'title',
+    min: 1,
+    max: POST_TITLE_MAX,
+    trim: true,
+    allowInnerWhitespace: true,
+  })
 }
 
 function parseBody(value: unknown): string {
-  // 正文允许内部换行与空白，仅归一化首尾空白；空正文由长度下限拦截。
-  return requireString(value, { field: 'body', min: POST_BODY_MIN, max: POST_BODY_MAX, trim: true })
+  // 正文允许内部换行与空白（段落结构即内容），仅归一化首尾空白；空正文由长度下限拦截。
+  return requireString(value, {
+    field: 'body',
+    min: POST_BODY_MIN,
+    max: POST_BODY_MAX,
+    trim: true,
+    allowInnerWhitespace: true,
+  })
 }
 
 export function parseCreateInput(raw: unknown): CreatePostInput {

@@ -1,5 +1,6 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api-client'
 import type {
+  FeedPost,
   OwnProfile,
   ProfileUpdatePayload,
   PublicProfile,
@@ -10,7 +11,6 @@ import type {
 
 type ProfileData = { profile: PublicProfile }
 type OwnProfileData = { profile: OwnProfile }
-type PostsData = UserPostsPage
 
 /** 公开个人资料投影：未登录可读，不含内部字段。 */
 export async function fetchPublicProfile(username: string): Promise<PublicProfile> {
@@ -18,10 +18,22 @@ export async function fetchPublicProfile(username: string): Promise<PublicProfil
   return envelope.data.profile
 }
 
-/** 公开个人页帖子占位（M3 落地前为空）。 */
-export async function fetchUserPosts(username: string): Promise<UserPostsPage> {
-  const envelope = await apiGet<PostsData>(`users/${encodeURIComponent(username)}/posts`)
-  return envelope.data
+/** 公开个人页帖子：服务端游标分页，响应形状与 /api/posts 同构。 */
+export async function fetchUserPosts(
+  username: string,
+  cursor?: string | null,
+  signal?: AbortSignal,
+): Promise<UserPostsPage> {
+  const envelope = await apiGet<FeedPost[]>(`users/${encodeURIComponent(username)}/posts`, {
+    signal,
+    params: { cursor: cursor ?? undefined },
+  })
+  const meta = (envelope.meta ?? {}) as { nextCursor?: unknown; hasMore?: unknown }
+  return {
+    items: envelope.data,
+    nextCursor: typeof meta.nextCursor === 'string' ? meta.nextCursor : null,
+    hasMore: meta.hasMore === true,
+  }
 }
 
 /** 本人完整资料（含可选字段真实值与公开开关）。 */

@@ -39,6 +39,34 @@ export type FeedPage = {
   hasMore: boolean
 }
 
+/** 话题目录项，与 server/src/modules/topics/topic.types.ts 一致。 */
+export type Topic = {
+  id: number
+  slug: string
+  nameZh: string
+  nameEn: string
+  description: string | null
+  icon: string | null
+  sortOrder: number
+  postCount: number
+}
+
+export type PostStatus = 'draft' | 'published' | 'removed' | 'deleted'
+
+/**
+ * 帖子详情：列表字段 + 正文全文 + 状态。
+ * `isAuthor` 由服务端判定（不采信前端推导），仅决定是否展示编辑与删除入口，
+ * 真正的写权限仍由服务端校验。
+ */
+export type PostDetail = FeedPost & {
+  /** 当前话题主键，供编辑页初始化话题单选。 */
+  topicId: number
+  body: string
+  status: PostStatus
+  updatedAt: string
+  isAuthor: boolean
+}
+
 export type HealthInfo = {
   status: string
   database: string
@@ -108,12 +136,8 @@ export type ProfileUpdatePayload = Partial<{
   showOptional: boolean
 }>
 
-/** 公开个人页帖子占位：M3 落地前恒为空。 */
-export type UserPostsPage = {
-  items: never[]
-  nextCursor: string | null
-  hasMore: boolean
-}
+/** 公开个人页帖子：与主信息流同一投影与游标规则。 */
+export type UserPostsPage = FeedPage
 
 /** 元信息（说明页文案）：只读常量经 /api/meta/* 下发，与后端 config/constants 一致。 */
 

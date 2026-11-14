@@ -30,7 +30,7 @@ function parseRegisterBody(body: Record<string, unknown>) {
     }),
     displayName: requireString(body.displayName ?? body.username, {
       field: 'displayName', min: DISPLAY_NAME_MIN, max: DISPLAY_NAME_MAX,
-      trim: true,
+      trim: true, allowInnerWhitespace: true,
     }),
     inviteCode: requireString(body.inviteCode, {
       field: 'inviteCode', min: 1, max: 128,
