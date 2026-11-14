@@ -187,25 +187,49 @@ export type CommentPage = {
 
 /** 元信息（说明页文案）：只读常量经 /api/meta/* 下发，与后端 config/constants 一致。 */
 
-/** 社区准则：与 server/src/config/constants.ts 的 GUIDELINES 一致。 */
-export type MetaGuidelines = {
-  version: string
+/**
+ * 说明页长文的内容块。与后端 config/docs/types.ts 的 DocBlock 一一对应；
+ * 前后端各留一份定义是有意的——前端类型是消费契约，不应因后端内部重构而被动漂移。
+ */
+export type DocBlock =
+  | { kind: 'p'; text: string }
+  | { kind: 'sub'; text: string }
+  | { kind: 'list'; items: string[] }
+  | { kind: 'note'; text: string }
+
+export type DocSection = { heading: string; blocks: DocBlock[] }
+
+/** 文档元信息：摘要给不愿读全文的人，两个日期分别表示「改过」与「生效」。 */
+export type DocMeta = {
   title: string
-  principles: string[]
+  updatedAt: string
+  effectiveAt: string
+  summary: string
 }
 
-/** 隐私说明：分节文案，与后端 PRIVACY 一致。 */
-export type MetaPrivacy = {
+/** 社区准则：与后端 GUIDELINES 一致。 */
+export type MetaGuidelines = DocMeta & {
   version: string
-  title: string
-  sections: { heading: string; paragraphs: string[] }[]
+  sections: DocSection[]
 }
 
-/** 关于页：站点名称、当前版本、建站日期。 */
+/** 隐私说明：与后端 PRIVACY 一致。 */
+export type MetaPrivacy = DocMeta & {
+  version: string
+  sections: DocSection[]
+}
+
+/** 关于页：站点自述、技术构成与致谢，与后端 ABOUT 一致。 */
 export type MetaAbout = {
   siteName: string
   version: string
   launchDate: string
+  tagline: string
+  intro: string[]
+  whatWeDo: { title: string; body: string }[]
+  stack: { group: string; items: { name: string; role: string }[] }[]
+  credits: { heading: string; paragraphs: string[] }
+  feedback: { heading: string; paragraphs: string[] }
 }
 
 /** 社区公告：与后端 ANNOUNCEMENTS 一致，条目按时间倒序。 */

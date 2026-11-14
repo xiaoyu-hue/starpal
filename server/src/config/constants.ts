@@ -1,4 +1,8 @@
 /** 应用级常量：限制阈值、状态枚举、排序权重集中于此，禁止散落业务代码。 */
+import { ABOUT_DOC } from './docs/about.doc.js'
+import { GUIDELINES_META, GUIDELINES_SECTIONS } from './docs/guidelines.doc.js'
+import { PRIVACY_META, PRIVACY_SECTIONS } from './docs/privacy.doc.js'
+
 export const APP_VERSION = '1.1.0'
 
 export const FEED_TABS = ['recommended', 'latest', 'popular'] as const
@@ -86,16 +90,15 @@ export const TOPIC_SLUGS = [
   'other',
 ] as const
 
+/**
+ * 社区准则：正文在 docs/guidelines.doc.ts，此处只补版本号。
+ * 长文从本文件拆出，避免常量文件膨胀成难以维护的巨型文件（单文件 300 行预算）。
+ */
 export const GUIDELINES = {
   version: APP_VERSION,
-  title: '社区准则',
-  principles: [
-    '尊重每一位成员，不进行人身攻击或歧视性表达。',
-    '发布内容须合法，不传播他人隐私与未授权资料。',
-    '讨论围绕兴趣与知识展开，避免无关刷屏。',
-    '账号仅收集用户名与密码哈希，不收集手机号、邮箱等联系方式。',
-  ],
-} as const
+  ...GUIDELINES_META,
+  sections: GUIDELINES_SECTIONS,
+}
 
 /**
  * 社区公告：按时间倒序，最新在前。
@@ -134,57 +137,22 @@ export const SITE_NAME = '星聚 STARPAL'
 export const SITE_LAUNCH_DATE = '2026-11-12'
 
 /**
- * 隐私说明：分节文案，与 M2-S4 真实实现一致。
- * 采集范围、存储位置、保留期、注销与删除方式均按当前后端行为撰写。
+ * 隐私说明：正文在 docs/privacy.doc.ts。
+ * 采集范围、存储位置、保留期、注销与删除方式均按当前后端真实行为撰写，
+ * 未实现的能力（改密、自助删帖）在文中明确标注为缺口，不作承诺。
  */
 export const PRIVACY = {
   version: APP_VERSION,
-  title: '隐私说明',
-  sections: [
-    {
-      heading: '我们采集的信息',
-      paragraphs: [
-        '注册时：用户名，以及密码。密码仅以 Argon2id 哈希形式存储于服务器，我们不会保存明文密码。',
-        '个人资料（均为选填）：显示名、头像链接、个人简介；以及你选择公开的可选资料（星座、MBTI、年龄段）。',
-        '账号状态与活动时间：注册时间、用于保持登录状态的会话标识。',
-      ],
-    },
-    {
-      heading: '我们不采集的信息',
-      paragraphs: [
-        '不收集手机号、电子邮箱等联系方式。',
-        '不收集真实出生日期，仅以「年龄段」（如 25-34 岁）呈现，无法反推具体生日。',
-        '不收集真实姓名、地理位置或设备指纹。',
-      ],
-    },
-    {
-      heading: '信息存储位置',
-      paragraphs: [
-        '所有数据统一存储在云端 PostgreSQL 数据库（Neon），不存放在你的设备或本地文件中。',
-        '会话标识为不透明随机值，Cookie 仅作为载体，服务器据此查证登录状态。',
-      ],
-    },
-    {
-      heading: '信息保留期',
-      paragraphs: [
-        '在你主动注销前，资料持续保留，并仅对外展示你设为公开的部分（可选资料默认不公开）。',
-      ],
-    },
-    {
-      heading: '注销与删除',
-      paragraphs: [
-        '注销（软删除）：账号进入停用状态，显示名替换为「已注销用户」，头像、简介与可选资料被清空，登录会话立即失效；你已发布的内容仍保留并署名「已注销用户」。',
-        '彻底擦除：清除你的可识别信息，原用户名不再可访问（返回 404），并记入安全事件；此操作不可撤销。',
-        '说明：帖子与附件的彻底删除将在内容功能上线（M3）后提供，届时注销/擦除将一并处理已发布内容。',
-      ],
-    },
-    {
-      heading: '你的权利',
-      paragraphs: [
-        '你可在「设置」中随时编辑或清空资料、切换可选资料的公开开关、注销账号或彻底擦除数据。',
-      ],
-    },
-  ],
+  ...PRIVACY_META,
+  sections: PRIVACY_SECTIONS,
+}
+
+/** 关于页：站点自述 + 技术构成 + 致谢，正文见 docs/about.doc.ts。 */
+export const ABOUT = {
+  siteName: SITE_NAME,
+  version: APP_VERSION,
+  launchDate: SITE_LAUNCH_DATE,
+  ...ABOUT_DOC,
 }
 
 // ── M2 认证与账户约束 ────────────────────────────────────────────────
