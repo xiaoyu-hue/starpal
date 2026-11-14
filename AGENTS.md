@@ -6,7 +6,7 @@
 >
 > 配套：`docs/DOC_SYNC.md`（文档同步）、`CHANGELOG.md`（变更出口）、
 > `docs/IMPLEMENTATION-PLAN.md`（里程碑与验证记录）、`TRADEMARK.md`（品牌保留）。
-> 规则来源与致谢见文末；本文件自身属文档，采用 CC BY-NC-SA 4.0（见 `LICENSE-docs`）。
+> 本文件自身属文档，采用 CC BY-NC-SA 4.0（见 `LICENSE-docs`）。
 
 ---
 
@@ -144,12 +144,5 @@
 - 用户重复犯错时直接、平和地提醒；状态不清晰时主动解释真实状态。
 
 ---
-
-## 规则来源与致谢
-
-本规则为**星聚项目专用**，结构与理念参考（仅借鉴思路，未复制其代码/受其许可约束）：
-- [SPN · AI 协作规则](https://github.com/xiaoyu-hue/SPN)（三档授权 / 五次握手 / 三视角 / 零基础友好 / "代码 AI 写、判断人做"）；
-- [Nymir AGENTS.md](https://github.com/xiaoyu-hue/Nymir/blob/main/AGENTS.md)（项目本质 / 第一原则 / 安全红线 / 测试纪律 / 决策协作 / 文档同步）；
-- [sonder520 DOC_SYNC.md](https://github.com/xiaoyu-hue/sonder520/blob/main/docs/DOC_SYNC.md)（唯一真源 / 同步清单 / 发布前验证，具体落至 `docs/DOC_SYNC.md`）。
 
 > 一句话：**判断权留在人手里，能力由 AI 提供；拿不准就先问，完成必须可验证。**
