@@ -31,6 +31,26 @@ export async function nextSortOrder(client: PoolClient, postId: number): Promise
   return result.rows[0]?.next ?? 0
 }
 
+/**
+ * 删除元数据行并返回其存储键；`image_blobs` 由外键级联清理，不单独删字节。
+ *
+ * 必须带 `post_id` 条件：否则作者可以用自己帖子的登录态删掉别人帖子的图，
+ * 只要猜到对方图片主键。越权与不存在同样返回 null，由服务层统一按 NOT_FOUND 处理。
+ * 删除后 `sort_order` 留下空位，不做重排——重排会撞上 (post_id, sort_order) 唯一约束，
+ * 而 `nextSortOrder` 取 `MAX + 1`，空位不影响后续追加。
+ */
+export async function deleteImageMeta(
+  client: PoolClient,
+  postId: number,
+  imageId: number,
+): Promise<string | null> {
+  const result = await client.query<{ storage_key: string }>(
+    'DELETE FROM post_images WHERE id = $1 AND post_id = $2 RETURNING storage_key',
+    [imageId, postId],
+  )
+  return result.rows[0]?.storage_key ?? null
+}
+
 export type InsertImageInput = {
   postId: number
   key: string

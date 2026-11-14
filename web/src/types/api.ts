@@ -20,6 +20,29 @@ export type ApiErrorBody = {
 
 export type FeedTab = 'recommended' | 'latest' | 'popular'
 
+/**
+ * 帖子图片引用：只含键与尺寸，字节经 `/api/images/:key` 单独取。
+ * `width/height` 用于预留占位框，避免图片加载完成时把正文顶下去。
+ */
+export type PostImage = {
+  id: number
+  key: string
+  width: number
+  height: number
+}
+
+/** 上传成功后的回执，与服务端 `upload.types.ts` 的 UploadedImage 一致。 */
+export type UploadedImage = {
+  id: number
+  key: string
+  url: string
+  mimeType: string
+  width: number
+  height: number
+  byteSize: number
+  sortOrder: number
+}
+
 export type FeedPost = {
   id: number
   title: string
@@ -29,7 +52,7 @@ export type FeedPost = {
   author: { username: string; displayName: string; avatarUrl: string | null }
   likeCount: number
   commentCount: number
-  images: string[]
+  images: PostImage[]
   createdAt: string
 }
 

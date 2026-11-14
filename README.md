@@ -67,7 +67,7 @@
 | 运行时 | Node.js 22 LTS、npm |
 | 前端 | React、TypeScript、Vite、React Router、Tailwind CSS、shadcn/ui（基于 Radix UI）、Lucide React、TanStack Query |
 | 后端 | Express、PostgreSQL、服务端会话、模式校验、`sharp` 图像处理 |
-| 存储 | PostgreSQL（结构化数据）+ 本地 `uploads/` 目录（图片文件） |
+| 存储 | PostgreSQL（结构化数据与图片二进制，`ADR-014`） |
 | 部署 | 前端构建为静态产物，由 Express 单进程同时托管静态资源与 `/api` |
 
 具体依赖版本由各包 `package.json` 与 lockfile 固定。明确不引入全局状态库、图表库、动效库、拖拽库、特效组件集、Redis、消息队列、对象存储 SDK、外部验证码与 SSR 框架。
@@ -94,7 +94,7 @@
 
 - **M1**：前端工程骨架、设计系统、响应式应用外壳与导航、信息流外壳（含加载 / 错误 / 空三态）、后端骨架、PostgreSQL 连接与迁移机制、Express 单进程静态托管、说明页后端单源。
 - **M2**：注册 / 登录 / 登出与服务端会话（`M2-S1` / `M2-S2`）、受保护路由与角色守卫（`M2-S3`）、个人资料与设置（公开个人页、资料编辑、主题切换、账号注销与彻底擦除，`M2-S4`）、隐私 / 社区准则 / 关于三说明页（`M2-S5`）、以及 DoD-01 质量门（模块导入边界 lint、`seed`、`export:check`）。
-- **M3（进行中）**：内容数据模型（话题 / 帖子 / 图片元数据与二进制，`M3-S1`）、**帖子 API**（`M3-S2`）、**话题目录**（`M3-S4` 读侧）、**前端内容域**（`M3-S5`）已完成——用户现在可以在浏览器里走完「浏览信息流 → 挑话题 → 发帖 → 看详情 → 编辑 / 删除」全流程：三 Tab 信息流、话题筛选、话题详情、发帖与编辑表单、详情页（正文保留段落、相关帖子、作者操作）、个人页真实内容列表与滚动位置恢复。图片侧**后端已闭环**（`M3-S3` 的 `T1`—`T5`：存储适配器、上传中间件、魔术字节校验与重编码、事务入库、受控读取），上传接口可用且会剥离 EXIF、统一转 WebP；仅剩前端选图界面（`T6`）与渲染优化（`T7`），因此发帖页暂时还不能附图。
+- **M3（进行中）**：内容域**全链路可用**——数据模型（`M3-S1`）、帖子 API（`M3-S2`）、图片上传（`M3-S3`）、话题目录（`M3-S4` 读侧）与前端内容域（`M3-S5`）均已完成。用户可以在浏览器里走完「浏览信息流 → 挑话题 → 写正文 → 选图 → 发布 → 看详情 → 编辑 / 删图 / 删除」全流程：三 Tab 信息流与游标分页、话题筛选、图片上传（服务端校验真实类型、重编码为 WebP、剥离 EXIF 与 GPS）、详情页图文混排、卡片封面、编辑页即时增删图、个人页真实内容与滚动位置恢复。
 
 图片上传、点赞评论、私信、后台管理等仍按 `M3`—`M7` 里程碑交付。未实现的导航目的地以明确标注状态的占位页呈现，不提供点击无效果的伪交互控件；信息流无真实内容时返回服务端真实空结果，不填充演示数据。
 
@@ -120,7 +120,7 @@ npm run verify           # 类型检查 + 构建 + 体积检查
 node scripts/build-standalone.mjs   # 生成 web/dist/starpal-preview.html
 ```
 
-> 健康检查：`GET /api/health`；社区准则：`GET /api/meta/guidelines`；隐私：`GET /api/meta/privacy`；关于：`GET /api/meta/about`；信息流：`GET /api/posts?tab=latest|popular|recommended`（可加 `topic=<slug>` 按话题筛选）；帖子：`POST /api/posts`、`GET|PATCH|DELETE /api/posts/:id`、`GET /api/posts/:id/related`；话题目录：`GET /api/topics`；个人页内容：`GET /api/users/:username/posts`；图片读取：`GET /api/images/:key`（长缓存 + 禁止嗅探）；图片上传：`POST /api/posts/:id/images`（multipart，字段名 `image`，需作者或管理员）。`seed` / `init:admin` / `export:check` 已在 DoD-01 落地。
+> 健康检查：`GET /api/health`；社区准则：`GET /api/meta/guidelines`；隐私：`GET /api/meta/privacy`；关于：`GET /api/meta/about`；信息流：`GET /api/posts?tab=latest|popular|recommended`（可加 `topic=<slug>` 按话题筛选）；帖子：`POST /api/posts`、`GET|PATCH|DELETE /api/posts/:id`、`GET /api/posts/:id/related`；话题目录：`GET /api/topics`；个人页内容：`GET /api/users/:username/posts`；图片读取：`GET /api/images/:key`（长缓存 + 禁止嗅探）；图片上传：`POST /api/posts/:id/images`（multipart，字段名 `image`）；图片删除：`DELETE /api/posts/:id/images/:imageId`。上传与删除均需作者或管理员。`seed` / `init:admin` / `export:check` 已在 DoD-01 落地。
 
 ---
 
@@ -223,7 +223,7 @@ npm run verify
 | 排序 | 确定性加权，无个性化推荐与自适应能力 |
 | 评论 | 单层结构，不含嵌套回复 |
 | 检索 | 数据库条件检索，未接入独立检索引擎 |
-| 文件存储 | 本地目录依赖持久卷，环境重置可能导致图片丢失 |
+| 图片存储 | 二进制存于 PostgreSQL，无对象存储与 CDN；图片总量超过 500 MB 时应迁至对象存储（`ADR-014` §8.4） |
 | 防刷边界 | 不采集联系方式的注册体系无法彻底阻断自动化注册，目标为提高自动化成本 |
 
 完整清单与风险登记见 [PRD §10](./docs/PRD.md#10-已知限制与风险) 与 [实施计划 §9](./docs/IMPLEMENTATION-PLAN.md#9-已知限制与未完成项)。

@@ -120,3 +120,18 @@ export async function apiDelete<T>(path: string): Promise<ApiEnvelope<T>> {
     headers: { Accept: 'application/json' },
   })
 }
+
+/**
+ * 上传文件：multipart/form-data。
+ *
+ * 刻意不设置 `Content-Type`——浏览器必须自己带 boundary，手写会得到
+ * `multipart/form-data` 缺 boundary 的畸形请求，服务端解析直接失败。
+ */
+export async function apiUpload<T>(path: string, form: FormData): Promise<ApiEnvelope<T>> {
+  assertOnline()
+  return send<T>(buildUrl(path), {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+    body: form,
+  })
+}

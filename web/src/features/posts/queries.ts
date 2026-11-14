@@ -4,9 +4,11 @@ import { profileKeys } from '../profile'
 import {
   createPost,
   deletePost,
+  deletePostImage,
   fetchPostDetail,
   fetchRelatedPosts,
   updatePost,
+  uploadPostImage,
   type CreatePostPayload,
   type UpdatePostPayload,
 } from './api'
@@ -38,8 +40,9 @@ export function useRelatedPostsQuery(id: number) {
  * 写入后的失效策略：
  * 帖子变化会影响信息流、个人页帖子数与话题计数，故一并失效；
  * 话题计数与个人资料是低频数据，用 invalidate 而非等待，避免用户看到旧数字。
+ * 导出供「创建后立即上传图片」这类跨步骤流程复用——那些步骤不在 mutation 内。
  */
-function useInvalidateContent() {
+export function useInvalidateContent() {
   const client = useQueryClient()
   return async (postId?: number) => {
     await Promise.all([
@@ -79,6 +82,30 @@ export function useDeletePostMutation() {
     mutationFn: (id: number) => deletePost(id),
     onSuccess: async () => {
       await invalidate()
+    },
+  })
+}
+
+/**
+ * 图片增删的失效范围与帖子写入相同：卡片封面读的是列表接口，
+ * 只失效详情会让信息流停在旧封面上。
+ */
+export function useUploadPostImageMutation(postId: number) {
+  const invalidate = useInvalidateContent()
+  return useMutation({
+    mutationFn: (file: File) => uploadPostImage(postId, file),
+    onSuccess: async () => {
+      await invalidate(postId)
+    },
+  })
+}
+
+export function useDeletePostImageMutation(postId: number) {
+  const invalidate = useInvalidateContent()
+  return useMutation({
+    mutationFn: (imageId: number) => deletePostImage(postId, imageId),
+    onSuccess: async () => {
+      await invalidate(postId)
     },
   })
 }

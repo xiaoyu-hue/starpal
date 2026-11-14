@@ -26,7 +26,14 @@ export const PROJECTION = `
   u.status   AS author_status,
   up.avatar_url,
   COALESCE((
-    SELECT json_agg(i.storage_key ORDER BY i.sort_order)
+    SELECT json_agg(
+             json_build_object(
+               'id', i.id,
+               'key', i.storage_key,
+               'width', i.width,
+               'height', i.height
+             ) ORDER BY i.sort_order
+           )
       FROM post_images i WHERE i.post_id = p.id
   ), '[]'::json) AS images
 `
@@ -64,7 +71,8 @@ export type PostRow = QueryResultRow & {
   display_name: string
   author_status: string
   avatar_url: string | null
-  images: string[]
+  /** 图片引用（键 + 尺寸 + 主键），聚合子查询一次取齐，避免列表逐条查图。 */
+  images: { id: string; key: string; width: number; height: number }[]
   /** 仅 popular / recommended 的 CTE 查询会返回；latest 为 undefined。 */
   rank_score?: number
 }
@@ -90,7 +98,12 @@ export function mapRow(row: PostRow) {
       avatarUrl: deleted ? null : row.avatar_url,
     },
     topic: { slug: row.topic_slug, nameZh: row.topic_name },
-    images: row.images,
+    images: row.images.map((image) => ({
+      id: Number(image.id),
+      key: image.key,
+      width: image.width,
+      height: image.height,
+    })),
     rankScore: row.rank_score,
   }
 }

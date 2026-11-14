@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express'
 import { DomainError } from '../../shared/errors.js'
-import { parsePostIdParam } from './upload.schema.js'
-import { attachImage } from './upload.service.js'
+import { parseImageIdParam, parsePostIdParam } from './upload.schema.js'
+import { attachImage, removeImage } from './upload.service.js'
 
 /**
  * 图片上传控制器（`POST /api/posts/:postId/images`）。
@@ -31,6 +31,30 @@ export async function attachImageController(
       { buffer: file.buffer, originalName: file.originalname },
     )
     res.status(201).json({ data: image })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * 移除图片（`DELETE /api/posts/:postId/images/:imageId`）。
+ * 成功返回 200 而非 204：前端需要统一包络解析，裸 204 会让 `api-client` 的解包路径分叉。
+ */
+export async function removeImageController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const principal = req.principal
+    if (principal === undefined) {
+      throw new DomainError('AUTH_REQUIRED', '请先登录')
+    }
+
+    const postId = parsePostIdParam(req.params.postId)
+    const imageId = parseImageIdParam(req.params.imageId)
+    await removeImage(postId, { id: principal.id, role: principal.role }, imageId)
+    res.status(200).json({ data: { deleted: true } })
   } catch (error) {
     next(error)
   }

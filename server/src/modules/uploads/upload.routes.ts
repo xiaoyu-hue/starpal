@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../../middleware/require-auth.js'
 import { singleImageUpload } from '../../middleware/upload.js'
-import { attachImageController } from './upload.controller.js'
+import { attachImageController, removeImageController } from './upload.controller.js'
 
 /**
  * 图片上传路由（挂载于 `/api/posts/:postId/images`）。
@@ -13,3 +13,6 @@ import { attachImageController } from './upload.controller.js'
 export const imageUploadRouter = Router({ mergeParams: true })
 
 imageUploadRouter.post('/', requireAuth, singleImageUpload, attachImageController)
+
+// 移除不经过 multer：DELETE 无请求体，走 multipart 解析只会白等一次流。
+imageUploadRouter.delete('/:imageId', requireAuth, removeImageController)

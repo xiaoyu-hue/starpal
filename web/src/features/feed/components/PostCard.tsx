@@ -2,6 +2,7 @@ import type { KeyboardEvent, MouseEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Bookmark, Heart, MessageCircle, Share2 } from 'lucide-react'
 import { Avatar, Badge, Card } from '../../../components/ui/Primitives'
+import { PostCover } from '../../../components/content/PostImages'
 import type { FeedPost } from '../../../types/api'
 
 function formatTime(iso: string): string {
@@ -69,6 +70,10 @@ export function PostCard({ post, position, total }: PostCardProps) {
         </Link>
       </h2>
       <p className="mt-1.5 line-clamp-3 text-sm leading-relaxed text-muted">{post.excerpt}</p>
+
+      {post.images.length > 0 && (
+        <PostCover image={post.images[0]} title={post.title} />
+      )}
 
       <div
         className="mt-4 flex items-center gap-5 border-t border-line pt-3 text-xs text-muted"

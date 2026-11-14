@@ -1,10 +1,16 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { POST_BODY_MAX, POST_TITLE_MAX } from '../../../config/content-constants'
+import {
+  POST_BODY_MAX,
+  POST_IMAGES_MAX,
+  POST_TITLE_MAX,
+} from '../../../config/content-constants'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Primitives'
 import { useTopicsQuery } from '../../topics'
+import type { PostImage } from '../../../types/api'
 import type { CreatePostPayload } from '../api'
+import { ImagePicker } from './ImagePicker'
 import { TopicPicker } from './TopicPicker'
 
 type FormErrors = {
@@ -17,9 +23,18 @@ type PostComposerProps = {
   mode: 'create' | 'edit'
   initial?: { title: string; body: string; topicId: number }
   submitting: boolean
+  /** 覆盖提交按钮文案（上传图片时用来显示进度）。 */
+  submittingLabel?: string
   serverError: string | null
-  onSubmit: (payload: CreatePostPayload) => void
+  /** 创建模式把待上传文件一并交出；编辑模式的图片由父级即时处理，此处恒为空数组。 */
+  onSubmit: (payload: CreatePostPayload, files: File[]) => void
   cancelTo: string
+  /** 已入库图片，仅编辑模式有值。 */
+  images?: PostImage[]
+  imagesBusy?: boolean
+  imageError?: string | null
+  onAddImages?: (files: File[]) => void
+  onRemoveImage?: (imageId: number) => void
 }
 
 /** 与服务端一致的准入规则：标题 1..180、正文 1..20000、必须选话题。 */
@@ -36,29 +51,48 @@ function validate(title: string, body: string, topicId: number | null): FormErro
 /**
  * 发帖 / 编辑共用表单：两种模式只在初始值、按钮文案与提交目标上不同。
  * 首次提交后才展示校验错误，避免用户刚进页面就被满屏红字迎接。
+ *
+ * 图片的归属两种模式不同：新建时帖子还没有 id，图片只能先在浏览器里排队，
+ * 等帖子创建成功再逐张上传；编辑时帖子已存在，选中即上传，改动立刻生效。
  */
 export function PostComposer({
   mode,
   initial,
   submitting,
+  submittingLabel,
   serverError,
   onSubmit,
   cancelTo,
+  images = [],
+  imagesBusy = false,
+  imageError = null,
+  onAddImages,
+  onRemoveImage,
 }: PostComposerProps) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [body, setBody] = useState(initial?.body ?? '')
   const [topicId, setTopicId] = useState<number | null>(initial?.topicId ?? null)
   const [submitted, setSubmitted] = useState(false)
+  const [pending, setPending] = useState<File[]>([])
 
   const topicsQuery = useTopicsQuery()
   const errors = submitted ? validate(title, body, topicId) : {}
+
+  function handlePick(files: File[]) {
+    if (mode === 'edit') onAddImages?.(files)
+    else setPending((current) => [...current, ...files])
+  }
+
+  function handleRemovePending(index: number) {
+    setPending((current) => current.filter((_, i) => i !== index))
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitted(true)
     if (topicId === null) return
     if (Object.keys(validate(title, body, topicId)).length > 0) return
-    onSubmit({ title: title.trim(), body: body.trim(), topicId })
+    onSubmit({ title: title.trim(), body: body.trim(), topicId }, pending)
   }
 
   return (
@@ -136,7 +170,7 @@ export function PostComposer({
               </p>
             ) : (
               <p id="post-body-hint" className="text-xs text-faint">
-                支持换行。图片上传与草稿保存将在后续里程碑提供。
+                支持换行。图片会被压缩并抹除拍摄信息（含位置）。
               </p>
             )}
             <span className="shrink-0 text-xs text-faint">
@@ -144,6 +178,21 @@ export function PostComposer({
             </span>
           </div>
         </div>
+
+        <ImagePicker
+          existing={images}
+          pending={pending}
+          max={POST_IMAGES_MAX}
+          busy={submitting || imagesBusy}
+          error={imageError}
+          onPick={handlePick}
+          onRemoveExisting={(imageId) => onRemoveImage?.(imageId)}
+          onRemovePending={handleRemovePending}
+        />
+
+        {mode === 'edit' && (
+          <p className="text-xs text-faint">图片改动即时生效，无需点「保存修改」。</p>
+        )}
 
         {serverError ? (
           <p className="rounded-md border border-[var(--sp-danger)] bg-[var(--sp-danger-soft)] px-3 py-2 text-sm text-[var(--sp-danger)]" role="alert">
@@ -160,7 +209,7 @@ export function PostComposer({
           取消
         </Link>
         <Button type="submit" loading={submitting}>
-          {mode === 'create' ? '发布' : '保存修改'}
+          {submittingLabel ?? (mode === 'create' ? '发布' : '保存修改')}
         </Button>
       </div>
     </form>

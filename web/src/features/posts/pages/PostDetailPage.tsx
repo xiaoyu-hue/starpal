@@ -1,10 +1,12 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Heart, MessageCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Heart, MessageCircle, X } from 'lucide-react'
 import { Avatar, Badge, Card } from '../../../components/ui/Primitives'
 import { EmptyState, ErrorState } from '../../../components/feedback/States'
 import { ApiError } from '../../../lib/api-client'
 import type { PostStatus } from '../../../types/api'
 import { PostActions } from '../components/PostActions'
+import { PostImages } from '../../../components/content/PostImages'
 import { RelatedPosts } from '../components/RelatedPosts'
 import { usePostDetailQuery } from '../queries'
 
@@ -25,7 +27,13 @@ export function PostDetailPage() {
   const { id: rawId = '' } = useParams<{ id: string }>()
   const id = Number(rawId)
   const navigate = useNavigate()
+  const location = useLocation()
   const query = usePostDetailQuery(id)
+  const [dismissed, setDismissed] = useState(false)
+
+  // 发布页传图失败时会带 state 跳过来：帖子已建成，只有图片没传完，必须说清楚。
+  const failures = (location.state as { imageFailures?: number } | null)?.imageFailures ?? 0
+  const showFailure = failures > 0 && !dismissed
 
   if (!Number.isInteger(id) || id < 1) {
     return (
@@ -72,6 +80,28 @@ export function PostDetailPage() {
         <ArrowLeft size={15} /> 返回信息流
       </Link>
 
+      {showFailure && (
+        <div
+          className="flex items-start gap-3 rounded-md border border-[var(--sp-danger)] bg-[var(--sp-danger-soft)] px-3 py-2.5 text-sm"
+          role="status"
+        >
+          <p className="flex-1 text-ink">
+            内容已发布，但有 <strong>{failures}</strong> 张图片没传成功。
+            <Link to={`/posts/${post.id}/edit`} className="ml-1 text-accent underline">
+              去编辑页补传
+            </Link>
+          </p>
+          <button
+            type="button"
+            onClick={() => setDismissed(true)}
+            aria-label="关闭提示"
+            className="sp-transition text-muted hover:text-ink"
+          >
+            <X size={15} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
       <article aria-labelledby="post-heading">
         <Card className="p-6">
           <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -106,6 +136,8 @@ export function PostDetailPage() {
           <div className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-ink">
             {post.body}
           </div>
+
+          <PostImages images={post.images} title={post.title} />
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             <div className="flex items-center gap-5 text-xs text-muted" aria-label="帖子统计">

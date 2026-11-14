@@ -5,7 +5,7 @@ import { DomainError } from '../../shared/errors.js'
 import { createPostgresByteaAdapter } from '../../storage/index.js'
 import { processImage } from '../../storage/image-pipeline.js'
 import { ensurePostEditable, type Viewer } from '../posts/index.js'
-import { countImagesOf, insertImageMeta, nextSortOrder } from './upload.repository.js'
+import { countImagesOf, deleteImageMeta, insertImageMeta, nextSortOrder } from './upload.repository.js'
 import type { UploadedImage } from './upload.types.js'
 
 /**
@@ -78,4 +78,25 @@ export async function attachImage(
     byteSize: processed.buffer.byteLength,
     sortOrder: created.sortOrder,
   }
+}
+
+/**
+ * 从帖子移除一张图片：权限与上传同一口径（作者或管理员）。
+ *
+ * 与上传共用帖子级事务锁：一边删、一边并发追加时，若不加锁，`MAX(sort_order) + 1`
+ * 可能读到刚被删掉的序号而撞唯一约束。删除本身很快，锁竞争可以忽略。
+ * 帖子被删时图片随 `post_images` 级联清理，无需在删除帖子的路径上重复处理。
+ */
+export async function removeImage(
+  postId: number,
+  viewer: Viewer,
+  imageId: number,
+): Promise<void> {
+  await ensurePostEditable(postId, viewer)
+
+  await withTransaction(async (client) => {
+    await client.query('SELECT pg_advisory_xact_lock($1::bigint)', [postId])
+    const key = await deleteImageMeta(client, postId, imageId)
+    if (key === null) throw new DomainError('NOT_FOUND', '图片不存在')
+  })
 }

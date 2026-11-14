@@ -6,7 +6,12 @@ import { useAuth } from '../../auth'
 import { PostComposer } from '../components/PostComposer'
 import { messageOf } from '../errors'
 import type { CreatePostPayload } from '../api'
-import { usePostDetailQuery, useUpdatePostMutation } from '../queries'
+import {
+  useDeletePostImageMutation,
+  usePostDetailQuery,
+  useUpdatePostMutation,
+  useUploadPostImageMutation,
+} from '../queries'
 
 /** 编辑页：仅作者与管理员可达（前端只做入口控制，服务端仍独立校验）。 */
 export function EditPostPage() {
@@ -16,7 +21,11 @@ export function EditPostPage() {
   const { user } = useAuth()
   const query = usePostDetailQuery(id)
   const mutation = useUpdatePostMutation(id)
+  const uploadMutation = useUploadPostImageMutation(id)
+  const deleteImageMutation = useDeletePostImageMutation(id)
   const [error, setError] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   if (!Number.isInteger(id) || id < 1) {
     return (
@@ -74,6 +83,32 @@ export function EditPostPage() {
     })
   }
 
+  /**
+   * 编辑态的图片即时生效：帖子已存在，没有「等保存」的必要。
+   * 逐张串行上传，失败一张不影响其余，最后把失败原因集中报出来。
+   */
+  async function handleAddImages(files: File[]) {
+    setImageError(null)
+    setUploading(true)
+    const problems: string[] = []
+    for (const file of files) {
+      try {
+        await uploadMutation.mutateAsync(file)
+      } catch (cause) {
+        problems.push(messageOf(cause, `${file.name} 上传失败`))
+      }
+    }
+    setUploading(false)
+    if (problems.length > 0) setImageError(problems.slice(0, 2).join('；'))
+  }
+
+  function handleRemoveImage(imageId: number) {
+    setImageError(null)
+    deleteImageMutation.mutate(imageId, {
+      onError: (cause) => setImageError(messageOf(cause, '移除失败，请稍后重试。')),
+    })
+  }
+
   return (
     <section aria-labelledby="edit-heading" className="mx-auto max-w-2xl">
       <div className="mb-4">
@@ -90,6 +125,11 @@ export function EditPostPage() {
         serverError={error}
         onSubmit={handleSubmit}
         cancelTo={`/posts/${id}`}
+        images={post.images}
+        imagesBusy={uploading || deleteImageMutation.isPending}
+        imageError={imageError}
+        onAddImages={(files) => void handleAddImages(files)}
+        onRemoveImage={handleRemoveImage}
       />
     </section>
   )

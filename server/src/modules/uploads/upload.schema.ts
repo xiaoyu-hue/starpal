@@ -11,3 +11,12 @@ export function parsePostIdParam(raw: unknown): number {
   }
   return value
 }
+
+/** 图片主键：与帖子编号同规则，非法值直接 400，不落库查询。 */
+export function parseImageIdParam(raw: unknown): number {
+  const value = Number(raw)
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new DomainError('VALIDATION_FAILED', '图片编号不合法')
+  }
+  return value
+}

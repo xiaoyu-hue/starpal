@@ -19,6 +19,21 @@ export type PostTopicBrief = {
   nameZh: string
 }
 
+/**
+ * 帖子图片引用。
+ *
+ * 只下发引用键与尺寸，不下发字节：字节经 `GET /api/images/:key` 单独取，可长期缓存。
+ * `width` / `height` 是前端预留占位框的依据——缺了它，图片加载完成会把正文顶下去，
+ * 滚动位置随之跳动（信息流里尤其明显）。
+ * `id` 仅用于作者删除某张图；他人拿不到删除权限，暴露序号无意义也无风险。
+ */
+export type PostImage = {
+  id: number
+  key: string
+  width: number
+  height: number
+}
+
 /** 列表项：信息流卡片所需字段，不含正文全文。 */
 export type PostListItem = {
   id: number
@@ -28,8 +43,7 @@ export type PostListItem = {
   author: PostAuthorBrief
   likeCount: number
   commentCount: number
-  /** 图片引用键（`post_images.storage_key`）；前端拼 `/api/images/:key`。M3-S3 前恒为空。 */
-  images: string[]
+  images: PostImage[]
   createdAt: string
 }
 

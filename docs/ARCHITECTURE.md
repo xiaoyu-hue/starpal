@@ -712,7 +712,9 @@ GET /api/posts?tab=latest&limit=20&cursor=eyJjcmVhdGVkQXQiOiIyMDI2LTExLTEyVDEzOj
       "author": { "username": "member01", "avatarUrl": null },
       "likeCount": 0,
       "commentCount": 0,
-      "images": [],
+      "images": [
+        { "id": 41, "key": "9f2c…（32 位 hex）", "width": 1200, "height": 900 }
+      ],
       "createdAt": "2026-11-12T14:00:00Z"
     }
   ],
@@ -1030,7 +1032,7 @@ server/src/db/migrations/
 | 数据库备份 | 标准逻辑备份工具导出，定期执行，备份文件置于持久存储 |
 | 文件备份 | 图片存于 `image_blobs`，随数据库备份一并导出，无需独立归档 |
 | 用户导出 | `GET /api/export?format=md|json`，包含本人帖子、评论、图片引用与资料字段 |
-| 恢复 | 先恢复数据库，再恢复文件目录；校验 `post_images` 引用与文件一致性 |
+| 恢复 | 单次数据库恢复即可（图片与结构化数据同库）；恢复后校验 `post_images` 与 `image_blobs` 是否一一对应 |
 
 ---
 
@@ -1109,6 +1111,9 @@ export interface StorageAdapter {
   写字节前必须已有元数据行。对象存储实现忽略该字段，接口仍可替换；若改为以 `storage_key`
   直接关联，可移除该字段而不影响调用方语义。
 - `remove` 只删字节、保留元数据行，用于上传事务回滚与存储迁移；正常删除走 `post_images` 级联。
+  对外移除接口为 `DELETE /api/posts/:postId/images/:imageId`（作者或管理员），删除后
+  `sort_order` 留空位不重排——重排会与 `(post_id, sort_order)` 唯一约束冲突，而追加取
+  `MAX(sort_order) + 1`，空位不影响顺序。
 - `local-disk.ts` 不再提供：Serverless 运行环境无可写持久目录，实现即失效。
 - 读取经受控路由 `GET /api/images/:key` 返回，携带 `Cache-Control: public, max-age=31536000, immutable`
   与 `X-Content-Type-Options: nosniff`；`storage_key` 随机且内容不可变，可长期缓存。

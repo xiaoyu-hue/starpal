@@ -1,5 +1,5 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api-client'
-import type { FeedPost, PostDetail } from '../../types/api'
+import { apiDelete, apiGet, apiPatch, apiPost, apiUpload } from '../../lib/api-client'
+import type { FeedPost, PostDetail, UploadedImage } from '../../types/api'
 
 /** 帖子写读接口：只描述路径与载荷，传输与错误归一化由 api-client 统一承担。 */
 
@@ -43,4 +43,20 @@ export async function updatePost(
 
 export async function deletePost(id: number): Promise<void> {
   await apiDelete<{ deleted: boolean }>(`posts/${id}`)
+}
+
+/**
+ * 上传一张图片。字段名固定为 `image`，服务端 multer 按此名取文件；
+ * 一次一张：多图并发会在服务端触发多次重编码，串行既稳定也能给出准确进度。
+ */
+export async function uploadPostImage(postId: number, file: File): Promise<UploadedImage> {
+  const form = new FormData()
+  form.append('image', file, file.name)
+  const envelope = await apiUpload<UploadedImage>(`posts/${postId}/images`, form)
+  return envelope.data
+}
+
+/** 移除一张图片（作者或管理员）。 */
+export async function deletePostImage(postId: number, imageId: number): Promise<void> {
+  await apiDelete<{ deleted: boolean }>(`posts/${postId}/images/${imageId}`)
 }
