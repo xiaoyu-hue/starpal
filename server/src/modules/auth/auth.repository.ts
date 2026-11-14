@@ -1,6 +1,7 @@
 import type { PoolClient } from 'pg'
 import { pool, withTransaction } from '../../db/pool.js'
 import type { SecurityEventKind } from '../../config/constants.js'
+import { DomainError } from '../../shared/errors.js'
 
 /** 认证相关数据访问。全部使用参数化查询，不拼接用户输入。 */
 
@@ -52,6 +53,8 @@ export async function createUser(input: {
   subjectHash: string
   /** 已勾选同意用户协议时写入版本与时间；未传则两列留空，不伪造同意记录。 */
   acceptedTermsVersion: string | null
+  /** 邀请码哈希：注册事务内消费（标记 used 并绑定本用户），无效则整笔回滚，不会「码废号建成」。 */
+  inviteCodeHash: string
 }): Promise<{ id: string; username: string; displayName: string }> {
   return withTransaction(async (client: PoolClient) => {
     const inserted = await client.query<{ id: string }>(
@@ -68,6 +71,14 @@ export async function createUser(input: {
       'INSERT INTO security_events (kind, subject_hash) VALUES ($1, $2)',
       ['register', input.subjectHash],
     )
+    const consumed = await client.query(
+      `UPDATE invite_codes SET status = 'used', used_by = $2, used_at = now()
+        WHERE code_hash = $1 AND status = 'available' RETURNING id`,
+      [input.inviteCodeHash, id],
+    )
+    if (consumed.rows.length === 0) {
+      throw new DomainError('INVITE_INVALID', '邀请码无效或已被使用')
+    }
     return { id, username: input.username, displayName: input.displayName }
   })
 }

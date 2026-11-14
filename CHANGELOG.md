@@ -4,7 +4,21 @@
 
 ## [Unreleased]
 
-`M4` 互动域进行中：点赞 / 收藏 / 评论已可用，通知中心待交付。
+`M4` 互动域收尾中：通知中心已上线，邀请制改为一人一码；仅余统一发版与验证记录回填。
+
+### 新增（通知中心）
+
+- 通知读取 API：`GET /api/notifications`（键集游标翻页，每次 20 条）、`GET /api/notifications/unread`（未读数）、`POST /api/notifications/read`（一键全部已读），均需登录。
+- 通知中心界面 `web/src/features/notifications/`：列表、相对时间、未读高亮、加载更早、全部已读。
+- 顶栏铃铛红点角标（`TopBar.tsx`）：取未读数，超过 99 记为 `99+`；匿名态不展示。
+
+### 变更（邀请制改为一人一码）
+
+- 新增迁移 `009_invite_codes.sql`：`code_hash`（HMAC-SHA256 哈希存储明文邀请码，Crockford Base32 生成人读码）、状态机 `available→used/revoked`、创建 / 使用 / 撤销留痕与索引。
+- 邀请码模块 `modules/invite/`：逐批生成（1–50，备注可选），明文仅在生成时返回一次；未用码可撤销，已用 / 已撤销不可改回。
+- 注册改为事务内原子消费：同一事务 `UPDATE ... SET status='used' WHERE code_hash=$1 AND status='available'`，无效码整笔回滚，杜绝「码废号建成」。
+- 下线统一邀请码：移除 `INVITE_CODE` 环境变量与 `inviteCodeMatches`；`auth.service` 改用哈希校验，旧通用码注册提示 `INVITE_INVALID`。
+- 管理员「运营管理 → 邀请码」界面 `web/src/features/invite/`：生成 / 列表（可用 / 已用 / 已撤销）/ 撤销，均受 `requireRole(ROLE_ADMIN)` 守卫。
 
 ### 变更（社区公告改写为结构化发布记录）
 

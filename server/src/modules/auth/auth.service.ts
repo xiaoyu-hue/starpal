@@ -13,9 +13,9 @@ import { hashPassword, verifyPassword } from './password.js'
 import {
   enforceLoginFailLimit,
   enforceRateLimit,
-  inviteCodeMatches,
   note,
 } from './rate-limit.js'
+import { hashInviteCode } from '../invite/index.js'
 import { newSessionId, sessionExpiresAt } from './session.js'
 
 /** 认证业务层：注册 / 登录 / 登出 / 当前会话。凭据错误统一提示，不泄漏账户存在性。 */
@@ -69,11 +69,7 @@ export async function register(input: {
   acceptedTerms: boolean
 }): Promise<PublicUser> {
   await enforceRateLimit('register', input.subjectHash)
-  if (!inviteCodeMatches(input.inviteCode)) {
-    await note('register', input.subjectHash)
-    throw new DomainError('INVITE_INVALID', '邀请码无效')
-  }
-
+  const codeHash = hashInviteCode(input.inviteCode)
   const passwordHash = await hashPassword(input.password)
   try {
     const created = await createUser({
@@ -82,11 +78,17 @@ export async function register(input: {
       passwordHash,
       subjectHash: input.subjectHash,
       acceptedTermsVersion: input.acceptedTerms ? APP_VERSION : null,
+      inviteCodeHash: codeHash,
     })
     const row = await findUserById(created.id)
     if (!row) throw new DomainError('INTERNAL_ERROR', '注册结果读取失败')
     return toPublicUser(row)
   } catch (error) {
+    // 邀请码在创建用户的事务内校验：无效时事务已回滚（用户未建成），此处记一次失败事件并原样抛出。
+    if (error instanceof DomainError && error.code === 'INVITE_INVALID') {
+      await note('register', input.subjectHash)
+      throw error
+    }
     // 唯一约束冲突（23505）：用户名已被占用，转换为可读的 409，不泄漏其他账户信息。
     if (isUniqueViolation(error)) {
       await note('register', input.subjectHash)

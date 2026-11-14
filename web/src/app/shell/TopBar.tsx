@@ -6,6 +6,7 @@ import { Avatar } from '../../components/ui/Primitives'
 import { GlassPanel } from '../../components/layout/GlassPanel'
 import { useTheme } from '../../hooks/useTheme'
 import { useAuth } from '../../features/auth/AuthProvider'
+import { useUnreadQuery } from '../../features/notifications/notifications.queries'
 import { DESKTOP_KEYS, DESTINATIONS } from './nav-items'
 
 type TopBarProps = {
@@ -16,6 +17,8 @@ type TopBarProps = {
 export function TopBar({ onOpenMenu }: TopBarProps) {
   const { theme, toggleTheme } = useTheme()
   const { user, loading, logout } = useAuth()
+  const { data: unread } = useUnreadQuery(!!user)
+  const unreadCount = unread ?? 0
   const create = DESTINATIONS.create!
   const CreateIcon = create.icon
 
@@ -62,8 +65,17 @@ export function TopBar({ onOpenMenu }: TopBarProps) {
         <Link to="/search" className={buttonClass('ghost', 'sm', 'hidden sm:inline-flex')} aria-label="搜索">
           <Search size={17} />
         </Link>
-        <Link to="/notifications" className={buttonClass('ghost', 'sm')} aria-label="通知">
+        <Link
+          to="/notifications"
+          className={`${buttonClass('ghost', 'sm')} relative`}
+          aria-label={unreadCount > 0 ? `通知（${unreadCount} 条未读）` : '通知'}
+        >
           <Bell size={17} />
+          {unreadCount > 0 && (
+            <span className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--sp-danger)] px-1 text-[10px] font-semibold leading-none text-on-accent">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </Link>
         <button
           type="button"

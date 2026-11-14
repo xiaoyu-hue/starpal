@@ -266,6 +266,19 @@ export type Announcement = {
   action?: string
 }
 
+/**
+ * 通知与邀请码类型较多且自成体系，拆到 ./community.ts，
+ * 此处仅重新导出以保持 `../../types/api` 的导入路径稳定。
+ */
+export type {
+  NotificationItem,
+  NotificationList,
+  InviteCodeStatus,
+  InviteCodeItem,
+  InviteCodeList,
+  GenerateInviteResult,
+} from './community'
+
 /** 社区公告：与后端 ANNOUNCEMENTS 一致，条目按时间倒序。 */
 export type MetaAnnouncements = {
   version: string

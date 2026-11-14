@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Check } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Check, KeyRound } from 'lucide-react'
 import { Avatar, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
@@ -18,7 +18,7 @@ import type { OwnProfile } from '../../types/api'
 /** 设置页编排：资料编辑、主题、关于与账号。由路由级 RequireAuth 守卫进入。 */
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { refresh } = useAuth()
+  const { user, refresh } = useAuth()
   const query = useOwnProfileQuery()
 
   if (query.isPending) {
@@ -42,6 +42,19 @@ export function SettingsPage() {
       <ProfileSection key={query.data.username} profile={query.data} onSaved={refresh} />
       <ThemeSection />
       <AboutSection />
+      {user?.role === 'admin' && (
+        <Card className="space-y-3 p-6">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
+            <KeyRound size={16} /> 运营管理
+          </h2>
+          <p className="text-sm leading-relaxed text-muted">
+            生成与撤销邀请码，控制谁能注册。邀请码一人一码、用完即失效。
+          </p>
+          <Link to="/invite-codes" className={buttonClass('secondary', 'sm')}>
+            邀请码管理
+          </Link>
+        </Card>
+      )}
       <AccountSection onDeleted={() => { void refresh(); navigate('/') }} />
     </div>
   )

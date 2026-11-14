@@ -17,7 +17,7 @@ loadDotenv({ path: join(REPO_ROOT, '.env'), quiet: true })
 
 type NodeEnv = 'development' | 'test' | 'production'
 
-const REQUIRED = ['DATABASE_URL', 'SESSION_SECRET', 'INVITE_CODE'] as const
+const REQUIRED = ['DATABASE_URL', 'SESSION_SECRET'] as const
 
 const DEFAULTS = {
   NODE_ENV: 'development',
@@ -87,7 +87,6 @@ function env() {
     databaseUrl: read('DATABASE_URL'),
     sessionSecret: read('SESSION_SECRET'),
     sessionTtlHours: positiveInt('SESSION_TTL_HOURS'),
-    inviteCode: read('INVITE_CODE'),
     rateLimitWindowSeconds: positiveInt('RATE_LIMIT_WINDOW_SECONDS'),
     rateLimitMax: positiveInt('RATE_LIMIT_MAX'),
     loginFailMax: positiveInt('LOGIN_FAIL_MAX'),

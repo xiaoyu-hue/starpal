@@ -471,7 +471,7 @@ flowchart LR
 
 **目标**：建立互动闭环，计数准确且不可重复，全部写操作在事务内完成。
 
-**当前进度**（2026-11-14）：`M4-S1` / `S2` / `S3` 已交付并有验证记录（`VR-M4-01`—`VR-M4-07`）；`M4-S4` 通知域未开始——评论产生的通知已按事务写入 `notifications` 表，但缺少读取接口与界面，因此用户看不到任何提醒。收尾顺序：`M4-S4` 先做，随后把统一邀请码改为一人一码（可撤销、可限次）。
+**当前进度**（2026-11-14）：`M4-S1` / `S2` / `S3` 已交付（`VR-M4-01`—`VR-M4-07`）；`M4-S4` 通知域已完成——通知读取接口与通知中心界面交付，评论提醒闭环打通。`M4-S5` 一人一码邀请制已完成：统一邀请码下线，改为逐码生成、事务内原子消费、可撤销。M4 仅剩验证记录回填（`VR-M4-08`/`VR-M4-09`）与统一发版。
 
 **前置条件**：`M3` 完成；帖子与用户信息可读。
 
@@ -507,8 +507,18 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M4-S4-T1` | 通知 API | 列表、批量已读 | `modules/notifications/` | 已读状态持久化 |
-| `M4-S4-T2` | 通知中心 | 顶栏铃铛、未读计数、列表页 | `web/src/features/notification/` | 三态完整，移动端可达 |
+| `M4-S4-T1` | ✅ 通知 API | 列表（键集游标 + 未读数 + 全部已读） | `modules/notifications/` | 已读状态持久化；未读数来自服务端 |
+| `M4-S4-T2` | ✅ 通知中心 | 顶栏铃铛红点（99+ 截断）、未读计数、列表页、相对时间 | `web/src/features/notifications/` | 三态完整，移动端可达；未读高亮 |
+
+#### `M4-S5` 一人一码邀请制（替换 `M2-S2` 统一码）
+
+| 编号 | 任务 | 具体动作 | 产出 | 验证 |
+| --- | --- | --- | --- | --- |
+| `M4-S5-T1` | ✅ 邀请码表 | `009_invite_codes.sql`：`code_hash`（HMAC-SHA256，Crockford Base32 明文）、状态机 `available→used/revoked`、`created_by/used_by/used_at/revoked_at` 与索引 | `migrations/009_*.sql` | 状态约束与唯一哈希生效 |
+| `M4-S5-T2` | ✅ 生成与撤销 | 逐批生成（1–50，备注可选），明文仅返回一次；未用码可撤销，已用 / 已撤销不可改回 | `modules/invite/` | 生成返回明文、撤销置 `revoked` |
+| `M4-S5-T3` | ✅ 原子消费 | 注册在同一事务内 `UPDATE ... SET status='used' WHERE code_hash=$1 AND status='available'`；无效码整笔回滚，避免「码废号建成」 | `modules/auth/auth.repository.ts` | 一码一账号；错码 `INVITE_INVALID` |
+| `M4-S5-T4` | ✅ 下线统一码 | 移除 `INVITE_CODE` 环境变量与 `inviteCodeMatches`；`auth.service` 改为哈希校验 | `config/env.ts`、`rate-limit.ts` | 旧通用码注册提示无效 |
+| `M4-S5-T5` | ✅ 管理界面 | 管理员「运营管理 → 邀请码」生成 / 列表 / 撤销 | `web/src/features/invite/`、`admin.routes.ts` | admin 角色守卫下可用 |
 
 #### M4 验证记录
 
@@ -525,7 +535,10 @@ flowchart LR
 | `VR-M4-06` | 管理员移除与可见性 | 通过 | 将测试账号临时提权为 admin 后：移除他人评论返回 200，入库 `status='removed'` 且 `deleted_at` 为 NULL（满足 `comments_deleted_consistent`）；管理员列表能看到该项并标 `removed` / `canRemove=true`，普通读者列表为空；`commentCount` 扣减为 0。另在隔离库直测 9 项：自评论不产生通知、`deleted` 带 `deleted_at`、重复移除返回 null 且计数不为负、帖子不存在时事务整体回滚不留孤儿评论 |
 | `VR-M4-07` | 评论区真实浏览器行为 | 通过 | Chromium 390 px：登录态详情页评论区显示标题计数、输入框、`0 / 2000` 计数器；输入后点发送，新评论出现在列表首位、计数器回零；删除按钮弹出确认框，确认后条目消失、计数回落；匿名视角显示「登录后可以参与讨论。」且不渲染输入框；控制台 0 错误。截图 `preview/ui-comments-390.png`、`ui-comments-after-post-390.png`、`ui-comments-anon-390.png` |
 
-**M4 交付物**：点赞 / 收藏 / 评论 API 与前端、计数事务、通知中心。
+| `VR-M4-08` | 通知中心真实浏览器行为（`M4-S4`） | 待回填 | 计划：Chromium 390 px 登录态，顶栏铃铛红点随未读数出现，进入通知页未读高亮、`全部已读`后红点消失；匿名态铃铛不展示红点 |
+| `VR-M4-09` | 一人一码邀请制与管理界面（`M4-S5`） | 待回填 | 计划：管理员生成邀请码明文仅展示一次、注册以该码消费后失效、撤销未用码、非 admin 访问邀请码接口被拒；匿名用旧通用码注册提示无效 |
+
+**M4 交付物**：点赞 / 收藏 / 评论 API 与前端、计数事务、通知中心、一人一码邀请制。
 
 **M4 完成判据**：`AC-07`、`AC-08` 有验证记录；唯一约束在并发下生效；`DoD-01`—`DoD-10` 全部满足。
 

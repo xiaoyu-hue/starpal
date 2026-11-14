@@ -1,4 +1,3 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
 import { appEnv } from '../../config/env.js'
 import { DomainError } from '../../shared/errors.js'
 import { countEvents, pruneExpiredData, recordEvent } from './auth.repository.js'
@@ -35,11 +34,4 @@ export async function enforceLoginFailLimit(subjectHash: string): Promise<void> 
   if (fails >= appEnv.loginFailMax) {
     throw new DomainError('RATE_LIMITED', '登录尝试过于频繁，请稍后再试')
   }
-}
-
-/** 邀请码比较：摘要定长后恒定时间比较，避免逐字符短路造成时序差异。 */
-export function inviteCodeMatches(candidate: string): boolean {
-  const a = createHmac('sha256', appEnv.sessionSecret).update(candidate).digest()
-  const b = createHmac('sha256', appEnv.sessionSecret).update(appEnv.inviteCode).digest()
-  return timingSafeEqual(a, b)
 }
