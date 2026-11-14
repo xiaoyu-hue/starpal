@@ -52,6 +52,9 @@
 - 新增 `apiPatch()` / `apiDelete()` 于 `web/src/lib/api-client.ts`；`Avatar` 支持 `src` 头像链接并带首字母兜底；主题扩展为 `light/dark/system`，`system` 经 `matchMedia` 监听即时切换且刷新后保持；类型层回填 `avatarUrl` 与资料相关接口。
 - 路由层接入资料域：懒加载 `ProfilePage`（`/u/:username`）与 `SettingsPage`（`/settings`，`RequireAuth` 包裹），替代原占位页；`/privacy`、`/guidelines`、`/about` 仍为待办占位（`M2-S5`）。
 - 生产部署 `dpl_BcrdQmkfwWfS3DseNjVPMUk1omtu`：`READY` / `target=production` / `PROMOTED`，`gitSource.sha=89bf4b6ec145b0f7286ee5a085cfdf18e739a413`，域名 `starpal.cc.cd` 与 `starpal.vercel.app` 均 `verified`；对生产 API 实跑 M2-S4 在线验证 26 项全过，测试账号 0 残留。
+- 新增 `M2-S5` 说明页面（隐私 / 社区准则 / 关于）后端单源：`config/constants.ts` 新增 `PRIVACY`（分节文案，对齐 M2-S4 真实实现：采集范围、Neon 存储、保留期、注销软删除 / 彻底擦除）、`SITE_NAME`、`SITE_LAUNCH_DATE`；`modules/meta/` 增加 `privacyController` / `aboutController`，`routes.ts` 挂载 `GET /api/meta/privacy`、`/api/meta/about`；准则继续复用既有 `/api/meta/guidelines`。
+- 新增前端 `web/src/features/_static/`：通用排版壳 `StaticPage` / `Section`、三页 `PrivacyPage` / `GuidelinesPage` / `AboutPage`、`meta.api.ts`（拉取三接口）+ `meta.queries.ts`（React Query）；`router.tsx` 以懒加载替换 `/privacy`、`/guidelines`、`/about` 三处占位；准则页文本与后端接口逐字一致，关于页版本号与建站日期读自后端（单一来源）。
+- 生产部署 `dpl_BdMqm33R5k3J2phU2vTSRv8o6RV`：承接 M2-S5 推送，对生产实跑在线验证 27 项全过（三页面可达、文案与接口一致、不泄露私有字段），测试账号 0 残留。
 
 ### Fixed
 
@@ -75,7 +78,7 @@
 | 里程碑 | 计划内容 |
 | --- | --- |
 | `M1` | 已实现 `M1-S1`—`M1-S5`；`AC-13`（移动端布局）与 `AC-14`（视觉一致）已有验证记录，其余验收项按里程碑推进 |
-| `M2` | 已完成 `M2-S1` 数据基座、`M2-S2` 注册登录（含前端认证域）、`M2-S3` 守卫与初始管理员、`M2-S4` 个人资料（公开投影隐私、资料编辑 `AC-10`、可选资料、公开个人页、设置页、账号软删除与彻底擦除）；待实现 `M2-S5` 说明页面（隐私 / 准则 / 关于），以及 `DoD-01` 的 lint / 导入边界 / `seed` / `export:check` 欠账 |
+| `M2` | 已完成 `M2-S1` 数据基座、`M2-S2` 注册登录（含前端认证域）、`M2-S3` 守卫与初始管理员、`M2-S4` 个人资料、`M2-S5` 说明页面（隐私 / 准则 / 关于，后端单源 + 线上验证 `VR-M2-22~24`）；待结清 `DoD-01` 的 lint / 导入边界 / `seed` / `export:check` 欠账（`init:admin` 已交付） |
 | `M3` | 帖子、图片上传、话题分类、详情页 |
 | `M4` | 点赞、收藏、评论、通知 |
 | `M5` | 私信、成就、搜索、数据导出 |

@@ -364,8 +364,11 @@ flowchart LR
 | `VR-M2-19` | 彻底擦除（`M2-S4-T6`） | 通过 | 生产 `POST /api/users/me/erase` 在软删除基础上随机化用户名（原用户名 404 不可枚举）、记入 `account_erase` 安全事件、撤销全部会话；显示名仍署「已注销用户」 |
 | `VR-M2-20` | 生产部署与线上全量验证 | 通过 | Vercel 部署 `dpl_BcrdQmkfwWfS3DseNjVPMUk1omtu`：`READY` / `target=production` / `PROMOTED`，`gitSource.sha=89bf4b6ec…`，域名 `starpal.cc.cd` 与 `starpal.vercel.app` 均 `verified`；对生产 API 实跑 26 项检查全过，测试账户 0 残留 |
 | `VR-M2-21` | 生产库无测试数据残留（`M2-S4` 轮次） | 通过 | 每轮验证后按 `username LIKE 'm2s4_online_%'` 精确清理；清理后计数 `0`，账本 `001/002` 未改动，无测试帖子 / 会话遗留 |
+| `VR-M2-22` | 说明页后端单源与接口（`M2-S5`） | 通过 | 生产 `GET /api/meta/guidelines`、`/api/meta/privacy`、`/api/meta/about` 均 200；`guidelines` 4 条含「不收集手机号」；`privacy` 6 节含「我们采集的信息 / 我们不采集的信息 / 信息存储位置 / 注销与删除」且正文提及 Neon / Argon2id / 已注销用户 / 彻底擦除；`about` 返回 `version=0.1.0`、`launchDate=2026-11-12`、`siteName=星聚 STARPAL` |
+| `VR-M2-23` | 三说明页渲染与文案一致性（`M2-S5`） | 通过 | 真实 Chromium 加载生产 SPA：隐私页含全部 6 节标题与「Neon / 已注销用户 / 彻底擦除 / 0.1.0」；准则页逐条渲染 4 条准则 + 「申诉与审核」+ 版本；关于页显示「星聚 STARPAL / 当前版本 0.1.0 / 建站于 2026-11-12 / 暂无更新通道」；准则页文本与 `/api/meta/guidelines` 接口逐字一致 |
+| `VR-M2-24` | 说明页不泄露私有字段（`M2-S5`） | 通过 | `meta` 三接口响应经正则复核，不含 `password_hash/role/status/session` 等用户私有字段；页面仅展示站点级只读文案，不触达任何账户数据 |
 
-**仍未验证 / 未满足（如实登记）**：`AC-18` 已通过（`VR-M2-12` 有最终复扫记录），工作区 `.env` 残留风险仍待部署方处置（凭据不入仓）；`M2-S5` 说明页面（隐私 / 准则 / 关于）尚未实现，`/privacy`、`/guidelines`、`/about` 仍以占位页待办；`DoD-01` 的 lint 与导入边界规则及 `seed` / `export:check` 脚本仍欠账（`init:admin` 已交付）。`M2` 完成判据中 `AC-01/02/03/10/18` 现已齐全；待 `M2-S5` 与 `DoD-01` 欠账结清后，里程碑方可进入 `M3`。
+**仍未验证 / 未满足（如实登记）**：`AC-18` 已通过（`VR-M2-12` 有最终复扫记录），工作区 `.env` 残留风险仍待部署方处置（凭据不入仓）；`M2-S5` 说明页面（隐私 / 准则 / 关于）**已实现并线上验证通过**（`VR-M2-22~24`），三个路由已由占位页替换为真实页面；`DoD-01` 的 lint 与导入边界规则及 `seed` / `export:check` 脚本仍欠账（`init:admin` 已交付）。`M2` 完成判据中 `AC-01/02/03/10/18` 现已齐全；待 `DoD-01` 欠账结清后，里程碑方可进入 `M3`。
 
 ---
 
