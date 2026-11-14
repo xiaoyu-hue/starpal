@@ -10,9 +10,10 @@ import {
   USERNAME_MIN,
   USERNAME_PATTERN,
 } from '../../config/constants.js'
+import { DomainError } from '../../shared/errors.js'
 import { sendData } from '../../shared/response.js'
 import { honeypotFilled, requireObject, requireString } from '../../shared/validation.js'
-import { currentUser, login, logout, register, type PublicUser } from './auth.service.js'
+import { changePassword, currentUser, login, logout, register, type PublicUser } from './auth.service.js'
 import { note } from './rate-limit.js'
 import { clearSessionCookie, readSessionId, setSessionCookie } from './session.js'
 import { subjectHashOf } from './subject.js'
@@ -53,6 +54,20 @@ function parseLoginBody(body: Record<string, unknown>) {
     }),
     password: requireString(body.password, {
       field: 'password', min: PASSWORD_MIN, max: PASSWORD_MAX,
+      allowInnerWhitespace: true,
+    }),
+  }
+}
+
+/** 改密：新旧口令都走与注册一致的强度口径；新口令不得与旧口令相同由前端提示、服务端不强判。 */
+function parseChangePasswordBody(body: Record<string, unknown>) {
+  return {
+    currentPassword: requireString(body.currentPassword, {
+      field: 'currentPassword', min: PASSWORD_MIN, max: PASSWORD_MAX,
+      allowInnerWhitespace: true,
+    }),
+    newPassword: requireString(body.newPassword, {
+      field: 'newPassword', min: PASSWORD_MIN, max: PASSWORD_MAX,
       allowInnerWhitespace: true,
     }),
   }
@@ -135,6 +150,30 @@ export async function meController(
   try {
     const user: PublicUser = await currentUser(readSessionId(req))
     sendData(res, { user })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/** 改密：requireAuth 已保证登录态与 req.principal；会话标识只在服务端读取，不采信请求体。 */
+export async function changePasswordController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const body = requireObject(req.body)
+    const input = parseChangePasswordBody(body)
+    const sessionId = readSessionId(req)
+    if (!sessionId) throw new DomainError('AUTH_REQUIRED', '请先登录')
+    await changePassword({
+      userId: req.principal!.id,
+      sessionId,
+      currentPassword: input.currentPassword,
+      newPassword: input.newPassword,
+      subjectHash: subjectHashOf(req),
+    })
+    sendData(res, { changed: true })
   } catch (error) {
     next(error)
   }

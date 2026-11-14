@@ -88,6 +88,27 @@ export async function updateLastLogin(userId: string): Promise<void> {
   await pool.query('UPDATE users SET last_login_at = now() WHERE id = $1', [userId])
 }
 
+/**
+ * 改密写入：更新口令哈希，并撤销该用户「除当前会话外」的全部会话。
+ *
+ * 两条语句必须同事务：否则「密码改了、旧会话还在」会留下一个用旧口令登录的
+ * 活会话，等于改密没生效。保留当前会话让操作者不掉线，符合用户预期。
+ * 用最小 Executor 接口注入，使同一段 SQL 可在测试里跑 PGlite 内存库。
+ */
+export async function runPasswordChange(
+  executor: { query(sql: string, params: unknown[]): Promise<{ rows: unknown[] }> },
+  input: { userId: string; passwordHash: string; keepSessionId: string },
+): Promise<void> {
+  await executor.query('UPDATE users SET password_hash = $2 WHERE id = $1', [
+    input.userId,
+    input.passwordHash,
+  ])
+  await executor.query('DELETE FROM sessions WHERE user_id = $1 AND id <> $2', [
+    input.userId,
+    input.keepSessionId,
+  ])
+}
+
 // ── 会话 ────────────────────────────────────────────────────────────
 
 export type SessionRow = {

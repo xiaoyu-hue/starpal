@@ -4,7 +4,29 @@
 
 ## [Unreleased]
 
-`M4` 互动域收尾中：通知中心已上线，邀请制改为一人一码；仅余统一发版与验证记录回填。
+`M4` 互动域收尾中：通知中心、一人一码邀请制、自助改密已上线；仅余统一发版。
+
+### 新增（自助改密）
+
+- 新增 `POST /api/auth/change-password`：登录后凭当前密码设置新密码，`requireAuth` 守卫；新密码复用注册的 `PASSWORD_MIN/MAX`（12–128）与 Argon2id 参数。
+- 改密在同一事务内完成「更新口令哈希 + 撤销该用户除当前会话外的全部会话」：其它设备强制重新登录，当前设备不掉线。
+- 新增独立失败限流 `password_change_fail`（与登录失败同阈值但独立计数），新增 `password_change_ok` 事件留痕；`SECURITY_EVENT_KINDS` 与架构文档同步。
+- 前端设置页新增「修改密码」分区（`web/src/features/profile/PasswordSection.tsx`）：当前 / 新 / 确认三次输入、即时校验、成功后提示其它设备需重新登录。
+- 密码长度常量抽到 `web/src/config/auth-constants.ts`，注册表单与改密表单共用，消除数字重复。
+- 新增测试 `server/tests/integration/password-change.test.ts`（6 项）：哈希更新、只撤销其它会话、不影响他人会话、Argon2id 往返与损坏哈希容错。测试数 51 → 57。
+
+### 新增（协作与文档同步规则）
+
+- 新增根目录 `AGENTS.md`：给 AI Agent 的项目级协作规则（三档授权、决策三问、调试三步、安全红线、质量门、文档同步、提交推送规范）。
+- 新增 `docs/DOC_SYNC.md`：文档与版本同步规范，按星聚实际确立唯一真源（版本号 `package.json`、数字看 `verify` 输出、功能状态看公告真源与代码），含触发时机、同步清单、发布前验证与已知易漂移点。
+- 两份新文档补进 `LICENSE-docs` 适用范围。
+
+### 变更（文档与配置同步）
+
+- 社区公告新增「可以自己改密码了」条目；「当前进度」未完成清单由六项更正为四项，并写明此前把「自行删除帖子」误列为未完成（该功能早已可用）。
+- `.env.example` 移除已下线的 `INVITE_CODE`（统一邀请码早已改为一人一码）。
+- `ARCHITECTURE.md`：路由表补 `change-password`、`security_events.kind` 补两种新事件、auth 模块职责补「自助改密」。
+- `IMPLEMENTATION-PLAN.md`：M4 交付物补自助改密，新增 `VR-M4-10` 真实浏览器与端到端验证记录。
 
 ### 新增（通知中心）
 

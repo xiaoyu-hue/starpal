@@ -217,6 +217,8 @@ export const SECURITY_EVENT_KINDS = [
   'login_ok',
   'login_fail',
   'honeypot',
+  'password_change_ok',
+  'password_change_fail',
 ] as const
 export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number]
 

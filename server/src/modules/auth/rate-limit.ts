@@ -36,3 +36,14 @@ export async function enforceLoginFailLimit(subjectHash: string): Promise<void> 
     throw new DomainError('RATE_LIMITED', '登录尝试过于频繁，请稍后再试')
   }
 }
+
+/**
+ * 改密旧口令校验失败限次：与登录失败共用阈值但独立计数，
+ * 避免「已登录会话被用来反复试旧密码」而不触发任何防刷。
+ */
+export async function enforcePasswordChangeLimit(subjectHash: string): Promise<void> {
+  const fails = await countEvents('password_change_fail', subjectHash, appEnv.rateLimitWindowSeconds)
+  if (fails >= appEnv.loginFailMax) {
+    throw new DomainError('RATE_LIMITED', '尝试次数过多，请稍后再试')
+  }
+}

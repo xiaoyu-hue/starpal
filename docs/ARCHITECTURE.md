@@ -418,7 +418,7 @@ server/
 
 | 模块 | 主要职责 | 主要表 |
 | --- | --- | --- |
-| `auth` | 注册、登录、登出、会话、邀请码、失败限次 | `users` `sessions` `security_events` |
+| `auth` | 注册、登录、登出、会话、邀请码、自助改密、失败限次 | `users` `sessions` `security_events` |
 | `users` | 资料读写、公开资料投影、账号删除与擦除 | `users` `user_profiles` |
 | `posts` | 帖子 CRUD、可见性、计数、相关帖子 | `posts` |
 | `comments` | 评论发表、列表、移除 | `comments` |
@@ -584,6 +584,7 @@ sequenceDiagram
 | POST | `/api/auth/login` | 访客 | 登录 |
 | POST | `/api/auth/logout` | 登录 | 登出 |
 | GET | `/api/auth/me` | 登录 | 当前会话用户 |
+| POST | `/api/auth/change-password` | 登录 | 自助改密（校验当前口令，成功后撤销其它会话） |
 
 **用户与资料**
 
@@ -819,7 +820,7 @@ erDiagram
 | 字段 | 类型 | 约束 | 说明 |
 | --- | --- | --- | --- |
 | `id` | `BIGSERIAL` | PK | — |
-| `kind` | `VARCHAR(32)` | NOT NULL | `register` / `login_fail` / `login_ok` / `honeypot` |
+| `kind` | `VARCHAR(32)` | NOT NULL | `register` / `login_fail` / `login_ok` / `honeypot` / `password_change_ok` / `password_change_fail` |
 | `subject_hash` | `VARCHAR(64)` | NOT NULL | 来源不可逆摘要，不存原始地址 |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | 时间 |
 

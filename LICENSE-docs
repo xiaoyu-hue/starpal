@@ -14,8 +14,8 @@ International**（知识共享 署名—非商业性使用—相同方式共享 
 
 本许可适用于本仓库中的**文档与文字内容**，具体包括：
 
-- `docs/` 目录下的全部文档：`PRD.md`、`ARCHITECTURE.md`、`IMPLEMENTATION-PLAN.md`、`DEPLOYMENT.md`
-- 根目录说明性文档：`README.md`、`CHANGELOG.md`、`THIRD-PARTY-NOTICES.md`
+- `docs/` 目录下的全部文档：`PRD.md`、`ARCHITECTURE.md`、`IMPLEMENTATION-PLAN.md`、`DEPLOYMENT.md`、`DOC_SYNC.md`
+- 根目录说明性文档：`README.md`、`CHANGELOG.md`、`THIRD-PARTY-NOTICES.md`、`TRADEMARK.md`、`AGENTS.md`
 - 上述文档中的插图、示意图与表格
 
 **不适用于源代码与品牌资产。**

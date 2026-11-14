@@ -58,3 +58,11 @@ export async function deleteOwnAccount(): Promise<void> {
 export async function eraseOwnAccount(): Promise<void> {
   await apiPost<{ erased: boolean }>('users/me/erase')
 }
+
+/** 自助改密：校验当前口令后写入新口令，成功后其它设备的登录会失效。 */
+export async function changePassword(input: {
+  currentPassword: string
+  newPassword: string
+}): Promise<void> {
+  await apiPost<{ changed: boolean }>('auth/change-password', input)
+}

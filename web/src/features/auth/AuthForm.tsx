@@ -3,6 +3,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
+import { PASSWORD_MAX, PASSWORD_MIN } from '../../config/auth-constants'
 import { ApiError } from '../../lib/api-client'
 import type { LoginPayload, RegisterPayload } from '../../types/api'
 import { useAuth } from './AuthProvider'
@@ -12,8 +13,6 @@ import { useAuth } from './AuthProvider'
 const USERNAME_MIN = 3
 const USERNAME_MAX = 32
 const USERNAME_PATTERN = /^[A-Za-z0-9_]+$/
-const PASSWORD_MIN = 12
-const PASSWORD_MAX = 128
 const DISPLAY_NAME_MAX = 64
 
 type Mode = 'login' | 'register'

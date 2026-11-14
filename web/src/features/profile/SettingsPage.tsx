@@ -14,6 +14,7 @@ import {
   ZODIAC_VALUES,
 } from '../../config/profile-constants'
 import { AccountSection, Field, Select, ThemeSection, AboutSection } from './SettingsSections'
+import { PasswordSection } from './PasswordSection'
 import type { OwnProfile } from '../../types/api'
 
 /** 设置页编排：资料编辑、主题、关于与账号。由路由级 RequireAuth 守卫进入。 */
@@ -41,6 +42,7 @@ export function SettingsPage() {
     <div className="mx-auto max-w-2xl space-y-4">
       <h1 className="text-xl font-semibold text-ink">设置</h1>
       <ProfileSection key={query.data.username} profile={query.data} onSaved={refresh} />
+      <PasswordSection />
       <ThemeSection />
       <AboutSection />
       {user?.role === 'admin' && (

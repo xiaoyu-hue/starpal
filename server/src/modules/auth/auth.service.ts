@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { APP_VERSION } from '../../config/constants.js'
+import { withTransaction } from '../../db/pool.js'
 import { DomainError } from '../../shared/errors.js'
 import {
   createUser,
@@ -8,11 +9,13 @@ import {
   findUserById,
   findUserByUsername,
   insertSession,
+  runPasswordChange,
   updateLastLogin,
 } from './auth.repository.js'
 import { hashPassword, verifyPassword } from './password.js'
 import {
   enforceLoginFailLimit,
+  enforcePasswordChangeLimit,
   enforceRateLimit,
   note,
 } from './rate-limit.js'
@@ -126,6 +129,41 @@ export async function login(input: {
 /** 登出：删除服务端会话行，Cookie 由控制器清除。 */
 export async function logout(sessionId: string | null): Promise<void> {
   if (sessionId) await deleteSession(sessionId)
+}
+
+/**
+ * 自助改密（登录后）：校验旧口令 → 写新哈希 → 撤销其它会话，后两步同事务。
+ *
+ * 安全要点：
+ * - 旧口令错误按 AUTH_FAILED_MESSAGE 之外的中性提示返回，并计入独立失败限流，
+ *   防止已登录会话被当成「无限次试旧密码」的入口；
+ * - 新口令复用注册的 PASSWORD_MIN/MAX 与 Argon2id 参数，不另立强度口径；
+ * - 成功后删除该用户除当前会话外的全部会话：改密即让其它设备重新登录，
+ *   但不踢掉正在操作的这一台，避免「改完就被登出」的困惑。
+ */
+export async function changePassword(input: {
+  userId: string
+  sessionId: string
+  currentPassword: string
+  newPassword: string
+  subjectHash: string
+}): Promise<void> {
+  await enforcePasswordChangeLimit(input.subjectHash)
+  const row = await findUserById(input.userId)
+  const ok = await verifyPassword(input.currentPassword, row?.password_hash ?? DUMMY_HASH)
+  if (!row || !ok) {
+    await note('password_change_fail', input.subjectHash)
+    throw new DomainError('INVALID_CREDENTIALS', '当前密码不正确')
+  }
+  const passwordHash = await hashPassword(input.newPassword)
+  await withTransaction((client) =>
+    runPasswordChange(client, {
+      userId: input.userId,
+      passwordHash,
+      keepSessionId: input.sessionId,
+    }),
+  )
+  await note('password_change_ok', input.subjectHash)
 }
 
 /** 当前会话用户：会话无效或账户不可用一律返回未授权。 */
