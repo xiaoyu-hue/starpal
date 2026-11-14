@@ -5,6 +5,7 @@ import { Avatar, Badge, Card } from '../../../components/ui/Primitives'
 import { EmptyState, ErrorState } from '../../../components/feedback/States'
 import { ApiError } from '../../../lib/api-client'
 import type { PostStatus } from '../../../types/api'
+import { CommentSection } from '../components/CommentSection'
 import { PostActions } from '../components/PostActions'
 import { PostInteractions } from '../components/PostInteractions'
 import { PostImages } from '../../../components/content/PostImages'
@@ -23,7 +24,7 @@ function formatTime(iso: string): string {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('zh-CN')
 }
 
-/** 帖子详情页：完整正文 + 作者与时间 + 作者操作 + 同话题内容 + 评论区占位。 */
+/** 帖子详情页：完整正文 + 作者与时间 + 作者操作 + 评论区 + 同话题内容。 */
 export function PostDetailPage() {
   const { id: rawId = '' } = useParams<{ id: string }>()
   const id = Number(rawId)
@@ -152,12 +153,7 @@ export function PostDetailPage() {
         </Card>
       </article>
 
-      <Card className="p-5 text-center">
-        <p className="text-sm font-medium text-ink">评论功能即将开放</p>
-        <p className="mt-1 text-xs text-muted">
-          点赞与收藏已可交互。评论区正在开发中，届时这里会直接显示评论列表。
-        </p>
-      </Card>
+      <CommentSection postId={post.id} commentCount={post.commentCount} />
 
       <RelatedPosts postId={post.id} />
     </div>

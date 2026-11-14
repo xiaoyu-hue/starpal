@@ -1,5 +1,5 @@
 import { apiDelete, apiGet, apiPatch, apiPost, apiPut, apiUpload } from '../../lib/api-client'
-import type { FeedPost, PostDetail, UploadedImage } from '../../types/api'
+import type { CommentItem, CommentPage, FeedPost, PostDetail, UploadedImage } from '../../types/api'
 
 /** 帖子写读接口：只描述路径与载荷，传输与错误归一化由 api-client 统一承担。 */
 
@@ -83,4 +83,35 @@ export async function setPostBookmark(
 /** 移除一张图片（作者或管理员）。 */
 export async function deletePostImage(postId: number, imageId: number): Promise<void> {
   await apiDelete<{ deleted: boolean }>(`posts/${postId}/images/${imageId}`)
+}
+
+/**
+ * 评论列表：`data` 为数组、分页信息在 `meta`，与信息流同一包络形状。
+ * 时间倒序（最新在上），游标对客户端不透明。
+ */
+export async function fetchComments(
+  postId: number,
+  cursor?: string,
+  signal?: AbortSignal,
+): Promise<CommentPage> {
+  const envelope = await apiGet<CommentItem[]>('posts/' + postId + '/comments', {
+    signal,
+    params: { cursor },
+  })
+  const meta = (envelope.meta ?? {}) as { nextCursor?: unknown; hasMore?: unknown }
+  return {
+    items: envelope.data,
+    nextCursor: typeof meta.nextCursor === 'string' ? meta.nextCursor : null,
+    hasMore: meta.hasMore === true,
+  }
+}
+
+export async function createComment(postId: number, body: string): Promise<CommentItem> {
+  const envelope = await apiPost<CommentItem>(`posts/${postId}/comments`, { body })
+  return envelope.data
+}
+
+/** 删除走评论自身路径，不需要帖子 id。 */
+export async function deleteComment(commentId: number): Promise<void> {
+  await apiDelete<{ deleted: boolean }>(`comments/${commentId}`)
 }

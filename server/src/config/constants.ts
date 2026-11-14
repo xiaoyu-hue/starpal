@@ -53,6 +53,8 @@ export const POST_IMAGES_MAX = 9
  * 长度按 **Unicode 码点** 计（emoji 算 1），与 PostgreSQL `char_length` 同口径。
  */
 export const COMMENT_BODY_MAX = 2000
+/** 评论最小长度：归一化首尾空白后至少 1 个字符，与数据库的非空约束同源。 */
+export const COMMENT_BODY_MIN = 1
 /** 评论列表默认页大小；与信息流一致的游标分页口径。 */
 export const COMMENT_PAGE_SIZE = 20
 /** 评论列表分页上限，防止单次拉取过多。 */

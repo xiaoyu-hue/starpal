@@ -142,7 +142,7 @@ export async function deletePost(id: number, viewer: Viewer): Promise<void> {
 }
 
 /**
- * 供附属能力复用（图片上传等）：确认调用方可以改动该帖子。
+ * 供附属能力复用（图片上传、评论等）：确认调用方可以改动该帖子。
  *
  * 判定与 `updatePost` 完全一致，两处共用 `authorize`，避免权限规则在模块间漂移。
  * 返回主键字符串形式，调用方无需再解析内部类型。
@@ -159,6 +159,20 @@ export async function ensurePostEditable(
     throw new DomainError('FORBIDDEN', '内容已被移除，无法修改')
   }
   return { authorId: String(existing.authorId) }
+}
+
+/** 帖子引用的最小投影：供评论等附属模块判定可见性与归属，不暴露完整记录。 */
+export type PostRef = { id: number; authorId: string; status: string }
+
+/**
+ * 取帖子并做可见性判定；不可见一律按不存在处理。
+ * 与详情接口同一套 `authorize`，避免「详情看不到却能评论」这类入口不一致。
+ */
+export async function loadVisiblePost(id: number, viewer: Viewer): Promise<PostRef> {
+  const record = await findPostById(id)
+  if (record === null) throw new DomainError('NOT_FOUND', '帖子不存在')
+  authorize(record, viewer)
+  return { id: record.id, authorId: String(record.authorId), status: record.status }
 }
 
 /**

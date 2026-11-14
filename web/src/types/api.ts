@@ -166,6 +166,25 @@ export type ProfileUpdatePayload = Partial<{
 /** 公开个人页帖子：与主信息流同一投影与游标规则。 */
 export type UserPostsPage = FeedPage
 
+/** 评论项：与 server/src/modules/comments/comment.types.ts 一致。 */
+export type CommentItem = {
+  id: number
+  body: string
+  /** `removed` 仅管理员在详情页可见，普通读者拿不到这类记录。 */
+  status: 'published' | 'removed'
+  /** 已注销作者的署名由服务端降级为「已注销用户」。 */
+  author: { username: string; displayName: string; avatarUrl: string | null }
+  createdAt: string
+  isAuthor: boolean
+  canRemove: boolean
+}
+
+export type CommentPage = {
+  items: CommentItem[]
+  nextCursor: string | null
+  hasMore: boolean
+}
+
 /** 元信息（说明页文案）：只读常量经 /api/meta/* 下发，与后端 config/constants 一致。 */
 
 /** 社区准则：与 server/src/config/constants.ts 的 GUIDELINES 一致。 */

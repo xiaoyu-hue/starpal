@@ -1,11 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { feedKeys } from '../feed'
 import { profileKeys } from '../profile'
 import type { PostDetail } from '../../types/api'
 import {
+  createComment,
   createPost,
+  deleteComment,
   deletePost,
   deletePostImage,
+  fetchComments,
   fetchPostDetail,
   fetchRelatedPosts,
   setPostBookmark,
@@ -21,6 +24,7 @@ export const postKeys = {
   all: ['post'] as const,
   detail: (id: number) => ['post', 'detail', id] as const,
   related: (id: number) => ['post', 'related', id] as const,
+  comments: (id: number) => ['post', 'comments', id] as const,
 }
 
 export function usePostDetailQuery(id: number) {
@@ -177,4 +181,44 @@ export function useBookmarkMutation(id: number) {
       )
     },
   })
+}
+
+/**
+ * 评论沿用与信息流一致的游标链：每页独立缓存，翻页只追加不重排。
+ * 倒序排列（最新在上）由服务端保证，前端不再本地排序——本地排序会在
+ * 新评论插入后把用户正在阅读的位置挤走。
+ */
+export function useCommentsQuery(postId: number) {
+  return useInfiniteQuery({
+    queryKey: postKeys.comments(postId),
+    queryFn: ({ pageParam, signal }) => fetchComments(postId, pageParam ?? undefined, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextCursor : undefined),
+    enabled: Number.isInteger(postId) && postId > 0,
+  })
+}
+
+/**
+ * 发表 / 删除后必须同时失效三处：评论链本身、帖子详情（`commentCount` 变了）、
+ * 信息流（卡片上的评论数）。只失效评论链会让详情页数字停在旧值。
+ */
+export function useCommentMutation(postId: number) {
+  const client = useQueryClient()
+  const invalidate = async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: postKeys.comments(postId) }),
+      client.invalidateQueries({ queryKey: postKeys.detail(postId) }),
+      client.invalidateQueries({ queryKey: feedKeys.all }),
+    ])
+  }
+
+  const create = useMutation({
+    mutationFn: (body: string) => createComment(postId, body),
+    onSuccess: invalidate,
+  })
+  const remove = useMutation({
+    mutationFn: (commentId: number) => deleteComment(commentId),
+    onSuccess: invalidate,
+  })
+  return { create, remove }
 }
