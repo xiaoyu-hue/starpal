@@ -9,7 +9,7 @@ import { PRODUCT_SCOPE_SECTIONS } from './docs/product-scope.doc.js'
 import { PRODUCT_META, PRODUCT_SECTIONS } from './docs/product.doc.js'
 import { TERMS_META, TERMS_SECTIONS } from './docs/terms.doc.js'
 
-export const APP_VERSION = '1.2.0'
+export const APP_VERSION = '1.3.0'
 
 export const FEED_TABS = ['recommended', 'latest', 'popular'] as const
 export type FeedTab = (typeof FEED_TABS)[number]

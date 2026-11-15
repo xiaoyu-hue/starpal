@@ -44,19 +44,18 @@ describe('关于页许可与源码信息', () => {
  * 代码里只剩「发布记录」档案。测试若继续找 `kind === 'status'` 的常量会全线失败，
  * 而正确的真源变成了「数据库里那条种子最初长什么样」——即迁移文件本身。
  *
- * 拼接 016 与 017：016 是初始种子，017 修正了摘要并追加通知范围说明。
- * 只读 016 会漏掉后续修正，等于让真源停在旧版本上。
+ * 拼接 016 / 017 / 018：016 是初始种子，017 修正摘要并追加通知范围说明，
+ * 018 让摘要不再枚举会漂移的「未开始」项。只读 016 会让真源停在旧版本上。
  */
 const STATUS_SEED_SQL = [
-  readFileSync(
-    fileURLToPath(new URL('../../src/db/migrations/016_announcements.sql', import.meta.url)),
-    'utf8',
-  ),
-  readFileSync(
-    fileURLToPath(new URL('../../src/db/migrations/017_status_announcement_scope.sql', import.meta.url)),
-    'utf8',
-  ),
-].join('\n')
+  '016_announcements.sql',
+  '017_status_announcement_scope.sql',
+  '018_status_summary_no_enumeration.sql',
+]
+  .map((file) =>
+    readFileSync(fileURLToPath(new URL(`../../src/db/migrations/${file}`, import.meta.url)), 'utf8'),
+  )
+  .join('\n')
 
 /** 已交付能力：关于页与公告种子必须同时列出，任一处漏写即为漂移。 */
 const DELIVERED = [
@@ -116,17 +115,17 @@ describe('关于页自述与公告种子口径一致', () => {
    * 而同一行正文列着三项「尚未开始」；右栏卡片只显示摘要，用户会以为全站完工。
    * 017 修正了摘要并追加通知范围说明，这里把两条都钉住。
    */
-  it('017 已修正摘要，不再声称「没有未完成项」', () => {
+  it('017 / 018 已修正摘要，不再枚举「未开始」项', () => {
     const fix = readFileSync(
       fileURLToPath(
-        new URL('../../src/db/migrations/017_status_announcement_scope.sql', import.meta.url),
+        new URL('../../src/db/migrations/018_status_summary_no_enumeration.sql', import.meta.url),
       ),
       'utf8',
     )
-    assert.ok(fix.includes('尚未开始'), '017 的新摘要未写出未开始项')
+    assert.ok(fix.includes('核心功能已交付'), '018 的新摘要应写明「核心功能已交付」')
     assert.ok(
-      fix.includes('核心功能已交付'),
-      '017 的摘要应改为「核心功能已交付；…尚未开始」的口径',
+      fix.includes('详见下方清单'),
+      '018 的摘要应指向正文清单，而不是自己枚举——枚举必然漂移',
     )
   })
 
