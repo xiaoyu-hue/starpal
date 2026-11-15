@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState, type KeyboardEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import type { FeedTab } from '../../../types/api'
 import { EmptyState } from '../../../components/feedback/States'
 import { mergeFeedPages } from '../../../lib/pagination'
@@ -16,6 +16,10 @@ export function HomePage() {
   const [tab, setTab] = useState<FeedTab>('recommended')
   const query = useFeedQuery(tab)
   const navigate = useNavigate()
+  // 角色守卫把非管理员弹回首页时会带一句 notice（guards.tsx），这里负责把它显示出来。
+  // 不接这句话，用户只会看到自己莫名其妙被扔回首页，不知道发生了什么。
+  const location = useLocation()
+  const notice = (location.state as { notice?: string } | null)?.notice
 
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = query
   const sentinelRef = useFeedSentinel(hasNextPage, isFetchingNextPage, () => {
@@ -54,6 +58,15 @@ export function HomePage() {
         </div>
         <FeedTabs value={tab} onChange={setTab} />
       </div>
+
+      {notice ? (
+        <p
+          role="status"
+          className="mb-4 rounded-sm border border-line bg-subtle px-4 py-3 text-sm text-ink"
+        >
+          {notice}
+        </p>
+      ) : null}
 
       <div role="feed" aria-busy={query.isPending || undefined} onKeyDown={handleKeyDown}>
         <FeedView
