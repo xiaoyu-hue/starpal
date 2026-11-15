@@ -77,6 +77,9 @@ const MyReportsPage = lazy(() =>
 const AdminReportsPage = lazy(() =>
   import('../features/reports/AdminReportsPage').then((m) => ({ default: m.AdminReportsPage })),
 )
+const AdminAnnouncementsPage = lazy(() =>
+  import('../features/announcements').then((m) => ({ default: m.AdminAnnouncementsPage })),
+)
 const AboutPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.AboutPage })),
 )
@@ -168,6 +171,14 @@ const routes: RouteObject[] = [
         element: (
           <RequireRole role="admin">
             <Suspended><AdminReportsPage /></Suspended>
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'admin/announcements',
+        element: (
+          <RequireRole role="admin">
+            <Suspended><AdminAnnouncementsPage /></Suspended>
           </RequireRole>
         ),
       },

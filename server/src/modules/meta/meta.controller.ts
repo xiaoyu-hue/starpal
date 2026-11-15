@@ -2,7 +2,6 @@
 import type { Request, Response } from 'express'
 import {
   ABOUT,
-  ANNOUNCEMENTS,
   DISCLAIMER,
   GUIDELINES,
   PRIVACY,
@@ -14,11 +13,6 @@ import { sendData } from '../../shared/response.js'
 /** 社区准则：只读常量，不依赖数据库。长文正文在 config/docs 下。 */
 export function metaController(_req: Request, res: Response): void {
   sendData(res, GUIDELINES)
-}
-
-/** 社区公告：与右栏卡片、/announcements 页共用同一份常量。 */
-export function announcementsController(_req: Request, res: Response): void {
-  sendData(res, ANNOUNCEMENTS)
 }
 
 /** 隐私说明：每一条都与当前后端行为对应，未实现的能力标注为缺口。 */

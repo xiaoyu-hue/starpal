@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** 应用级常量：限制阈值、状态枚举、排序权重集中于此，禁止散落业务代码。 */
-import { ANNOUNCEMENT_ITEMS } from './docs/announcements.doc.js'
 import { ABOUT_DOC } from './docs/about.doc.js'
 import { DISCLAIMER_LIABILITY_SECTIONS } from './docs/disclaimer-liability.doc.js'
 import { DISCLAIMER_META, DISCLAIMER_SECTIONS } from './docs/disclaimer.doc.js'
@@ -106,16 +105,6 @@ export const GUIDELINES = {
   ...GUIDELINES_META,
   sections: GUIDELINES_SECTIONS,
 }
-
-/**
- * 社区公告：条目在 docs/announcements.doc.ts，此处只做组装。
- * 右侧栏卡片与 /announcements 页读同一份数据，只有一个真相源。
- */
-export const ANNOUNCEMENTS = {
-  version: APP_VERSION,
-  title: '社区公告',
-  items: ANNOUNCEMENT_ITEMS,
-} as const
 
 // ── M2-S5 说明页（只读常量，不依赖数据库）─────────────────────────────
 // 文案随代码版本化，与前端 /api/meta/* 接口一一对应，避免表述与实现对不上。

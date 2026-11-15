@@ -82,23 +82,42 @@ export type MetaAbout = {
   feedback: { heading: string; paragraphs: string[] }
 }
 
-/** 公告类型：决定页面上的标签样式，与后端 AnnouncementKind 一一对应。 */
-export type AnnouncementKind = 'feature' | 'fix' | 'rule' | 'status'
+/**
+ * 公告类型：决定页面上的标签样式，与后端 `AnnouncementKind` 一一对应。
+ * `notice` 是运营通知（维护、提醒），`status` 是「当前进度」这类活文档。
+ */
+export type AnnouncementKind = 'feature' | 'fix' | 'rule' | 'status' | 'notice'
 
-/** 单条公告：摘要供右栏卡片，changes 为公告页明细，action 为需要用户配合的事项。 */
-export type Announcement = {
-  date: string
+/**
+ * 单条公告视图：档案与库内公告共用同一种形状，前端只写一套渲染。
+ * `source` 区分来源——档案随代码走、不可编辑，通知在库里、运营者随时可改。
+ */
+export type AnnouncementView = {
+  id: string
   kind: AnnouncementKind
   title: string
   summary: string
-  changes: string[]
-  action?: string
+  points: string[]
+  action: string | null
+  date: string
+  pinned: boolean
+  source: 'notice' | 'history'
 }
 
-/** 社区公告：与后端 ANNOUNCEMENTS 一致，条目按时间倒序。 */
-export type MetaAnnouncements = {
-  version: string
-  title: string
-  items: Announcement[]
+/** 社区公告：置顶、通知、历史档案三段分开返回，由后端拼好，前端按段渲染。 */
+export type AnnouncementFeed = {
+  pinned: AnnouncementView[]
+  notices: AnnouncementView[]
+  history: AnnouncementView[]
+}
+
+export type AnnouncementStatus = 'draft' | 'published'
+
+/** 管理列表条目：比公开视图多出草稿状态与时间，供编辑表单回填。 */
+export type AdminAnnouncement = AnnouncementView & {
+  numericId: number
+  status: AnnouncementStatus
+  updatedAt: string
+  createdAt: string
 }
 

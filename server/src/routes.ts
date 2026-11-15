@@ -3,13 +3,13 @@ import { Router } from 'express'
 import { healthController } from './modules/health/health.controller.js'
 import {
   aboutController,
-  announcementsController,
   disclaimerController,
   metaController,
   privacyController,
   productController,
   termsController,
 } from './modules/meta/meta.controller.js'
+import { announcementsFeedController } from './modules/announcements/index.js'
 import { authRouter } from './modules/auth/auth.routes.js'
 import { adminRouter } from './modules/admin/admin.routes.js'
 import { reportRouter } from './modules/reports/index.js'
@@ -42,7 +42,7 @@ apiRouter.get('/health', healthController)
 apiRouter.get('/meta/guidelines', metaController)
 apiRouter.get('/meta/privacy', privacyController)
 apiRouter.get('/meta/terms', termsController)
-apiRouter.get('/meta/announcements', announcementsController)
+apiRouter.get('/meta/announcements', announcementsFeedController)
 apiRouter.get('/meta/about', aboutController)
 apiRouter.get('/meta/disclaimer', disclaimerController)
 apiRouter.get('/meta/product', productController)

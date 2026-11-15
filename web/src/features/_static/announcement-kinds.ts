@@ -14,4 +14,6 @@ export const ANNOUNCEMENT_KIND_META: Record<
   fix: { label: '修复', variant: 'neutral' },
   rule: { label: '规则', variant: 'neutral' },
   status: { label: '当前状态', variant: 'warn' },
+  // 运营通知单独一档：它既不是功能发布、也不是规则，用最轻的标签避免抢注意力。
+  notice: { label: '通知', variant: 'accent' },
 }

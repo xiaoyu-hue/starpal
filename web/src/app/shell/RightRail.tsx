@@ -45,7 +45,10 @@ export function RightRail() {
   const topicsQuery = useTopicsQuery()
   const announcementsQuery = useAnnouncementsQuery()
   const recommendedQuery = useFeedQuery('recommended')
-  const latest = announcementsQuery.data?.items[0]
+  const feed = announcementsQuery.data
+  // 置顶（当前状态 / 重要提醒）优先，其次最新运营通知，最后才是历史档案。
+  // 右栏只放一条：它是提示，不是公告的第二个列表页。
+  const latest = feed ? (feed.pinned[0] ?? feed.notices[0] ?? feed.history[0]) : undefined
   // 后端新增类型时老代码不该整块崩掉：取不到就退回「新增功能」，宁可标签不准也不要白屏。
   const latestKind = latest
     ? (ANNOUNCEMENT_KIND_META[latest.kind] ?? ANNOUNCEMENT_KIND_META.feature)

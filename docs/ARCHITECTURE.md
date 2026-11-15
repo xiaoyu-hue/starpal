@@ -397,7 +397,7 @@ server/
 │   │   ├── bookmarks/  ├── messages/     ├── notifications/
 │   │   ├── achievements/ ├── reports/    ├── moderation/
 │   │   ├── uploads/    ├── search/       ├── images/
-│   │   ├── export/
+│   │   ├── export/     ├── announcements/
 │   │   └── admin/      # 薄聚合层：仅组合上述模块的管理视图
 │   ├── shared/
 │   │   ├── errors.ts           # 领域错误与错误码
@@ -417,7 +417,7 @@ server/
 
 ### 5.3 模块清单（v1.0 冻结）
 
-> 本表是架构设计阶段的模块划分。其中 `search`（M5-S3）、`messages`（M5-S1）、`achievements`（M5-S2）与 `export`（M5-S4）已落地，职责与表归属与本表一致；`moderation` 仍未实现。当前已落地的举报 / 申诉、私信、成就与导出端点见 §6.2 末尾的「当前已落地」小表。
+> 本表是架构设计阶段的模块划分。其中 `search`（M5-S3）、`messages`（M5-S1）、`achievements`（M5-S2）、`export`（M5-S4）与 `announcements`（M6-S0）已落地，职责与表归属与本表一致；`moderation` 仍未实现。当前已落地的举报 / 申诉、私信、成就、导出与公告端点见 §6.2 末尾的「当前已落地」小表。
 
 | 模块 | 主要职责 | 主要表 |
 | --- | --- | --- |
@@ -436,6 +436,7 @@ server/
 | `uploads` | 上传校验、重编码、存储与清理 | `post_images` |
 | `search` | 帖子与话题检索 | `posts` `topics` |
 | `export` | 用户数据导出 | 跨表只读 |
+| `announcements` | 运营通知与「当前状态」的读写；发布记录（历史档案）仍走代码常量 | `announcements` |
 | `admin` | 管理视图聚合、统计 | 跨模块只读 |
 
 ### 5.4 中间件链（顺序固定）
@@ -719,6 +720,25 @@ sequenceDiagram
 | GET | `/api/export?format=md|json` | 登录 | 导出本人全部帖子（含草稿与软删除，标注状态）、评论、图片引用与资料字段；`format` 仅接受 `json` / `md`，缺省为 `json` |
 
 > 实现口径（与 §7.7 的规划一致，三处细化）：① **响应体直写，不套 `{ data }` 包络**——导出物是一个文件，包一层会让任何外部工具读不出顶层 `user`，与 `scripts/export-check.mjs` 的契约冲突；② **图片只导出 `/api/images/<storage_key>` 引用**，不含 `image_blobs` 二进制，因为 Serverless 响应体上限 4.5 MB，含二进制会让下载随机失败；③ **没有导入端点，且不计划新增**——一份个人文件重建不出作者关系、时间线与互动，整站恢复由 `pg_dump` 逻辑备份承担（`DEPLOYMENT.md §10`）。范围在 SQL 层用 `WHERE author_id = $1` 收敛，不在应用层过滤。响应带 `Content-Disposition: attachment`、`Cache-Control: no-store`、`X-Content-Type-Options: nosniff`。
+
+**当前已落地：社区公告（2026-11-15，迁移 `016_announcements.sql`）**
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/meta/announcements` | 公开 | 三段式返回：`pinned`（置顶）、`notices`（运营通知）、`history`（代码里的发布记录） |
+| GET | `/api/admin/announcements` | 管理员 | 管理列表，含草稿，按最后修改倒序 |
+| POST | `/api/admin/announcements` | 管理员 | 新建；`status=draft|published` 决定是否立即公开 |
+| PATCH | `/api/admin/announcements/:id` | 管理员 | 编辑 / 发布 / 撤回 / 置顶，字段级部分更新 |
+| DELETE | `/api/admin/announcements/:id` | 管理员 | 软删除（保留行，误删可打捞） |
+
+> **分层（本次改造的核心）**：公告被拆成三种性质，只有后两种进数据库。
+> ① **发布记录**——功能上线说明，属历史档案，随代码版本走（`config/docs/announcements.doc.ts`），没有写入口；
+> ② **当前状态**——「现在能用什么、还差什么」，属活文档，进库且置顶；
+> ③ **运营通知**——维护、规则提醒，进库，可草稿、可置顶、可删除。
+> 此前三者共用一套结构、一份代码常量，结果是「改状态 = 改历史」：一条 `2026-11-14` 的进度公告被反复改写，
+> 而另一条公告里至今残留「私信仍在开发中」——私信早已交付。分层后，改状态不再触碰档案。
+> `published_at` 与 `status` 由数据库 `CHECK ((status='published') = (published_at IS NOT NULL))` 约束成对变化，
+> 「发布了却没有时间」「草稿被当成已发布」在数据层就不可能发生；编辑标题不会刷新发布时间，避免改错别字等于篡改日期。
 
 ### 6.3 关键请求 / 响应示例
 
@@ -1007,6 +1027,23 @@ erDiagram
 | --- | --- | --- |
 | `achievements` | `code` PK、`name_zh`、`description`、`condition` JSONB、`sort_order`、`is_active` | 用 `code` 作主键而非代理键：成就的身份就是它的语义名；解锁条件以数据表达，新增成就只插一行、不改业务代码。**图标不进数据库**（`015` 移除了 `icon` 列）：用哪个图形属表现层决策，前端按 `code` 自绘 |
 | `user_achievements` | `user_id` FK、`achievement_code` FK、`unlocked_at`、`PRIMARY KEY(user_id, achievement_code)` | 复合主键即「同一用户对同一成就只解锁一次」（`FR-ACH-02`） |
+
+#### `announcements`
+
+> 落地于 `016_announcements.sql`。v1.0 基线里公告是代码常量，没有这张表。
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| `id` | `BIGSERIAL` PK | — | — |
+| `kind` | `VARCHAR(16)` | NOT NULL, `CHECK IN ('feature','fix','rule','status','notice')` | `notice` 为运营通知新增档位 |
+| `title` | `VARCHAR(120)` | NOT NULL, 非空校验 | — |
+| `summary` | `TEXT` | NOT NULL, 非空校验 | 右栏卡片只显示这一段 |
+| `body` | `TEXT` | NOT NULL, DEFAULT `''` | 每行一条要点，前端按行拆分；不存 HTML，避免富文本消毒与 XSS 面 |
+| `is_pinned` | `BOOLEAN` | NOT NULL, DEFAULT false | 置顶优先展示 |
+| `status` | `VARCHAR(16)` | NOT NULL, `CHECK IN ('draft','published')` | — |
+| `published_at` | `TIMESTAMPTZ` | `CHECK ((status='published') = (published_at IS NOT NULL))` | 与状态成对变化；编辑不刷新 |
+| `created_by` / `updated_by` | `BIGINT` | FK → `users.id`, NULL | 运营操作留痕 |
+| `deleted_at` | `TIMESTAMPTZ` | NULL | 软删除，保留正文供打捞 |
 
 #### `reports`
 

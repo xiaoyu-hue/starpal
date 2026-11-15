@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { apiGet } from '../../lib/api-client'
 import type {
+  AnnouncementFeed,
   MetaAbout,
-  MetaAnnouncements,
   MetaDisclaimer,
   MetaGuidelines,
   MetaPrivacy,
@@ -19,8 +19,8 @@ export async function fetchGuidelines(): Promise<MetaGuidelines> {
 }
 
 /** 社区公告：消费 /api/meta/announcements。 */
-export async function fetchAnnouncements(): Promise<MetaAnnouncements> {
-  const envelope = await apiGet<MetaAnnouncements>('meta/announcements')
+export async function fetchAnnouncements(): Promise<AnnouncementFeed> {
+  const envelope = await apiGet<AnnouncementFeed>('meta/announcements')
   return envelope.data
 }
 

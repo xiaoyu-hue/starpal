@@ -10,6 +10,7 @@ import {
   revokeInviteCodeController,
 } from '../invite/index.js'
 import { adminReportsController, decideReportController } from '../reports/index.js'
+import { announcementAdminRouter } from '../announcements/index.js'
 
 /**
  * 管理路由组（挂载于 /api/admin）。
@@ -27,3 +28,5 @@ adminRouter.post('/invite-codes', createInviteCodesController)
 adminRouter.post('/invite-codes/:id/revoke', revokeInviteCodeController)
 adminRouter.get('/reports', adminReportsController)
 adminRouter.post('/reports/:id/decision', decideReportController)
+// 公告管理：运营通知与「当前状态」的增删改与草稿 / 发布 / 置顶。发布记录不在其中（随代码走）。
+adminRouter.use('/announcements', announcementAdminRouter)

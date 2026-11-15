@@ -89,7 +89,7 @@ export function SettingsPage() {
             <KeyRound size={16} /> 运营管理
           </h2>
           <p className="text-sm leading-relaxed text-muted">
-            生成与撤销邀请码，控制谁能注册；查看并处理社区里的举报与申诉。
+            生成与撤销邀请码，控制谁能注册；查看并处理社区里的举报与申诉；编辑社区公告与置顶通知。
           </p>
           <div className="flex flex-wrap gap-2">
             <Link to="/invite-codes" className={buttonClass('secondary', 'sm')}>
@@ -97,6 +97,9 @@ export function SettingsPage() {
             </Link>
             <Link to="/admin/reports" className={buttonClass('secondary', 'sm')}>
               举报与申诉
+            </Link>
+            <Link to="/admin/announcements" className={buttonClass('secondary', 'sm')}>
+              社区公告
             </Link>
           </div>
         </Card>

@@ -209,13 +209,15 @@ export type {
  * 在此 re-export，调用方仍可从 '../../types/api' 引入。
  */
 export type {
-  Announcement,
+  AdminAnnouncement,
+  AnnouncementFeed,
   AnnouncementKind,
+  AnnouncementStatus,
+  AnnouncementView,
   DocBlock,
   DocMeta,
   DocSection,
   MetaAbout,
-  MetaAnnouncements,
   MetaDisclaimer,
   MetaGuidelines,
   MetaPrivacy,

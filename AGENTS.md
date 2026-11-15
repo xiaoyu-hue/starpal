@@ -102,7 +102,7 @@
   - `R4` 版本号一致性：根 / `web` / `server` 三个 `package.json` 与 `APP_VERSION` 同源。
 - **版本号唯一真源**是根 `package.json`（构建注入 `__APP_VERSION__`）。当前 `1.2.0`（`M4` 收尾版本，已发布）；`1.1.0` 早已发布。
   公告按政策不含版本号，日常变更累积在 `CHANGELOG.md` 的 `[Unreleased]`。**别擅自 bump 版本或打 tag**——发版是 🟡 先问类决策，须作者拍板后统一处理。
-- **迁移**：`server/src/db/migrations/` 顺序编号（现到 `015`），只增不改已应用的历史迁移。
+- **迁移**：`server/src/db/migrations/` 顺序编号（现到 `016`），只增不改已应用的历史迁移。
 - 新功能**必须同时新增/更新测试**；测试数、文件数等一切数字以 `npm run verify` 实际输出为准，不写死在文档里。
 - 新增源码文件带 `SPDX-License-Identifier: AGPL-3.0-or-later` 头；`shebang` 脚本插在 `#!` 下一行。
 
