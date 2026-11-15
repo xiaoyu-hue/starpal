@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bookmark, Check, Flag, Heart, KeyRound } from 'lucide-react'
+import { Award, Bookmark, Check, Flag, Heart, KeyRound } from 'lucide-react'
 import { Avatar, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
@@ -13,7 +13,14 @@ import {
   MBTI_VALUES,
   ZODIAC_VALUES,
 } from '../../config/profile-constants'
-import { AccountSection, Field, Select, ThemeSection, AboutSection } from './SettingsSections'
+import {
+  AccountSection,
+  Field,
+  LinkCard,
+  Select,
+  ThemeSection,
+  AboutSection,
+} from './SettingsSections'
 import { PasswordSection } from './PasswordSection'
 import { TitlesSection } from './TitlesSection'
 import type { OwnProfile } from '../../types/api'
@@ -45,45 +52,34 @@ export function SettingsPage() {
       <ProfileSection key={query.data.username} profile={query.data} onSaved={refresh} />
       <PasswordSection />
       <ThemeSection />
-      <Card className="flex flex-wrap items-center justify-between gap-3 p-6">
-        <div>
-          <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
-            <Bookmark size={16} /> 我的收藏
-          </h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
-            收藏的帖子只有你自己能看到，随时可以取消。
-          </p>
-        </div>
-        <Link to="/bookmarks" className={buttonClass('secondary', 'sm')}>
-          查看收藏
-        </Link>
-      </Card>
-      <Card className="flex flex-wrap items-center justify-between gap-3 p-6">
-        <div>
-          <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
-            <Heart size={16} /> 我的点赞
-          </h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
-            点过赞的帖子只有你自己能看到，进帖子详情页可以取消点赞。
-          </p>
-        </div>
-        <Link to="/likes" className={buttonClass('secondary', 'sm')}>
-          查看点赞
-        </Link>
-      </Card>
-      <Card className="flex flex-wrap items-center justify-between gap-3 p-6">
-        <div>
-          <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
-            <Flag size={16} /> 我的提交
-          </h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
-            举报与申诉的处理状态、运营者答复；也可以在这里提交申诉。只有你和运营者能看到。
-          </p>
-        </div>
-        <Link to="/reports" className={buttonClass('secondary', 'sm')}>
-          查看提交
-        </Link>
-      </Card>
+      <LinkCard
+        icon={Bookmark}
+        title="我的收藏"
+        description="收藏的帖子只有你自己能看到，随时可以取消。"
+        to="/bookmarks"
+        action="查看收藏"
+      />
+      <LinkCard
+        icon={Heart}
+        title="我的点赞"
+        description="点过赞的帖子只有你自己能看到，进帖子详情页可以取消点赞。"
+        to="/likes"
+        action="查看点赞"
+      />
+      <LinkCard
+        icon={Flag}
+        title="我的提交"
+        description="举报与申诉的处理状态、运营者答复；也可以在这里提交申诉。只有你和运营者能看到。"
+        to="/reports"
+        action="查看提交"
+      />
+      <LinkCard
+        icon={Award}
+        title="我的成就"
+        description="你在这里留下的记录：发帖、回应、被认可、邀请朋友。已解锁的徽章也会显示在你的公开主页上。"
+        to="/achievements"
+        action="查看成就"
+      />
       <AboutSection />
       {user?.role === 'admin' && (
         <Card className="space-y-3 p-6">

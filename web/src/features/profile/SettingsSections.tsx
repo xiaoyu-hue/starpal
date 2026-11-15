@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react'
-import { RefreshCw, Trash2, UserX } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { RefreshCw, Trash2, UserX, type LucideIcon } from 'lucide-react'
 import { Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
@@ -10,6 +11,39 @@ import { deleteOwnAccount, eraseOwnAccount } from './api'
 
 /** 版本号由构建注入（`web/vite.config.ts` → 包版本），此处不写死。 */
 const APP_VERSION = __APP_VERSION__
+
+/**
+ * 设置页的「一句说明 + 一个入口」卡片。
+ * 收藏、点赞、提交、成就四张完全同构，抽出来避免四处复制；图标用线性图标是
+ * 因为这里的语义是「可以点进去」，与成就页那套实心印章（表示「你做到了」）分工不同。
+ */
+export function LinkCard({
+  icon: Icon,
+  title,
+  description,
+  to,
+  action,
+}: {
+  icon: LucideIcon
+  title: string
+  description: string
+  to: string
+  action: string
+}) {
+  return (
+    <Card className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 sm:flex-1">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
+          <Icon size={16} /> {title}
+        </h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted">{description}</p>
+      </div>
+      <Link to={to} className={buttonClass('secondary', 'sm', 'shrink-0 self-start')}>
+        {action}
+      </Link>
+    </Card>
+  )
+}
 
 /** 主题选择：浅色 / 深色 / 跟随系统，选择保存在本机并刷新保留。 */
 export function ThemeSection() {
