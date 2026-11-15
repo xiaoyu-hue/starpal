@@ -23,6 +23,7 @@ import { imageRouter } from './modules/images/index.js'
 import { imageUploadRouter } from './modules/uploads/index.js'
 import { searchRouter } from './modules/search/index.js'
 import { messageRouter } from './modules/messages/index.js'
+import { achievementRouter } from './modules/achievements/index.js'
 
 /**
  * /api 路由汇总：元信息、认证、管理探针、个人资料、内容（帖子）与话题目录。
@@ -57,4 +58,5 @@ apiRouter.use('/comments', commentRouter)
 apiRouter.use('/topics', topicRouter)
 apiRouter.use('/search', searchRouter)
 apiRouter.use('/messages', messageRouter)
+apiRouter.use('/achievements', achievementRouter)
 apiRouter.use('/images', imageRouter)

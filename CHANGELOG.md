@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+### 新增（成就与每周热门 · M5-S2）
+
+- 数据库新增 `014_achievements.sql`：`achievements`（`code` 主键、`condition` JSONB、`CHECK` 钉住「有 `metric` 且 `gte` 为非负数字」、`sort_order`、`is_active`）与 `user_achievements`（复合主键 `(user_id, achievement_code)` + `(user_id, unlocked_at DESC)` 索引）。随结构写入九条种子成就：初次发声、回声、跨界的、笔耕不辍、被看见、共鸣、递出第一句话、引路人、同行三十天。
+- 规则数据化的落点：`condition` 只支持「单指标 + 阈值」，引擎（`achievement.engine.ts`）不认识任何具体成就，七个指标（发帖 / 评论 / 跨话题 / 被赞 / 私信 / 邀请 / 加入天数）由一条 SQL 的标量子查询一次算完。**新增一项成就只需插一行数据，不改 TypeScript**——这是 `FR-ACH-01` 的直接实现方式。阈值刻意保守（20 个赞而非 100），社区规模小，长期不可达的目标只会让人放弃。
+- 后端新增 `server/src/modules/achievements/`（engine / repository / service / controller / routes / barrel）：`GET /api/achievements/:username`（时间线，公开）、`GET /api/achievements/weekly`（本周热门，`optionalAuth` 仅为补 `isLiked`）。`/weekly` 注册在 `/:username` 之前，避免被用户名参数捕获。
+- **解锁时机选「读时判定」而非写时触发**（关键取舍，已与用户确认）：打开成就页或资料页时按当前统计现算并补写达标记录，`ON CONFLICT DO NOTHING` 保证幂等。好处是**完全不碰已上线的发帖、评论、点赞、私信四条写路径**，零回归风险、天然不漏挂入口；代价是 `unlocked_at` 记录「判定时刻」而非达成瞬间，页面文案如实写作「解锁于某日」，不谎称精确到秒。已解锁记录不会因条件回退（如撤赞）而收回——记录的是历史事实。
+- 前端新增 `web/src/features/achievements/`：`/achievements` 替换原「M5 交付」占位页，`?u=用户名` 看他人、缺省看自己；已解锁按解锁时间倒序、未解锁按目录顺序排在其后。资料页在资料卡与「已发布内容」之间新增「成就」区块（最多 6 枚徽章 + 「x / 9 · 全部」入口）；旁观者成就为空时整块隐藏，本人为空时给一条入口提示——否则这个页面在站内没有可发现的路径。
+- 每周热门：只排帖子、不排人（按用户排名就是排行榜，`FR-ACH-04` 明确禁止）。按东八区周一 00:00 为界，`赞 + 评论×2` 排序取 5 条，要求至少 1 个互动才入榜——否则新帖全 0 互动也会进榜，「热门」会退化成「最新」。周界用固定 `interval '8 hours'` 偏移而非 `AT TIME ZONE 'Asia/Shanghai'`：中国自 1991 年起无夏令时，偏移恒成立，且不依赖 WASM 构建的时区库。
+- **原计划的「只读聚合视图」改为服务层查询**（讲清偏离）：视图无法传「上周」参数，调排序权重也要写新迁移；`FR-ACH-03` 的实质是「不落热量表、不跑定时任务」，服务层查询同样满足。计划文本与架构文档已同步改写，不留两套说法。
+- **刻意不做的部分**：排行榜（含任何按用户的名次）、签到、无限滚动、「还差 X 个」进度百分比、成就徽章出现在帖子署名行（避免每张卡片变成荣誉墙）。配色单独落令牌（陶土棕），**避开金 / 紫 / 青三种头衔色**——撞色会让徽章被误读成身份等级。
+- 验证：新增 `server/tests/integration/achievements.test.ts`（10 项 PGlite 真库断言：种子指标全部存在于注册表、新用户不凭空解锁、发帖解锁且重复判定只留一条且解锁时间不被覆盖、草稿 / 已删除 / 已删评论不计、三话题才解锁且同话题不重复计、按 `like_count` 汇总、时间线排序、已注销与停用处理、本周热门窗口与权重、条件文案），`npm run verify` 全绿（**124** 项测试、lint 硬规则 0 违规、286 个源文件在行数预算内）；见 `docs/IMPLEMENTATION-PLAN.md` 的 `VR-M5-S2-01`。**UI 用本地桩接口 + 无头浏览器复核**（浅色 / 暗色 / 未登录三态），**不是端到端验证**：桩数据不经过真实 SQL；「登录态下发帖 → 打开成就页看到新徽章」的完整浏览器 E2E 未执行，如实标注。
+- 文档同步：公告 `status` 未完成清单由「成就时间线、数据导出」改为「数据导出」、成就移入可用能力并补三条说明（解锁时间语义、刻意不做的机制）；关于页自述与 `about-doc` 测试同步；README 路线图与迁移范围（`001`–`014`）；ARCHITECTURE 的模块表、路由表、表定义与「当前已落地」端点表；PRD §4.10 补实现状态与已知语义偏差；`AGENTS.md` / `DOC_SYNC.md` 迁移编号口径顺延至 `014`（下一个 `015`）。
+
 ### 新增（站内私信 · M5-S1）
 
 - 数据库新增 `013_messages.sql`：`conversations`（`participant_a/b`、`CHECK` 禁止自聊、`UNIQUE(participant_a, participant_b)`）与 `messages`（`body` 非空 `CHECK`、`(conversation_id, created_at DESC, id DESC)` 复合索引）。两人会话唯一性由「插入时 `LEAST/GREATEST` 归一化 + 普通列唯一约束 + `ON CONFLICT DO UPDATE SET id = conversations.id` 取回既有行」保证——不写表达式唯一约束，因为 PGlite（测试库）不支持，改用该写法后生产与测试跑同一段 SQL。

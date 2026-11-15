@@ -65,6 +65,9 @@ const MessagesPage = lazy(() =>
 const SearchPage = lazy(() =>
   import('../features/search/SearchPage').then((m) => ({ default: m.SearchPage })),
 )
+const AchievementsPage = lazy(() =>
+  import('../features/achievements').then((m) => ({ default: m.AchievementsPage })),
+)
 const MyReportsPage = lazy(() =>
   import('../features/reports/MyReportsPage').then((m) => ({ default: m.MyReportsPage })),
 )
@@ -193,7 +196,7 @@ const routes: RouteObject[] = [
       { path: 'search', element: <Suspended><SearchPage /></Suspended> },
       { path: 'login', element: <Suspended><AuthPage mode="login" /></Suspended> },
       { path: 'register', element: <Suspended><AuthPage mode="register" /></Suspended> },
-      { path: 'achievements', element: placeholder('成就时间线', 'M5', '成就与每周热门将在 M5 里程碑交付。') },
+      { path: 'achievements', element: <Suspended><AchievementsPage /></Suspended> },
       { path: 'guidelines', element: <Suspended><GuidelinesPage /></Suspended> },
       { path: 'announcements', element: <Suspended><AnnouncementsPage /></Suspended> },
       { path: 'privacy', element: <Suspended><PrivacyPage /></Suspended> },

@@ -209,7 +209,7 @@ web/
     │   ├── message/     # 会话与消息（留言式）
     │   ├── notification/
     │   ├── profile/     # 公开页、资料编辑、可选资料（已实现）
-    │   ├── achievement/ # 成就时间线、每周热门
+    │   ├── achievements/ # 成就时间线、每周热门（已实现）
     │   ├── search/
     │   ├── report/      # 举报提交
     │   ├── admin/       # 六分区后台
@@ -274,7 +274,7 @@ features/<domain>/
 | `/notifications` | 通知 | notification | 登录 |
 | `/u/:username` | 公开个人页 | profile | 公开 |
 | `/settings` | 资料与主题设置 | profile | 本人 |
-| `/achievements` | 成就时间线 | achievement | 登录 |
+| `/achievements` | 成就时间线（`?u=` 看他人） | achievements | 公开 |
 | `/search` | 搜索结果 | search | 公开 |
 | `/reports/new` | 举报提交 | report | 登录 |
 | `/admin/*` | 管理后台六分区 | admin | 管理员 |
@@ -416,7 +416,7 @@ server/
 
 ### 5.3 模块清单（v1.0 冻结）
 
-> 本表是架构设计阶段的模块划分。其中 `search`（M5-S3）与 `messages`（M5-S1）已落地，职责与表归属与本表一致；`achievements`、`export`、`moderation` 仍未实现。当前已落地的举报 / 申诉与私信端点见 §6.2 末尾的「当前已落地」小表。
+> 本表是架构设计阶段的模块划分。其中 `search`（M5-S3）、`messages`（M5-S1）与 `achievements`（M5-S2）已落地，职责与表归属与本表一致；`export`、`moderation` 仍未实现。当前已落地的举报 / 申诉、私信与成就端点见 §6.2 末尾的「当前已落地」小表。
 
 | 模块 | 主要职责 | 主要表 |
 | --- | --- | --- |
@@ -654,9 +654,8 @@ sequenceDiagram
 | POST | `/api/conversations/:id/messages` | 参与者 | 发送消息 |
 | GET | `/api/notifications` | 登录 | 通知列表 |
 | PATCH | `/api/notifications/read` | 登录 | 批量标记已读 |
-| GET | `/api/achievements` | 公开 | 成就定义 |
-| GET | `/api/me/achievements` | 登录 | 我的成就时间线 |
-| GET | `/api/highlights/weekly` | 公开 | 每周热门（只读聚合） |
+| GET | `/api/achievements/:username` | 公开 | 某人成就时间线（读时判定，达标即补写解锁记录） |
+| GET | `/api/achievements/weekly` | 公开 | 本周热门（服务层只读聚合，不落表、无定时任务） |
 | GET | `/api/search` | 公开 | `q` + `type` 搜索 |
 | GET | `/api/export` | 登录 | `format=md|json` 导出本人数据 |
 
@@ -702,6 +701,15 @@ sequenceDiagram
 | POST | `/api/messages/:id/messages` | 参与者 | 发送消息（`trim` 后非空、≤ 2000 字） |
 
 > 与上表规划稿的差异：实际挂载路径是 `/api/messages`（不是 `/api/conversations`），且不支持对单个会话 `PATCH` / 删除。整组 `requireAuth`，参与者校验在服务层由 `getConversationFor` 二次确认；两人会话唯一性靠插入时 `LEAST/GREATEST` 归一化 + `UNIQUE(participant_a, participant_b)`。留言式、无实时推送、无未读红点（`ADR-009`）。
+
+**当前已落地：成就与每周热门（2026-11-15，迁移 `014_achievements.sql`）**
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/achievements/:username` | 公开 | 成就时间线：已解锁（按解锁时间倒序）+ 未解锁；**读取时现算指标并补写达标记录** |
+| GET | `/api/achievements/weekly` | 公开 | 本周热门：只读聚合，按东八区周界取当周帖子，`赞 + 评论×2` 排序取 5 条 |
+
+> 与上表规划稿的差异：原计划 `GET /api/achievements`（成就定义）+ `GET /api/me/achievements`（我的时间线）+ `GET /api/highlights/weekly` 三个端点，合并为两个——时间线响应已含完整定义（已解锁与未解锁在同一列表），无需单独的「定义」端点；热门挂在成就前缀下，因为 `FR-ACH-03` 把它定义为成就域的只读聚合。`/weekly` 必须注册在 `/:username` 之前，否则会被用户名参数捕获。时间线有意带写副作用（读时判定）：每次访问按当前统计补写新达标记录，`ON CONFLICT DO NOTHING` 保证幂等，换来的是一条已上线的写路径都不用改；`unlocked_at` 因此是「判定时刻」而非达成瞬间，对外文案如实写作「解锁于某日」。每周热门**不建数据库视图**：视图无法传「上周」参数，调排序权重也要写新迁移，而 `FR-ACH-03` 的实质是「不落热量表、不跑定时任务」，服务层查询同样满足。
 
 ### 6.3 关键请求 / 响应示例
 
@@ -988,8 +996,8 @@ erDiagram
 
 | 表 | 字段 | 说明 |
 | --- | --- | --- |
-| `achievements` | `id` PK、`code` UNIQUE、`name_zh`、`description`、`icon`、`condition` JSONB、`created_at` | 解锁条件以数据表达，新增称号不改业务代码 |
-| `user_achievements` | `user_id` FK、`achievement_id` FK、`unlocked_at`、`UNIQUE(user_id, achievement_id)` | 解锁记录 |
+| `achievements` | `code` PK、`name_zh`、`description`、`icon`、`condition` JSONB、`sort_order`、`is_active` | 用 `code` 作主键而非代理键：成就的身份就是它的语义名；解锁条件以数据表达，新增成就只插一行、不改业务代码 |
+| `user_achievements` | `user_id` FK、`achievement_code` FK、`unlocked_at`、`PRIMARY KEY(user_id, achievement_code)` | 复合主键即「同一用户对同一成就只解锁一次」（`FR-ACH-02`） |
 
 #### `reports`
 

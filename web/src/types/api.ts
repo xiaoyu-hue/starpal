@@ -235,3 +235,12 @@ export type {
   InviteCodeList,
   GenerateInviteResult,
 } from './community'
+
+/** 成就结构见 ./achievements；此处 re-export，保持导入路径稳定。 */
+export type { AchievementItem, AchievementTimeline } from './achievements'
+
+/** 本周热门：只读聚合，`range` 为本周起止（东八区周一 00:00 起）。 */
+export type WeeklyPopular = {
+  range: { start: string; end: string }
+  items: FeedPost[]
+}

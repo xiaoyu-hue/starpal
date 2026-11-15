@@ -8,6 +8,7 @@ import { ApiError } from '../../lib/api-client'
 import { mergeFeedPages } from '../../lib/pagination'
 import { PostCard } from '../feed'
 import { useAuth } from '../auth'
+import { ProfileAchievements } from '../achievements'
 import { TitleBadges } from '../users'
 import { usePublicProfileQuery, useUserPostsQuery } from './queries'
 
@@ -106,6 +107,8 @@ export function ProfilePage() {
           </div>
         )}
       </Card>
+
+      <ProfileAchievements username={profile.username} isSelf={isSelf} />
 
       <section aria-labelledby="posts-heading">
         <h2 id="posts-heading" className="mb-3 text-sm font-medium text-muted">

@@ -13,7 +13,7 @@ import { ANNOUNCEMENT_ITEMS } from '../../src/config/docs/announcements.doc.js'
  */
 
 /** 当前对社区用户公示的未完成能力，公告 status 条与关于页自述必须逐条一致。 */
-const PENDING_GAPS = ['成就时间线', '数据导出'] as const
+const PENDING_GAPS = ['数据导出'] as const
 
 describe('关于页许可与源码信息', () => {
   it('三类许可齐全，且各自写明适用对象与范围', () => {
