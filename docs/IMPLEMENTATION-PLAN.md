@@ -619,8 +619,9 @@ flowchart LR
 - **环境**：本地 `node:test` + PGlite 内存真库（跑全部 `001`–`012` 迁移），`npm run verify` 全链路。
 - **技术选型**：`ILIKE '%关键词%'`（`ESCAPE '\'` 转义 `% _ \`），**不引入 pg_trgm / tsvector**。理由：内容以中文为主，PostgreSQL 默认分词器不切中文词，`tsvector` 对中文近乎失效；`pg_trgm` 需在 PGlite 构造期声明扩展、会侵入测试基建。小社区数据量下 ILIKE 全表扫描为毫秒级，先够用；将来数据量增大再加 `pg_trgm` 索引，是增量迁移、不动本接口。搜索**不需要新迁移**（标题/正文/话题名均在现有表）。
 - **实现**：新增 `server/src/modules/search/`（schema / repository / service / controller / routes / barrel），`GET /api/search?q=&type=all|post|topic&cursor=&limit=` 挂 `optionalAuth`（匿名可搜公开内容，登录者额外补 `isLiked`/`isBookmarked`）；查询复用 `posts` 模块的 `PROJECTION` / `VISIBLE` / `toListItem`（经 `posts/index.ts` 公共出口），保证搜索结果与信息流对同一帖子的可见性完全一致。前端新增 `web/src/features/search/`（`/search` 替换占位、顶栏入口已就位、范围切换、键集游标分页、空关键词与无结果明确空态）。
-- **真实命令与输出**：新增 `server/tests/integration/search.test.ts`，7 项断言——中文命中标题、中文命中正文、草稿/已删除/停用作者排除、`type=topic` 只按话题名而 `type=post` 不匹配话题名、键集游标分页不重不漏、空关键词短路、`%` 被转义不匹配一切。`npm run verify` 全绿（**106** 项测试通过、lint 硬规则 **0** 违规）。
-- **真实局限（如实标注）**：`ILIKE` 无索引加速，数据量显著增长后需补 `pg_trgm`；**登录态下「顶栏点搜索 → 输入 → 结果渲染」的完整浏览器交互 E2E 未执行**（读链路由集成测试与组件渲染覆盖，需真实后端+登录态复核）。
+- **真实命令与输出**：新增 `server/tests/integration/search.test.ts`，7 项断言——中文命中标题、中文命中正文、草稿/已删除/停用作者排除、`type=topic` 只按话题名而 `type=post` 不匹配话题名、键集游标分页不重不漏、空关键词短路、`%` 被转义不匹配一切。`npm run verify` 全绿（**107** 项测试通过、lint 硬规则 **0** 违规）。
+- **线上实测（2026-11-15，`4030ade` 部署后 `starpal.cc.cd`，匿名态）**：`GET /api/search?q=星聚` 命中首帖（`author.titles` 随署名一并返回）、`q=闲聊&type=topic` 仅返回话题为闲聊的帖子而 `q=星聚&type=topic` 为空、`q=zzz不存在zzz` 返回空数组、`q=%` 返回空（转义生效未被当通配符）、`q=` 返回 `200` 空结果；无头浏览器截图复核 `/search?q=星聚`（搜索框回填、全部/帖子/话题三档切换、结果卡片含作者头衔徽章与摘要、无布局错乱）与 `/search?q=zzz不存在zzz`（空态仅标题+说明，无伪操作按钮），首页顶栏放大镜入口在位可点。
+- **真实局限（如实标注）**：`ILIKE` 无索引加速，数据量显著增长后需补 `pg_trgm`；**登录态下 `isLiked`/`isBookmarked` 由搜索页回填的真值表现未在浏览器端复核**（匿名态验证为 `false`，该字段由 `attachViewerFlags` 复用互动模块既有逻辑，有集成测试覆盖）。
 
 ---
 

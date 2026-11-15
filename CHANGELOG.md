@@ -9,7 +9,7 @@
 - 后端新增 `server/src/modules/search/`：`GET /api/search?q=&type=all|post|topic&cursor=&limit=`，挂 `optionalAuth`（匿名可搜公开内容，登录者额外补 `isLiked` / `isBookmarked`）。查询复用 `posts` 模块的 `PROJECTION` / `VISIBLE` / `toListItem`（经 `posts/index.ts` 公共出口），保证搜索结果与信息流对同一帖子的可见性完全一致——草稿、已删除、停用作者的内容不会出现。无新迁移。
 - 技术选型：`ILIKE '%关键词%'`（`ESCAPE '\'` 转义 `% _ \`），**不引入 pg_trgm / tsvector**。原因：内容以中文为主，PostgreSQL 默认分词器不切中文词，`tsvector` 对中文近乎失效；`pg_trgm` 需在 PGlite 构造期声明扩展、会侵入测试基建。小社区数据量下 ILIKE 为毫秒级；将来数据量增大再加 `pg_trgm` 索引是增量迁移、不动接口。
 - 前端新增 `web/src/features/search/`：`/search` 替换原「M7 交付」占位，顶栏放大镜入口已就位；支持「全部 / 帖子 / 话题」范围切换、键集游标分页，空关键词与无结果都有明确空态（不显示伪控件）。关键词来自 URL 的 `q`，可分享与前进后退。
-- 验证：新增 `server/tests/integration/search.test.ts`（7 项 PGlite 真库断言：中文命中标题/正文、可见性排除、类型过滤、游标分页、空词短路、通配符转义），`npm run verify` 全绿（106 项测试、lint 硬规则 0 违规）；见 `docs/IMPLEMENTATION-PLAN.md` 的 `VR-M5-S3-01`。**登录态下「点搜索 → 输入 → 结果渲染」的完整浏览器交互 E2E 未执行**，如实标注为未验证。
+- 验证：新增 `server/tests/integration/search.test.ts`（7 项 PGlite 真库断言：中文命中标题/正文、可见性排除、类型过滤、游标分页、空词短路、通配符转义），`npm run verify` 全绿（107 项测试、lint 硬规则 0 违规）；见 `docs/IMPLEMENTATION-PLAN.md` 的 `VR-M5-S3-01`。推送后在 `starpal.cc.cd` 以匿名态实测接口五种情形（命中 / 类型过滤 / 无结果 / `%` 转义 / 空关键词）与 `/search` 有结果、无结果两态页面渲染，均符合预期；**登录态下 `isLiked` / `isBookmarked` 回填后的页面表现未在浏览器端复核**，如实标注。
 - 文档同步：公告 `status` 未完成清单由「私信、搜索」改为「私信」、搜索移入可用能力；关于页自述与 `about-doc` 测试同步；README 功能概览与路线图标注「搜索已交付」。
 
 
