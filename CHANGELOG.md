@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### 新增（用户数据导出 · M5-S4）
+
+- **`GET /api/export?format=md|json` 上线**，设置页新增「导出我的数据」区块（`features/profile/ExportSection.tsx`）。此前 `scripts/export-check.mjs` 与文档里的端点早已存在，但**服务端一行实现都没有**——`export:check` 一直在跑内置自测样例，校验的是一份虚构对象，不是真实产物；本次才让脚本第一次校验真东西。
+- **契约先行，实现对齐契约**：`export-check.mjs` 规定顶层必须有 `user`、不得出现 `password_hash` / `session` / `role`。产物按此产出，集成测试**用真脚本跑真文件**（`execFileSync` 调 `node scripts/export-check.mjs <tmp>`），不做「等价断言重写」——脚本才是对外契约，测试不得自行解释它。
+- **不套 `sendData` 包络**：全站响应都是 `{ data }`，但导出物是一个**文件**，包一层会让任何外部工具都读不出结构。控制器直接写响应体，配 `Content-Disposition: attachment` 与 `Cache-Control: no-store`（个人数据不进任何缓存）。
+- **范围严格限定本人**，且在 SQL 里就用 `WHERE author_id = $1` 收敛，不靠应用层过滤：帖子、评论、帖子内图片引用、资料字段（`users` ⟕ `user_profiles`，不查 `password_hash` / `role_id`）。
+- **草稿与已删除内容照样导出并标注状态**（`已发布 / 草稿 / 已删除 / 已被下架` + 删除时间）。这是有意为之：只导已发布的话，用户删掉的草稿永远找不回来，而那恰恰是最需要导出的场景。
+- **三条明确的不做**，都写进了界面、公告与文档：① **不含私信**——私信里有对方说的话，不属于「你自己的数据」；② **图片给可访问链接、不给二进制**——整包图片轻易超过 Serverless 响应上限（4.5 MB），且图片本就随站点存活；③ **不做导入**——一份个人文件重建不出社区关系（谁赞过你、评论挂在谁帖下都在别人的数据里），重建出来只是无互动的空壳，整站恢复应由数据库备份承担。页面上如实写明「这是带走，不是传回来」。
+- 两处工程细节：文件名经 `[^a-zA-Z0-9_-] → _` 清洗后带用户名与东八区时间戳（多次下载不互相覆盖）；Markdown 版把多行简介渲染为引用块、`##` 与 `###` 之间留空行，避免严格解析器把标题判成同一块。
+- 验证：`npm run verify` 全绿（**130** 项测试、lint 硬规则 0 违规、行数预算内）。新增 `server/tests/integration/export.test.ts` 6 项断言——他人内容不混入、草稿与软删除标注正确、真产物过 `export:check`、Markdown 可还原评论上下文、账号不存在抛 `NOT_FOUND`、恶意用户名（`../../etc/passwd`）被清洗。**端到端验证（本轮首次做到真实登录态）**：本地 PostgreSQL + 真实会话 Cookie，浏览器点「下载 JSON / 下载 Markdown」，两份文件真实落盘（1604 / 1211 字节），JSON 再喂给 `export:check` 通过；未登录 `401 AUTH_REQUIRED`、`format=xml` `400`；桌面 1440 与移动 375 截图复核，按钮并排无挤压、无溢出。
+- 文档同步：`README.md` 功能概览补「数据导出」、`M5` 行改为已交付、公示的未完成项改为「无」；`ARCHITECTURE.md` §5.3 说明 `export` 已落地（只剩 `moderation` 未实现）并新增「当前已落地」小节；`IMPLEMENTATION-PLAN.md` 的 `M5-S4` 三项标记完成、补 `VR-M5-S4-01`；`announcements.doc.ts` 新增面向用户的公告（含三条边界）。`DEPLOYMENT.md §11` 与 `scripts/export-check.mjs` 无需改动——它们描述的行为与实现一致。
+
 ### 修复（右栏推荐面板 · 从空话换成真实内容）
 
 - 右栏「为你推荐」卡片此前只有一句「推荐位依赖话题选择，将在后续里程碑接入」——**这句话本身是错的**。`FR-FEED-01` 的 recommended 信息流早在 M3 就已实现，用的是确定性加权排序（话题亲和度 + 时间衰减 + 热度分），不涉及行为画像，`ADR-008` 否掉的是机器学习，不是推荐本身。

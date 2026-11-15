@@ -600,13 +600,19 @@ flowchart LR
 | `M5-S3-T1` | 检索 API | 帖子标题 / 正文 / 话题名称检索，类型过滤与分页 | `modules/search/` | 结果仅含权限范围内可见内容 |
 | `M5-S3-T2` | 搜索页 | 顶栏搜索接入、结果页、空态 | `web/src/features/search/` | 空关键词与无结果态明确 |
 
-#### `M5-S4` 数据导出
+#### `M5-S4` 数据导出 ✅ 已完成（2026-11-15）
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
 | `M5-S4-T1` | 导出 API | `GET /api/export?format=md|json`，仅本人数据，含帖子、评论、图片引用、资料 | `modules/export/` | `AC-16` 有记录 |
 | `M5-S4-T2` | 格式校验 | 导出文件可被外部工具读取，不含其他用户数据 | `scripts/export-check` | `export:check` 通过 |
-| `M5-S4-T3` | 入口 | 设置页导出入口与说明 | `web/src/features/export/` | 入口可达，说明清晰 |
+| `M5-S4-T3` | 入口 | 设置页导出入口与说明 | `web/src/features/profile/ExportSection.tsx` | 入口可达，说明清晰 |
+
+> **实现要点与两处对计划的修正**（2026-11-15）：
+> 1. **不套 `sendData` 包络**。全站响应统一 `{ data }`，但导出物是文件，包一层会让 `export-check.mjs` 与任何外部工具都读不出顶层 `user`。控制器直接写响应体 + `Content-Disposition: attachment` + `Cache-Control: no-store`。
+> 2. **`T3` 的产出路径由 `web/src/features/export/` 改为 `web/src/features/profile/ExportSection.tsx`**。导出只有设置页里的一个区块，没有独立路由与查询逻辑，建独立 feature 目录会得到一个只放单个组件的空壳；放在 `profile/` 与 `PasswordSection` / `TitlesSection` 同级，符合现有目录惯例。
+> 3. **范围三条硬边界**：不含私信（含对方内容）、图片只给可访问链接不给二进制（Serverless 响应上限 4.5 MB）、只导出不导入（个人文件重建不出社区关系，整站恢复走数据库备份）。三条均写入界面说明与站内公告。
+> 4. 草稿与软删除内容照样导出并标注状态——只导已发布的话，用户删掉的草稿永远找不回来。
 
 **M5 交付物**：私信、成就时间线与每周热门、搜索、数据导出。
 
@@ -650,6 +656,18 @@ flowchart LR
 - **真实命令与输出**：新增 `server/tests/integration/search.test.ts`，7 项断言——中文命中标题、中文命中正文、草稿/已删除/停用作者排除、`type=topic` 只按话题名而 `type=post` 不匹配话题名、键集游标分页不重不漏、空关键词短路、`%` 被转义不匹配一切。`npm run verify` 全绿（**107** 项测试通过、lint 硬规则 **0** 违规）。
 - **线上实测（2026-11-15，`4030ade` 部署后 `starpal.cc.cd`，匿名态）**：`GET /api/search?q=星聚` 命中首帖（`author.titles` 随署名一并返回）、`q=闲聊&type=topic` 仅返回话题为闲聊的帖子而 `q=星聚&type=topic` 为空、`q=zzz不存在zzz` 返回空数组、`q=%` 返回空（转义生效未被当通配符）、`q=` 返回 `200` 空结果；无头浏览器截图复核 `/search?q=星聚`（搜索框回填、全部/帖子/话题三档切换、结果卡片含作者头衔徽章与摘要、无布局错乱）与 `/search?q=zzz不存在zzz`（空态仅标题+说明，无伪操作按钮），首页顶栏放大镜入口在位可点。
 - **真实局限（如实标注）**：`ILIKE` 无索引加速，数据量显著增长后需补 `pg_trgm`；**登录态下 `isLiked`/`isBookmarked` 由搜索页回填的真值表现未在浏览器端复核**（匿名态验证为 `false`，该字段由 `attachViewerFlags` 复用互动模块既有逻辑，有集成测试覆盖）。
+
+##### `VR-M5-S4-01` · M5-S4 数据导出验证记录（通过）
+
+- **环境**：`node:test` + PGlite 内存真库（跑全部 `001`–`015` 迁移）覆盖 SQL 与渲染；**另起本地 PostgreSQL 16 + 真实会话 Cookie + 无头 Chromium** 做端到端，第一次不是「模拟接口」。
+- **技术选型**：
+  - **不建视图、不落表**：导出读的是 `posts` / `comments` / `post_images` / `users` ⟕ `user_profiles`，四条参数化查询各带 `WHERE author_id = $1`／`JOIN` 收敛。把边界写在 SQL 里，少一处「忘了过滤」的可能；也避免为此新增迁移（本轮**无新迁移**）。
+  - **不导出图片二进制**：`image_blobs` 里是真实字节，一篇 9 图长帖就能上兆。Serverless 函数响应体上限 4.5 MB，含二进制会让「正常用户导自己的数据」变成随机失败。给 `/api/images/<storage_key>` 的可访问链接，接收方按需取。
+  - **不做导入**：见 `CHANGELOG` 与公告——个人文件重建不出社区关系，整站恢复走 `pg_dump` 备份（`DEPLOYMENT.md §10`）。
+  - **不套 `sendData`**：导出物是文件，顶层必须直接是 `{ schemaVersion, generatedAt, user, posts, comments }`。
+- **真实命令与输出**：`npm run verify` 全绿（**130** 项测试通过、lint 硬规则 **0** 违规、行数预算内）。新增 `server/tests/integration/export.test.ts` 6 项：他人帖子/评论/图片不混入；`draft` / `deleted` 状态与删除时间正确；**真产物喂给 `scripts/export-check.mjs` 通过**（`execFileSync` 调真脚本，不做等价断言重写）；Markdown 含「回复《原帖标题》」与多行简介引用块；账号不存在抛 `NOT_FOUND`；用户名 `../../etc/passwd` 被清洗成 `______etc_passwd`。
+- **端到端实测（本地 PostgreSQL + 真实会话，2026-11-15）**：未登录 `401 AUTH_REQUIRED`；`format=xml` `400 VALIDATION_FAILED`；`format=json` 返回 `200` + `Content-Disposition: attachment; filename="starpal-<用户名>-<东八区时间>.json"` + `Cache-Control: no-store` + `X-Content-Type-Options: nosniff`，顶层键为 `schemaVersion, generatedAt, user, posts, comments`，`user` 内无 `password_hash` / `role`；`format=md` 为 `text/markdown; charset=utf-8`，正文含资料、帖子（状态标注）、评论（带原帖标题）。浏览器点「下载 JSON / 下载 Markdown」两枚按钮，文件真实落盘（1604 / 1211 字节），下载到的 JSON 再喂 `export:check` 仍通过。桌面 1440 与移动 375 截图复核：卡片标题、说明、两枚按钮并排，无挤压、无溢出，状态文案「已下载 JSON 文件」出现。
+- **真实局限（如实标注）**：① **未设总量上限与分片**——若某账号的文字量最终让响应体超过 Serverless 上限（4.5 MB），下载会失败且没有明确提示，需要后续加「分批导出 / 打包下载」；当前社区体量远未触及，但没有压测数据支撑这个判断。② 导出文件里的图片链接指向站点，站点关停则链接失效（这正是「不含二进制」的代价，已在界面与公告写明）。③ 线上（Vercel）尚未验证，本地通过不等于线上通过。
 
 ---
 

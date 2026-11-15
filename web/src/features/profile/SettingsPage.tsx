@@ -23,6 +23,7 @@ import {
 } from './SettingsSections'
 import { PasswordSection } from './PasswordSection'
 import { TitlesSection } from './TitlesSection'
+import { ExportSection } from './ExportSection'
 import type { OwnProfile } from '../../types/api'
 
 /** 设置页编排：资料编辑、主题、关于与账号。由路由级 RequireAuth 守卫进入。 */
@@ -80,6 +81,7 @@ export function SettingsPage() {
         to="/achievements"
         action="查看成就"
       />
+      <ExportSection />
       <AboutSection />
       {user?.role === 'admin' && (
         <Card className="space-y-3 p-6">

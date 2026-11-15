@@ -417,7 +417,7 @@ server/
 
 ### 5.3 模块清单（v1.0 冻结）
 
-> 本表是架构设计阶段的模块划分。其中 `search`（M5-S3）、`messages`（M5-S1）与 `achievements`（M5-S2）已落地，职责与表归属与本表一致；`export`、`moderation` 仍未实现。当前已落地的举报 / 申诉、私信与成就端点见 §6.2 末尾的「当前已落地」小表。
+> 本表是架构设计阶段的模块划分。其中 `search`（M5-S3）、`messages`（M5-S1）、`achievements`（M5-S2）与 `export`（M5-S4）已落地，职责与表归属与本表一致；`moderation` 仍未实现。当前已落地的举报 / 申诉、私信、成就与导出端点见 §6.2 末尾的「当前已落地」小表。
 
 | 模块 | 主要职责 | 主要表 |
 | --- | --- | --- |
@@ -711,6 +711,14 @@ sequenceDiagram
 | GET | `/api/achievements/weekly` | 公开 | 本周热门：只读聚合，按东八区周界取当周帖子，`赞 + 评论×2` 排序取 5 条 |
 
 > 与上表规划稿的差异：原计划 `GET /api/achievements`（成就定义）+ `GET /api/me/achievements`（我的时间线）+ `GET /api/highlights/weekly` 三个端点，合并为两个——时间线响应已含完整定义（已解锁与未解锁在同一列表），无需单独的「定义」端点；热门挂在成就前缀下，因为 `FR-ACH-03` 把它定义为成就域的只读聚合。`/weekly` 必须注册在 `/:username` 之前，否则会被用户名参数捕获。时间线有意带写副作用（读时判定）：每次访问按当前统计补写新达标记录，`ON CONFLICT DO NOTHING` 保证幂等，换来的是一条已上线的写路径都不用改；`unlocked_at` 因此是「判定时刻」而非达成瞬间，对外文案如实写作「解锁于某日」。每周热门**不建数据库视图**：视图无法传「上周」参数，调排序权重也要写新迁移，而 `FR-ACH-03` 的实质是「不落热量表、不跑定时任务」，服务层查询同样满足。
+
+**当前已落地：用户数据导出（2026-11-15，无新迁移）**
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET | `/api/export?format=md|json` | 登录 | 导出本人全部帖子（含草稿与软删除，标注状态）、评论、图片引用与资料字段；`format` 仅接受 `json` / `md`，缺省为 `json` |
+
+> 实现口径（与 §7.7 的规划一致，三处细化）：① **响应体直写，不套 `{ data }` 包络**——导出物是一个文件，包一层会让任何外部工具读不出顶层 `user`，与 `scripts/export-check.mjs` 的契约冲突；② **图片只导出 `/api/images/<storage_key>` 引用**，不含 `image_blobs` 二进制，因为 Serverless 响应体上限 4.5 MB，含二进制会让下载随机失败；③ **没有导入端点，且不计划新增**——一份个人文件重建不出作者关系、时间线与互动，整站恢复由 `pg_dump` 逻辑备份承担（`DEPLOYMENT.md §10`）。范围在 SQL 层用 `WHERE author_id = $1` 收敛，不在应用层过滤。响应带 `Content-Disposition: attachment`、`Cache-Control: no-store`、`X-Content-Type-Options: nosniff`。
 
 ### 6.3 关键请求 / 响应示例
 
@@ -1110,7 +1118,7 @@ server/src/db/migrations/
 | --- | --- |
 | 数据库备份 | 标准逻辑备份工具导出，定期执行，备份文件置于持久存储 |
 | 文件备份 | 图片存于 `image_blobs`，随数据库备份一并导出，无需独立归档 |
-| 用户导出 | `GET /api/export?format=md|json`，包含本人帖子、评论、图片引用与资料字段 |
+| 用户导出 | `GET /api/export?format=md|json`，包含本人帖子（含草稿与软删除并标注状态）、评论、图片引用与资料字段；不含私信与他人内容，图片只给引用不给二进制 |
 | 恢复 | 单次数据库恢复即可（图片与结构化数据同库）；恢复后校验 `post_images` 与 `image_blobs` 是否一一对应 |
 
 ---
