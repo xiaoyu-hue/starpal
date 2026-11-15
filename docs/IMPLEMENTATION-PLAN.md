@@ -573,15 +573,15 @@ flowchart LR
 
 **前置条件**：`M4` 完成。
 
-> **迁移编号口径（M5 / M5.5 / M6 通用）**：`server/src/db/migrations/` 的顺序编号以**目录实际占用**为准。`M4` 收尾时已用到 `009_invite_codes.sql`，其后「我的点赞」列表占用 `010_likes_user_idx.sql`，「举报 + 申诉最小闭环」又占用 `011_reports.sql`，因此 `M5` / `M5.5` / `M6` 的新迁移一律从下一个可用序号（现为 `012`）起顺编，且只增不改已应用的历史迁移。`M5.5-S1`（头衔列）已占用 `012_user_titles.sql`（见 `VR-M5.5-01`）。下表文件名统一用 `NNN_` 占位前缀（`NNN` = 开工时目录里的下一个可用序号，现为 `013`），不再预填具体编号——早期计划中的 `005` / `006` / `007` / `008` 已被 M1–M4 实际占用，照抄会导致文件覆盖或迁移账本冲突。
+> **迁移编号口径（M5 / M5.5 / M6 通用）**：`server/src/db/migrations/` 的顺序编号以**目录实际占用**为准。`M4` 收尾时已用到 `009_invite_codes.sql`，其后「我的点赞」列表占用 `010_likes_user_idx.sql`，「举报 + 申诉最小闭环」又占用 `011_reports.sql`，因此 `M5` / `M5.5` / `M6` 的新迁移一律从下一个可用序号（现为 `012`）起顺编，且只增不改已应用的历史迁移。`M5.5-S1`（头衔列）已占用 `012_user_titles.sql`（见 `VR-M5.5-01`），`M5-S1`（私信）占用 `013_messages.sql`（见 `VR-M5-S1-01`）。下表文件名统一用 `NNN_` 占位前缀（`NNN` = 开工时目录里的下一个可用序号，现为 `014`），不再预填具体编号——早期计划中的 `005` / `006` / `007` / `008` 已被 M1–M4 实际占用，照抄会导致文件覆盖或迁移账本冲突。
 
-#### `M5-S1` 私信（留言式）
+#### `M5-S1` 私信（留言式）✅ 已完成（2026-11-15）
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M5-S1-T1` | 会话与消息表 | `NNN_messages.sql` 建立 `conversations`、`messages`，表达式唯一索引保证两人一会话 | `migrations/NNN_*.sql` | 重复创建返回同一会话 |
+| `M5-S1-T1` | 会话与消息表 | `013_messages.sql` 建立 `conversations`、`messages`；两人会话由 `LEAST/GREATEST` 归一化 + 普通列唯一约束保证唯一（PGlite 不支持表达式唯一约束，生产与测试同一写法） | `migrations/013_messages.sql` | 重复/反向创建返回同一会话 |
 | `M5-S1-T2` | 私信 API | 会话列表、创建 / 获取、消息游标列表、发送；参与者校验 | `modules/messages/` | 非参与者访问被拒 |
-| `M5-S1-T3` | 留言式前端 | 会话列表、消息列表、发送框、刷新获取 | `web/src/features/message/` | 消息刷新后可见，无实时推送 |
+| `M5-S1-T3` | 留言式前端 | 会话列表、消息列表、发送框、刷新获取；他人主页「发私信」入口与 `?to=` 直达 | `web/src/features/messages/` | 消息刷新后可见，无实时推送 |
 | `M5-S1-T4` | 升级余地确认 | 表结构与服务层不依赖传输方式，新增推送模块不需改表 | 架构 §10.1 复核 | 评审记录留档 |
 
 #### `M5-S2` 成就与每周热门
@@ -614,6 +614,15 @@ flowchart LR
 
 **风险与回退**：私信与成就均为独立模块，可单独回退而不影响互动链路；导出为只读，风险最低。
 
+##### `VR-M5-S1-01` · M5-S1 私信验证记录（通过）
+
+- **环境**：本地 `node:test` + PGlite 内存真库（跑全部 `001`–`013` 迁移），`npm run verify` 全链路。
+- **实现**：迁移 `013_messages.sql` 建 `conversations`（`participant_a/b`、`CHECK` 禁止自聊、`UNIQUE(participant_a, participant_b)`）与 `messages`（`body` 非空 `CHECK`、`ORDER BY created_at DESC, id DESC` 的复合索引）。后端 `server/src/modules/messages/`（schema / repository / service / controller / routes / barrel）提供 `POST /api/messages`、`GET /api/messages`、`GET /api/messages/:id`、`GET /api/messages/:id/messages`、`POST /api/messages/:id/messages`；整组挂 `requireAuth`，服务层再用 `getConversationFor` 二次校验参与者。前端 `web/src/features/messages/`：`/messages` 替换占位页，会话列表 + 线程 + 发送框，桌面侧栏补入口、移动端底部 Tab 原有入口不变，他人主页新增「发私信」按钮（`?to=用户名` 直达并自动建会话）。
+- **关键取舍**：① 会话唯一性用「插入时 `LEAST/GREATEST` 归一化 + 普通列唯一约束 + `ON CONFLICT DO UPDATE SET id = conversations.id` 取回既有行」，而不是表达式唯一约束——PGlite（测试库）不支持 `UNIQUE (LEAST(...), GREATEST(...))`，该写法能让生产与测试跑同一段 SQL；② 消息正文在服务层兜底 `trim` + 非空 + 2000 字上限，避免绕过 schema 直调服务时写入空白消息；③ 本期不做未读红点 / 实时推送（用户确认），不改通知模块。
+- **真实命令与输出**：新增 `server/tests/integration/messages.test.ts`，6 项断言——创建会话幂等（重复 + 反向均返回同一 id）、不能与自己发起（`FORBIDDEN`）、收件人不存在（`VALIDATION_FAILED`）、发送后对方会话列表可见最近消息预览且键集游标分页不重不漏、非参与者读会话/读消息/发消息三路均 `FORBIDDEN`、空白与超长消息被拒且首尾空白归一后入库。`npm run verify` 全绿（**113** 项测试通过、lint 硬规则 **0** 违规）。
+- **测试基建修正（如实记录）**：新增测试文件后，`verify` 首轮出现两处 **SIGKILL**（`bookmarks-list`、`interaction-flags`），非断言失败——`node --test` 默认按 CPU 核数（本机 32）并发，同时起 32 个 PGlite WASM 实例触发容器内存上限。已在 `server/package.json` 的 `test` 脚本显式加 `--test-concurrency=4`，复跑 113 项全通过。这是运行方式修正，未改动任何断言或阈值。
+- **真实局限（如实标注）**：**登录态下「主页发私信 → 输入 → 发送 → 对方刷新看到」的完整浏览器交互 E2E 未执行**（数据层与权限边界由 6 项 PGlite 真库测试覆盖，前端只做了类型检查与构建）；无实时推送、无未读红点，会话列表不显示未读数。
+
 ##### `VR-M5-S3-01` · M5-S3 搜索验证记录（通过）
 
 - **环境**：本地 `node:test` + PGlite 内存真库（跑全部 `001`–`012` 迁移），`npm run verify` 全链路。
@@ -627,9 +636,9 @@ flowchart LR
 
 ### M5.5 · 头衔系统（经验 / 签到 / 等级 / 站长授权头衔）
 
-**目标**：建立轻量、自动、非竞争性的成员成长与识别体系，适配小型邀请制社区的亲密氛围。**首交付物为「站长账号头衔预览」**（站长可在自己账号上设置并预览特殊头衔）；经验 / 签到 / 等级作为后续增量子任务，不混入首交付物。
+**目标**：建立轻量、自动、非竞争性的成员成长与识别体系，适配小型邀请制社区的亲密氛围。**首交付物为「站长账号头衔预览」**（站长可在自己账号上设置并预览特殊头衔），已于 2026-11-15 交付，见 `VR-M5.5-01`；经验 / 签到 / 等级作为后续增量子任务，不混入首交付物。
 
-**前置条件**：`M5` 完成（头衔预览本身不依赖 M5 的私信 / 搜索，可与 M5 并行开工）。
+**前置条件**：无。`M5.5-S1`（头衔）不依赖 `M5` 的私信 / 搜索，已与 `M5` 并行交付；`M5.5-S2`（经验 / 等级）可随后续增量排期。
 
 > **调研依据（GitHub 开源参考，2026-11-15）**：
 > - **Discourse**（GPL-2.0，Ruby/Rails/Postgres）：信任等级 `TL0–4`，`TL0–3` 全自动（按阅读 / 参与 / 100 天滚动活跃，`TL3` 可因活跃度下降而失去），`TL4`「领袖」仅限工作人员手动晋升；徽章分铜 / 银 / 金，自动或管理员手动授予，且「可作为用户头衔」。是「等级自动 + 站长手动授权特殊头衔」分离模式的最直接范本。
@@ -871,7 +880,7 @@ flowchart LR
 | 类别 | 内容 | 来源里程碑 |
 | --- | --- | --- |
 | 完整源码 | `web/` 前端、`server/` 后端、`scripts/` 脚本 | `M1`—`M6` |
-| 数据库 schema 与迁移 | `migrations/001…012`（截至 M4 为 `001…009`，其后补 `010_likes_user_idx.sql`、`011_reports.sql`、`012_user_titles.sql`）、`seeds/`、`schema_migrations` | `M1`—`M6` |
+| 数据库 schema 与迁移 | `migrations/001…013`（截至 M4 为 `001…009`，其后补 `010_likes_user_idx.sql`、`011_reports.sql`、`012_user_titles.sql`、`013_messages.sql`）、`seeds/`、`schema_migrations` | `M1`—`M6` |
 | 环境变量文档 | 变量表、示例占位、安全说明 | `M7` |
 | 启动说明 | 开发 / 构建 / 单进程启动 | `M7` |
 | PostgreSQL 配置说明 | 实例准备、迁移、备份与恢复 | `M7` |

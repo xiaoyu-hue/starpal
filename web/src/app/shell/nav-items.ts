@@ -41,7 +41,7 @@ export const DESTINATIONS: Record<string, Destination> = {
   messages: { key: 'messages', label: '私信', path: '/messages', icon: MessageSquare },
 }
 
-/** 桌面顶栏与左栏展开的九个目的地（顶栏另过滤掉 create / notifications）。 */
+/** 桌面顶栏与左栏展开的十个目的地（顶栏另过滤掉 create / notifications）。 */
 export const DESKTOP_KEYS = [
   'home',
   'discover',
@@ -50,6 +50,7 @@ export const DESKTOP_KEYS = [
   'notifications',
   'bookmarks',
   'likes',
+  'messages',
   'reports',
   'profile',
 ] as const

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Pencil, Users } from 'lucide-react'
+import { MessageSquare, Pencil, Users } from 'lucide-react'
 import { Avatar, Badge, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { EmptyState, ErrorState } from '../../components/feedback/States'
@@ -75,6 +75,14 @@ export function ProfilePage() {
               {isSelf && (
                 <Link to="/settings" className={buttonClass('secondary', 'sm')}>
                   <Pencil size={14} /> 编辑资料
+                </Link>
+              )}
+              {!isSelf && user && (
+                <Link
+                  to={`/messages?to=${encodeURIComponent(profile.username)}`}
+                  className={buttonClass('secondary', 'sm')}
+                >
+                  <MessageSquare size={14} /> 发私信
                 </Link>
               )}
             </div>

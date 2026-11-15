@@ -59,6 +59,9 @@ const BookmarksPage = lazy(() =>
 const LikesPage = lazy(() =>
   import('../features/likes/LikesPage').then((m) => ({ default: m.LikesPage })),
 )
+const MessagesPage = lazy(() =>
+  import('../features/messages/MessagesPage').then((m) => ({ default: m.MessagesPage })),
+)
 const SearchPage = lazy(() =>
   import('../features/search/SearchPage').then((m) => ({ default: m.SearchPage })),
 )
@@ -162,7 +165,14 @@ const routes: RouteObject[] = [
           </RequireRole>
         ),
       },
-      { path: 'messages', element: placeholder('私信', 'M5', '留言式私信将在 M5 里程碑交付。') },
+      {
+        path: 'messages',
+        element: (
+          <RequireAuth>
+            <Suspended><MessagesPage /></Suspended>
+          </RequireAuth>
+        ),
+      },
       {
         path: 'settings',
         element: (

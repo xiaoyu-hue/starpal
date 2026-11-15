@@ -416,7 +416,7 @@ server/
 
 ### 5.3 模块清单（v1.0 冻结）
 
-> 本表是架构设计阶段的模块划分，含 M5 / M6 / M7 规划项（`messages`、`achievements`、`search`、`export`、`moderation` 等尚未实现）。当前已落地的举报 / 申诉端点见 §6.2 末尾的「当前已落地」小表。
+> 本表是架构设计阶段的模块划分。其中 `search`（M5-S3）与 `messages`（M5-S1）已落地，职责与表归属与本表一致；`achievements`、`export`、`moderation` 仍未实现。当前已落地的举报 / 申诉与私信端点见 §6.2 末尾的「当前已落地」小表。
 
 | 模块 | 主要职责 | 主要表 |
 | --- | --- | --- |
@@ -690,6 +690,18 @@ sequenceDiagram
 | POST | `/api/admin/reports/:id/decision` | 管理员 | 标记「已处理 / 已驳回」并写答复；`WHERE status = 'pending'` 条件更新保证终态不可重决，不做内容处置 |
 
 > 用户侧 `/api/reports` 整组挂 `requireAuth`；管理侧复用 `adminRouter` 已有的 `requireAuth + requireRole(ROLE_ADMIN)`，不另起一套角色校验。举报目标存在性与可见性由服务层参数化查询校验（草稿、已移除、已删除、停用作者的内容按不存在处理），多态目标不建外键。决策只改 `reports` 表的状态与答复字段，不写 `moderation_logs`、不改内容可见性、不停用账号。
+
+**当前已落地：站内私信（2026-11-15，迁移 `013_messages.sql`）**
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| POST | `/api/messages` | 登录 | 按 `username` 创建或复用两人会话；禁止自聊，收件人须存在且未停用 |
+| GET | `/api/messages` | 登录 | 会话列表：对方资料与头衔、最近一条消息预览，键集游标分页 |
+| GET | `/api/messages/:id` | 参与者 | 单个会话视图（非参与者 `FORBIDDEN`） |
+| GET | `/api/messages/:id/messages` | 参与者 | 消息列表（时间倒序，键集游标） |
+| POST | `/api/messages/:id/messages` | 参与者 | 发送消息（`trim` 后非空、≤ 2000 字） |
+
+> 与上表规划稿的差异：实际挂载路径是 `/api/messages`（不是 `/api/conversations`），且不支持对单个会话 `PATCH` / 删除。整组 `requireAuth`，参与者校验在服务层由 `getConversationFor` 二次确认；两人会话唯一性靠插入时 `LEAST/GREATEST` 归一化 + `UNIQUE(participant_a, participant_b)`。留言式、无实时推送、无未读红点（`ADR-009`）。
 
 ### 6.3 关键请求 / 响应示例
 
@@ -1061,10 +1073,11 @@ server/src/db/migrations/
 ├── 009_invite_codes.sql
 ├── 010_likes_user_idx.sql
 ├── 011_reports.sql
-└── 012_user_titles.sql
+├── 012_user_titles.sql
+└── 013_messages.sql
 ```
 
-明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。`011_reports.sql` 建 `reports` 表（用 `kind` 区分举报 / 申诉，CHECK 约束钉死目标形态与终态字段）及 `reports_mine_idx` / `reports_queue_idx` / 带 `WHERE` 条件的 `reports_pending_target_idx`；这一版不含 `moderation_logs`。`012_user_titles.sql` 在 `users` 表加 `titles TEXT[]` 列（CHECK 约束只允许 `community_leader` / `founder` / `admin` 三种枚举）并给现有 `role = admin` 账号回填三种头衔，头衔纯展示、不提升权限。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications`、M6 计划中的 `NNN_reports_moderation.sql` / `NNN_views.sql` 等属未来里程碑，未落盘，不在此列）。
+明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。`011_reports.sql` 建 `reports` 表（用 `kind` 区分举报 / 申诉，CHECK 约束钉死目标形态与终态字段）及 `reports_mine_idx` / `reports_queue_idx` / 带 `WHERE` 条件的 `reports_pending_target_idx`；这一版不含 `moderation_logs`。`012_user_titles.sql` 在 `users` 表加 `titles TEXT[]` 列（CHECK 约束只允许 `community_leader` / `founder` / `admin` 三种枚举）并给现有 `role = admin` 账号回填三种头衔，头衔纯展示、不提升权限。`013_messages.sql` 建 `conversations`（`participant_a/b` 外键、`CHECK` 禁止自聊、`UNIQUE(participant_a, participant_b)`——两人会话由插入时 `LEAST/GREATEST` 归一化保证唯一，不写表达式唯一约束，因 PGlite 不支持）与 `messages`（`body` 非空 `CHECK`、`(conversation_id, created_at DESC, id DESC)` 复合索引）；本期不含已读状态与实时推送。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications`、M6 计划中的 `NNN_reports_moderation.sql` / `NNN_views.sql` 等属未来里程碑，未落盘，不在此列）。
 
 | 规则 | 内容 |
 | --- | --- |

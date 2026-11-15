@@ -15,7 +15,7 @@
     "migrate": "tsx src/db/migrate.ts",
     "migrate:prod": "node dist/db/migrate.js",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.test.json",
-    "test": "tsx --test \"tests/**/*.test.ts\""
+    "test": "tsx --test --test-concurrency=4 \"tests/**/*.test.ts\""
   },
   "dependencies": {
     "dotenv": "18.0.10",

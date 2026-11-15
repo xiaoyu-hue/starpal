@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+### 新增（站内私信 · M5-S1）
+
+- 数据库新增 `013_messages.sql`：`conversations`（`participant_a/b`、`CHECK` 禁止自聊、`UNIQUE(participant_a, participant_b)`）与 `messages`（`body` 非空 `CHECK`、`(conversation_id, created_at DESC, id DESC)` 复合索引）。两人会话唯一性由「插入时 `LEAST/GREATEST` 归一化 + 普通列唯一约束 + `ON CONFLICT DO UPDATE SET id = conversations.id` 取回既有行」保证——不写表达式唯一约束，因为 PGlite（测试库）不支持，改用该写法后生产与测试跑同一段 SQL。
+- 后端新增 `server/src/modules/messages/`：`POST /api/messages`（按用户名创建/复用会话）、`GET /api/messages`（会话列表含对方资料、头衔与最近消息预览）、`GET /api/messages/:id`、`GET /api/messages/:id/messages`、`POST /api/messages/:id/messages`。整组 `requireAuth`，服务层再经 `getConversationFor` 二次校验参与者（非参与者 `FORBIDDEN`）；消息正文服务层兜底 `trim` + 非空 + 2000 字上限；键集游标分页，无新依赖。
+- 前端新增 `web/src/features/messages/`：`/messages` 替换原「M5 交付」占位页，会话列表 + 消息线程 + 发送框；桌面侧栏补「私信」入口（移动端底部 Tab 原有入口不变）；他人主页新增「发私信」按钮，`?to=用户名` 直达并自动建会话。线程用 `flex-col-reverse` 让最新消息贴底且初始滚动落位，无需测量高度。
+- **刻意不做的部分**（用户确认的取舍）：不做实时推送、不做未读红点、不改通知模块；会话列表不显示未读数。这一版解决的是「没有站内私下沟通渠道」，不是「即时通讯」。
+- 测试基建修正：新增测试文件后 `verify` 首轮出现两处 **SIGKILL**（`bookmarks-list`、`interaction-flags`），非断言失败——`node --test` 默认按 CPU 核数（本机 32）并发，同时起 32 个 PGlite WASM 实例触发容器内存上限。已在 `server/package.json` 的 `test` 脚本显式加 `--test-concurrency=4`。未改动任何断言或阈值。
+- 验证：新增 `server/tests/integration/messages.test.ts`（6 项 PGlite 真库断言：会话幂等含反向创建、禁止自聊、收件人不存在、发送后预览与游标分页、非参与者三路拒绝、空白/超长消息拒绝与空白归一），`npm run verify` 全绿（113 项测试、lint 硬规则 0 违规）；见 `docs/IMPLEMENTATION-PLAN.md` 的 `VR-M5-S1-01`。**登录态下「主页发私信 → 输入 → 发送 → 对方刷新可见」的完整浏览器交互 E2E 未执行**，如实标注。
+- 文档同步：公告 `status` 未完成清单由「私信」改为「成就时间线、数据导出」、私信移入可用能力；关于页自述与 `about-doc` 测试同步；README 功能概览、路线图与迁移范围（`001`–`013`）同步；`AGENTS.md` / `DOC_SYNC.md` 迁移编号口径顺延至 `013`。
+
 ### 新增（全站搜索 · M5-S3）
 
 - 后端新增 `server/src/modules/search/`：`GET /api/search?q=&type=all|post|topic&cursor=&limit=`，挂 `optionalAuth`（匿名可搜公开内容，登录者额外补 `isLiked` / `isBookmarked`）。查询复用 `posts` 模块的 `PROJECTION` / `VISIBLE` / `toListItem`（经 `posts/index.ts` 公共出口），保证搜索结果与信息流对同一帖子的可见性完全一致——草稿、已删除、停用作者的内容不会出现。无新迁移。
