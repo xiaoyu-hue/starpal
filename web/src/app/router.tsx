@@ -68,6 +68,9 @@ const SearchPage = lazy(() =>
 const AchievementsPage = lazy(() =>
   import('../features/achievements').then((m) => ({ default: m.AchievementsPage })),
 )
+const DiscoverPage = lazy(() =>
+  import('../features/discover').then((m) => ({ default: m.DiscoverPage })),
+)
 const MyReportsPage = lazy(() =>
   import('../features/reports/MyReportsPage').then((m) => ({ default: m.MyReportsPage })),
 )
@@ -115,7 +118,7 @@ const routes: RouteObject[] = [
     element: <ShellRoute />,
     children: [
       { index: true, element: <Suspended><HomePage /></Suspended> },
-      { path: 'discover', element: placeholder('发现', 'M3', '热门与最新话题的聚合视图将在 M3 后续交付。') },
+      { path: 'discover', element: <Suspended><DiscoverPage /></Suspended> },
       { path: 'topics', element: <Suspended><TopicsPage /></Suspended> },
       { path: 'topics/:slug', element: <Suspended><TopicPage /></Suspended> },
       {

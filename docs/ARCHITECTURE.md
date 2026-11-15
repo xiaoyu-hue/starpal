@@ -209,7 +209,8 @@ web/
     │   ├── message/     # 会话与消息（留言式）
     │   ├── notification/
     │   ├── profile/     # 公开页、资料编辑、可选资料（已实现）
-    │   ├── achievements/ # 成就时间线、每周热门（已实现）
+    │   ├── achievements/ # 成就时间线（已实现）
+    │   ├── discover/    # 发现：本周热门 + 话题入口（已实现）
     │   ├── search/
     │   ├── report/      # 举报提交
     │   ├── admin/       # 六分区后台
@@ -263,7 +264,7 @@ features/<domain>/
 | 路径 | 页面 | 域 | 访问 |
 | --- | --- | --- | --- |
 | `/` | 首页 / 信息流 | feed | 公开 |
-| `/discover` | 发现 | topic | 公开 |
+| `/discover` | 发现 | discover | 公开 |
 | `/topics` | 话题列表 | topic | 公开 |
 | `/topics/:slug` | 话题详情 | topic | 公开 |
 | `/posts/new` | 创建帖子 | post | 登录 |

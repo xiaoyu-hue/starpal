@@ -7,7 +7,6 @@ import { ApiError } from '../../lib/api-client'
 import { useAuth } from '../auth'
 import { AchievementTimeline } from './AchievementTimeline'
 import { useTimelineQuery } from './achievements.queries'
-import { WeeklyPopular } from './WeeklyPopular'
 
 /**
  * 成就页。
@@ -49,7 +48,6 @@ export function AchievementsPage() {
             去登录
           </Link>
         </div>
-        <WeeklyPopular />
       </div>
     )
   }
@@ -106,7 +104,6 @@ export function AchievementsPage() {
       </header>
 
       <AchievementTimeline timeline={timeline} />
-      <WeeklyPopular />
     </div>
   )
 }
