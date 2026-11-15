@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Award, Bookmark, Check, Flag, Heart, KeyRound } from 'lucide-react'
+import { Award, Bookmark, Check, Flag, Heart, KeyRound, UserRound } from 'lucide-react'
 import { Avatar, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
@@ -24,6 +24,7 @@ import {
 import { PasswordSection } from './PasswordSection'
 import { TitlesSection } from './TitlesSection'
 import { ExportSection } from './ExportSection'
+import { ProfileLevel } from '../level'
 import type { OwnProfile } from '../../types/api'
 
 /** 设置页编排：资料编辑、主题、关于与账号。由路由级 RequireAuth 守卫进入。 */
@@ -50,6 +51,10 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <h1 className="text-xl font-semibold text-ink">设置</h1>
+      {/* 等级放这里，是因为底部导航的「我的」指向本页而非 /u/ 主页——
+          用户点「我的」就该看到自己的等级，而不是必须先猜到公开主页地址。
+          等级本身只给自己看（不排名、不进署名行），出现在私人设置页并不越界。 */}
+      <ProfileLevel username={query.data.username} />
       <ProfileSection key={query.data.username} profile={query.data} onSaved={refresh} />
       <PasswordSection />
       <ThemeSection />
@@ -80,6 +85,13 @@ export function SettingsPage() {
         description="你在这里留下的记录：发帖、回应、被认可、邀请朋友。已解锁的徽章也会显示在你的公开主页上。"
         to="/achievements"
         action="查看成就"
+      />
+      <LinkCard
+        icon={UserRound}
+        title="我的公开主页"
+        description="别人点你名字看到的那个页面：等级与段位、已解锁的徽章、你发布的帖子都在这里。"
+        to={`/u/${query.data.username}`}
+        action="查看主页"
       />
       <ExportSection />
       <AboutSection />
