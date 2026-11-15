@@ -24,6 +24,7 @@ import { imageUploadRouter } from './modules/uploads/index.js'
 import { searchRouter } from './modules/search/index.js'
 import { messageRouter } from './modules/messages/index.js'
 import { achievementRouter } from './modules/achievements/index.js'
+import { levelRouter } from './modules/levels/index.js'
 import { exportRouter } from './modules/export/index.js'
 
 /**
@@ -60,5 +61,6 @@ apiRouter.use('/topics', topicRouter)
 apiRouter.use('/search', searchRouter)
 apiRouter.use('/messages', messageRouter)
 apiRouter.use('/achievements', achievementRouter)
+apiRouter.use('/levels', levelRouter)
 apiRouter.use('/export', exportRouter)
 apiRouter.use('/images', imageRouter)

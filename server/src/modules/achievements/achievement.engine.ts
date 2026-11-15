@@ -7,21 +7,13 @@
  * 这样 PRD `FR-ACH-01`「新增称号无须改动业务代码」在数据侧成立。
  */
 
-/** 指标注册表：每个键都对应 repository 里一段可执行的统计 SQL，两者必须同步增减。 */
-export const METRIC_IDS = [
-  'posts_published',
-  'comments_published',
-  'topics_covered',
-  'likes_received',
-  'messages_sent',
-  'invites_used',
-  'days_since_join',
-] as const
+import { METRIC_IDS, type Metric, type Metrics } from '../../shared/metrics.js'
 
-export type Metric = (typeof METRIC_IDS)[number]
-
-/** 一次性算好的全部指标值，判定时只在内存里比较，不再逐条查库。 */
-export type Metrics = Record<Metric, number>
+/**
+ * 指标注册表与采集 SQL 已抽到 `shared/metrics.ts`（等级模块复用同一份统计口径）。
+ * 这里转入并再转出，保持既有 import 路径不变——本模块的调用方不必知道它搬过家。
+ */
+export { METRIC_IDS, type Metric, type Metrics }
 
 /** 库中 condition 列的结构：一条成就只有一个指标与一个阈值。 */
 export type Condition = { metric: Metric; gte: number }

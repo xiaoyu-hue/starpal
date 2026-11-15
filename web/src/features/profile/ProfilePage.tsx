@@ -9,6 +9,7 @@ import { mergeFeedPages } from '../../lib/pagination'
 import { PostCard } from '../feed'
 import { useAuth } from '../auth'
 import { ProfileAchievements } from '../achievements'
+import { ProfileLevel } from '../level'
 import { TitleBadges } from '../users'
 import { usePublicProfileQuery, useUserPostsQuery } from './queries'
 
@@ -107,6 +108,8 @@ export function ProfilePage() {
           </div>
         )}
       </Card>
+
+      <ProfileLevel username={profile.username} />
 
       <ProfileAchievements username={profile.username} isSelf={isSelf} />
 

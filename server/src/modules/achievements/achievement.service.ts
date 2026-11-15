@@ -3,14 +3,9 @@ import { DELETED_DISPLAY_NAME } from '../../config/constants.js'
 import { DomainError } from '../../shared/errors.js'
 import { attachViewerFlags } from '../interactions/index.js'
 import { toListItem, type PostListItem, type RowExecutor } from '../posts/index.js'
+import { describeCondition, isSatisfied, parseCondition } from './achievement.engine.js'
+import { collectMetrics, toMetrics } from '../../shared/metrics.js'
 import {
-  describeCondition,
-  isSatisfied,
-  parseCondition,
-  type Metrics,
-} from './achievement.engine.js'
-import {
-  collectMetrics,
   findUserRef,
   insertUnlocked,
   listDefinitions,
@@ -18,7 +13,6 @@ import {
   listWeeklyPopular,
   getWeekRange,
   type AchievementRow,
-  type MetricsRow,
 } from './achievement.repository.js'
 
 /** 单次展示的本周热门条数：与「发现页精选」同量级，一屏可见，不做无限加载。 */
@@ -49,18 +43,6 @@ export type WeeklyView = {
 }
 
 export type WeeklyViewer = { id: string; role: string } | null
-
-function toMetrics(row: MetricsRow): Metrics {
-  return {
-    posts_published: row.posts_published,
-    comments_published: row.comments_published,
-    topics_covered: row.topics_covered,
-    likes_received: row.likes_received,
-    messages_sent: row.messages_sent,
-    invites_used: row.invites_used,
-    days_since_join: row.days_since_join,
-  }
-}
 
 function toItem(row: AchievementRow, unlockedAt: Date | undefined): AchievementItem {
   const condition = parseCondition(row.condition)

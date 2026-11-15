@@ -8,7 +8,6 @@ import {
   type PostRecord,
   type RowExecutor,
 } from '../posts/index.js'
-import type { Metrics } from './achievement.engine.js'
 
 /** 相对导入一律带 .js（server R3）；执行器形状与 posts / messages 一致，测试可注入 PGlite。 */
 
@@ -25,8 +24,6 @@ export type UnlockedRow = {
   unlocked_at: Date
 }
 
-export type MetricsRow = Metrics & { status: string }
-
 /**
  * 行类型收敛：`RowExecutor.query` 的行类型固定为帖子投影，本模块查的是别的表。
  * 经 unknown 转一次是唯一诚实的写法——请求的列与断言的类型由上面每条 SQL 自己保证，
@@ -42,42 +39,10 @@ async function rowsOf<T>(
 }
 
 /**
- * 一次查询算完七个指标。
- *
- * 为什么用标量子查询而不是七次往返：判定要在每次访问成就页 / 资料页时执行，
- * 七次串行往返在 Serverless 冷启动下会明显拖慢首屏；单条语句在库里并行求值，一次出网。
- * 全部 `::int`：count / sum 返回 bigint，pg 驱动会把它读成字符串，转成 int4 才是 number。
+ * 指标采集已上移到 `shared/metrics.ts`（等级模块复用同一份统计口径）。
+ * 这里转出，让本模块的调用方不必知道它搬过家；两处算法永远不会分叉。
  */
-const METRICS_SQL = `
-  SELECT
-    u.status,
-    GREATEST(0, floor(extract(epoch FROM (now() - u.created_at)) / 86400))::int AS days_since_join,
-    (SELECT count(*) FROM posts p
-      WHERE p.author_id = u.id AND p.status = 'published' AND p.deleted_at IS NULL)::int
-      AS posts_published,
-    (SELECT count(DISTINCT p.topic_id) FROM posts p
-      WHERE p.author_id = u.id AND p.status = 'published' AND p.deleted_at IS NULL)::int
-      AS topics_covered,
-    (SELECT coalesce(sum(p.like_count), 0) FROM posts p
-      WHERE p.author_id = u.id AND p.status = 'published' AND p.deleted_at IS NULL)::int
-      AS likes_received,
-    (SELECT count(*) FROM comments c
-      WHERE c.author_id = u.id AND c.status = 'published')::int
-      AS comments_published,
-    (SELECT count(*) FROM messages m WHERE m.sender_id = u.id)::int AS messages_sent,
-    (SELECT count(*) FROM invite_codes ic WHERE ic.used_by = u.id)::int AS invites_used
-  FROM users u
-  WHERE u.id = $1
-`
-
-/** 读取某用户的全部指标；用户不存在返回 null（由服务层转成 NOT_FOUND）。 */
-export async function collectMetrics(
-  userId: string,
-  executor: RowExecutor = pool,
-): Promise<MetricsRow | null> {
-  const rows = await rowsOf<MetricsRow>(executor, METRICS_SQL, [userId])
-  return rows[0] ?? null
-}
+export { collectMetrics } from '../../shared/metrics.js'
 
 /** 成就定义目录：只取启用中的，按展示顺序。图标不进 SQL——图形属于表现层，由前端按 code 自绘。 */
 export async function listDefinitions(

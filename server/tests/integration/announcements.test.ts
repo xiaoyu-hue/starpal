@@ -55,6 +55,21 @@ describe('社区公告 M6-S0', () => {
     assert.ok(feed.history.length > 0, '发布记录应保留在代码里')
   })
 
+  it('等级上线后，状态公告正文不再说「经验 / 签到 / 等级尚未开始」', async () => {
+    const feed = await getFeed(ex)
+    const body = feed.pinned[0]!.points.join('\n')
+    // 020 用子串 replace 改写正文：这条断言跑在真库上，验证拼接后的迁移确实生效，
+    // 而不是只改了迁移文件、线上仍是旧文案。
+    assert.ok(body.includes('等级与段位已上线'), '正文应写明等级已交付')
+    assert.ok(
+      !body.includes('尚未开始：经验 / 签到 / 等级'),
+      '等级与签到已不再是「尚未开始」项',
+    )
+    assert.ok(body.includes('尚未开始：完整治理后台与审核日志'), '真正未完成的能力仍要如实列出')
+    // 017 追加的通知范围说明不能被 020 的替换误伤
+    assert.ok(body.includes('通知只在你收到评论时发出'), '通知范围说明应保留')
+  })
+
   it('草稿不会出现在公开接口，但管理列表能看到', async () => {
     const draft = await createAnnouncement(adminId, base, ex)
     assert.equal(draft.status, 'draft')
