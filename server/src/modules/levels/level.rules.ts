@@ -95,6 +95,34 @@ export function rankOf(level: number): Rank {
   return RANKS.find((rank) => safe <= rank.maxLevel) ?? RANKS[RANKS.length - 1]!
 }
 
+/** 段位覆盖的最低等级：`萌新` 从 `L1` 起，其余接在前一段的 `maxLevel` 之后。 */
+export function minLevelOf(rank: Rank): number {
+  const index = RANKS.findIndex((item) => item.key === rank.key)
+  return index <= 0 ? 1 : RANKS[index - 1]!.maxLevel + 1
+}
+
+/**
+ * 已解锁的段位。
+ *
+ * 「解锁」不需要单独记录：等级只升不降，`top_level` 就是历史最高，
+ * 所以到过 `L29` 的人必然经过萌新、入门、常客三段，这三段永久可用。
+ * 一旦 `top_level` 到了某一段，它就再也不会退回去——这正是「解锁后永久」的实现。
+ */
+export function unlockedRanks(topLevel: number): readonly Rank[] {
+  const safe = Math.min(Math.max(Math.trunc(topLevel), 1), MAX_LEVEL)
+  return RANKS.filter((rank) => safe >= minLevelOf(rank))
+}
+
+/** 段位键校验：请求体里的值先过这里，非法值一律当校验失败，不静默忽略。 */
+export function isRankKey(value: unknown): value is RankKey {
+  return typeof value === 'string' && RANKS.some((rank) => rank.key === value)
+}
+
+/** 按 key 取段位定义；不存在返回 null（调用方决定当校验失败还是当「不戴」）。 */
+export function rankByKey(key: string): Rank | null {
+  return RANKS.find((rank) => rank.key === key) ?? null
+}
+
 /**
  * 七个指标的经验权重。
  *

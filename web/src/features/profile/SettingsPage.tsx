@@ -24,7 +24,7 @@ import {
 import { PasswordSection } from './PasswordSection'
 import { TitlesSection } from './TitlesSection'
 import { ExportSection } from './ExportSection'
-import { ProfileLevel } from '../level'
+import { ProfileLevel, RankSection } from '../level'
 import type { OwnProfile } from '../../types/api'
 
 /** 设置页编排：资料编辑、主题、关于与账号。由路由级 RequireAuth 守卫进入。 */
@@ -56,6 +56,7 @@ export function SettingsPage() {
           等级本身只给自己看（不排名、不进署名行），出现在私人设置页并不越界。 */}
       <ProfileLevel username={query.data.username} />
       <ProfileSection key={query.data.username} profile={query.data} onSaved={refresh} />
+      <RankSection username={query.data.username} />
       <PasswordSection />
       <ThemeSection />
       <LinkCard

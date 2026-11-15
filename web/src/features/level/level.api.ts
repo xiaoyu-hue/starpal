@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { apiGet } from '../../lib/api-client'
-import type { UserLevel } from '../../types/level'
+import { apiGet, apiPatch } from '../../lib/api-client'
+import type { RankBadge, RankKey, UserLevel } from '../../types/level'
 
 /**
  * 某人等级（匿名可读）。
@@ -11,4 +11,10 @@ import type { UserLevel } from '../../types/level'
 export async function fetchLevel(username: string, signal?: AbortSignal): Promise<UserLevel> {
   const envelope = await apiGet<UserLevel>(`levels/${encodeURIComponent(username)}`, { signal })
   return envelope.data
+}
+
+/** 设置自己佩戴的段位；传 `null` 表示摘下。只能选已解锁的，未解锁由服务端拒绝。 */
+export async function setMyRank(rank: RankKey | null): Promise<RankBadge | null> {
+  const envelope = await apiPatch<{ badge: RankBadge | null }>('users/me/rank', { rank })
+  return envelope.data.badge
 }

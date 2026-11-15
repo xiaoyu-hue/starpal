@@ -433,7 +433,7 @@ server/
 | `messages` | 会话与消息 | `conversations` `messages` |
 | `notifications` | 通知生成与已读 | `notifications` |
 | `achievements` | 成就定义、解锁、每周热门只读聚合 | `achievements` `user_achievements` |
-| `levels` | 经验换算与等级 / 段位派生（读时计算，只升不降） | `users.top_level` |
+| `levels` | 经验换算、等级 / 段位派生（读时计算，只升不降）与段位徽标佩戴 | `users.top_level` `users.equipped_rank` |
 | `reports` | 举报 / 申诉提交、目标可见性校验、我的提交、管理队列与决策（当前仅最小闭环，不含处置） | `reports` |
 | `moderation` | 处置动作、封禁、审核日志 | `reports` `moderation_logs` `users` `posts` `comments` |
 | `uploads` | 上传校验、重编码、存储与清理 | `post_images` |
@@ -662,6 +662,7 @@ sequenceDiagram
 | GET | `/api/achievements/:username` | 公开 | 某人成就时间线（读时判定，达标即补写解锁记录） |
 | GET | `/api/achievements/weekly` | 公开 | 本周热门（服务层只读聚合，不落表、无定时任务） |
 | GET | `/api/levels/:username` | 公开 | 某人的等级与段位（读时现算经验，晋级时抬 `top_level`） |
+| PATCH | `/api/users/me/rank` | 登录 | 佩戴 / 更换 / 摘下段位徽标（只允许已解锁段位，`null` 为摘下） |
 | GET | `/api/search` | 公开 | `q` + `type` 搜索 |
 | GET | `/api/export` | 登录 | `format=md|json` 导出本人数据 |
 
@@ -721,7 +722,8 @@ sequenceDiagram
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| GET | `/api/levels/:username` | 公开 | 等级（`L1`–`L50`）与段位（萌新 / 入门 / 常客 / 老友 / 元老）+ 累计经验；读取时现算经验，晋级时抬 `users.top_level` |
+| GET | `/api/levels/:username` | 公开 | 等级（`L1`–`L50`）与段位（萌新 / 入门 / 常客 / 老友 / 元老）+ 累计经验；读取时现算经验，晋级时抬 `users.top_level`；另返回当前佩戴的 `badge` 与带解锁标记的五段 `catalog` |
+| PATCH | `/api/users/me/rank` | 登录 | 设置佩戴的段位；`rank: null` 为摘下。未解锁返回 `FORBIDDEN`（消息带所需等级），非法键或缺少字段返回 `VALIDATION_FAILED` |
 
 > **为什么不建经验流水表**：经验由 `shared/metrics.ts` 的七个指标加权现算，与成就判定共用同一份 SQL。若改成写时累加，要给发帖、评论、点赞三条已上线写路径各加一处调用，漏一处就长期少算，还得回填历史数据。读时现算的代价是经验会因删帖 / 撤赞而下降，因此等级取 `max(现算等级, top_level)`——只升不降，晋级时 `UPDATE ... WHERE top_level < $2` 原子抬升，并发下也只有一次生效。`shared/metrics.ts` 由 `achievement.repository.ts` 上移而来，成就侧只改 import，行为不变。
 >
@@ -877,8 +879,9 @@ erDiagram
 | `last_login_at` | `TIMESTAMPTZ` | NULL | 最近登录 |
 | `titles` | `TEXT[]` | NOT NULL, DEFAULT `'{}'` | 站长授权头衔（迁移 `012`），仅展示、不提升权限 |
 | `top_level` | `SMALLINT` | NOT NULL, DEFAULT 1, CHECK 1–50 | 历史最高等级（迁移 `019`），用于兑现「只升不降」 |
+| `equipped_rank` | `TEXT` | NULL, CHECK 五个段位键 | 佩戴中的段位徽标（迁移 `021`）；`NULL` 为不戴。「已解锁哪些」不落库，由 `top_level` 派生 |
 
-检查约束：`status IN ('active','suspended','deleted')`；`titles <@ ARRAY['community_leader','founder','admin']`；`top_level BETWEEN 1 AND 50`（与 `level.rules.ts` 的 `MAX_LEVEL` 同源）。
+检查约束：`status IN ('active','suspended','deleted')`；`titles <@ ARRAY['community_leader','founder','admin']`；`top_level BETWEEN 1 AND 50`（与 `level.rules.ts` 的 `MAX_LEVEL` 同源）；`equipped_rank IS NULL OR equipped_rank IN (...)`（与 `RANKS` 同源）。
 
 #### `user_profiles`
 
@@ -1153,10 +1156,11 @@ server/src/db/migrations/
 ├── 017_status_announcement_scope.sql
 ├── 018_status_summary_no_enumeration.sql
 ├── 019_user_level.sql
-└── 020_status_announcement_level.sql
+├── 020_status_announcement_level.sql
+└── 021_user_rank_badge.sql
 ```
 
-明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。`011_reports.sql` 建 `reports` 表（用 `kind` 区分举报 / 申诉，CHECK 约束钉死目标形态与终态字段）及 `reports_mine_idx` / `reports_queue_idx` / 带 `WHERE` 条件的 `reports_pending_target_idx`；这一版不含 `moderation_logs`。`012_user_titles.sql` 在 `users` 表加 `titles TEXT[]` 列（CHECK 约束只允许 `community_leader` / `founder` / `admin` 三种枚举）并给现有 `role = admin` 账号回填三种头衔，头衔纯展示、不提升权限。`013_messages.sql` 建 `conversations`（`participant_a/b` 外键、`CHECK` 禁止自聊、`UNIQUE(participant_a, participant_b)`——两人会话由插入时 `LEAST/GREATEST` 归一化保证唯一，不写表达式唯一约束，因 PGlite 不支持）与 `messages`（`body` 非空 `CHECK`、`(conversation_id, created_at DESC, id DESC)` 复合索引）；本期不含已读状态与实时推送。`014_achievements.sql` 建 `achievements`（条件以 `condition` JSONB 表达，只支持「单指标 + 阈值」）与 `user_achievements`（复合主键保证一次性解锁），并种入九条成就；`015_drop_achievement_icon.sql` 移除 `achievements.icon` 列——图形属表现层，前端按 `code` 自绘。`016_announcements.sql` 建 `announcements` 表（`kind` / `status` / `is_pinned` / `published_at` / `deleted_at`，`CHECK ((status='published') = (published_at IS NOT NULL))` 绑死发布态与时间），并把「当前进度与已知问题」作为置顶种子入库；`017` / `018` 仅修正该条公告的正文与摘要口径（精确匹配旧文案才更新，不覆盖运营者手动编辑）。`019_user_level.sql` 在 `users` 加 `top_level SMALLINT NOT NULL DEFAULT 1`（`CHECK 1–50`），只记历史最高等级，用于「只升不降」；等级本身是派生值，不落表。`020_status_announcement_level.sql` 用子串 `replace` 把状态公告正文里的「尚未开始：经验 / 签到 / 等级…」换成「等级与段位已上线…」——只替换仍为原文的那一段，运营者的手动编辑不受影响；用子串替换而非整段覆盖，是因为 `017` 在正文末尾追加过一句，整段匹配会因末尾差异静默失效。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications`、M6 计划中的 `NNN_reports_moderation.sql` / `NNN_views.sql` 等属未来里程碑，未落盘，不在此列）。
+明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。`011_reports.sql` 建 `reports` 表（用 `kind` 区分举报 / 申诉，CHECK 约束钉死目标形态与终态字段）及 `reports_mine_idx` / `reports_queue_idx` / 带 `WHERE` 条件的 `reports_pending_target_idx`；这一版不含 `moderation_logs`。`012_user_titles.sql` 在 `users` 表加 `titles TEXT[]` 列（CHECK 约束只允许 `community_leader` / `founder` / `admin` 三种枚举）并给现有 `role = admin` 账号回填三种头衔，头衔纯展示、不提升权限。`013_messages.sql` 建 `conversations`（`participant_a/b` 外键、`CHECK` 禁止自聊、`UNIQUE(participant_a, participant_b)`——两人会话由插入时 `LEAST/GREATEST` 归一化保证唯一，不写表达式唯一约束，因 PGlite 不支持）与 `messages`（`body` 非空 `CHECK`、`(conversation_id, created_at DESC, id DESC)` 复合索引）；本期不含已读状态与实时推送。`014_achievements.sql` 建 `achievements`（条件以 `condition` JSONB 表达，只支持「单指标 + 阈值」）与 `user_achievements`（复合主键保证一次性解锁），并种入九条成就；`015_drop_achievement_icon.sql` 移除 `achievements.icon` 列——图形属表现层，前端按 `code` 自绘。`016_announcements.sql` 建 `announcements` 表（`kind` / `status` / `is_pinned` / `published_at` / `deleted_at`，`CHECK ((status='published') = (published_at IS NOT NULL))` 绑死发布态与时间），并把「当前进度与已知问题」作为置顶种子入库；`017` / `018` 仅修正该条公告的正文与摘要口径（精确匹配旧文案才更新，不覆盖运营者手动编辑）。`019_user_level.sql` 在 `users` 加 `top_level SMALLINT NOT NULL DEFAULT 1`（`CHECK 1–50`），只记历史最高等级，用于「只升不降」；等级本身是派生值，不落表。`020_status_announcement_level.sql` 用子串 `replace` 把状态公告正文里的「尚未开始：经验 / 签到 / 等级…」换成「等级与段位已上线…」——只替换仍为原文的那一段，运营者的手动编辑不受影响；用子串替换而非整段覆盖，是因为 `017` 在正文末尾追加过一句，整段匹配会因末尾差异静默失效。`021_user_rank_badge.sql` 在 `users` 加 `equipped_rank TEXT`（`CHECK` 只允许五个段位键或 `NULL`），只存「戴哪一个」——「解锁了哪些」由 `top_level` 派生，不另建表，避免两处真源分叉。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications`、M6 计划中的 `NNN_reports_moderation.sql` / `NNN_views.sql` 等属未来里程碑，未落盘，不在此列）。
 
 | 规则 | 内容 |
 | --- | --- |

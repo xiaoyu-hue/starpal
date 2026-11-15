@@ -14,6 +14,7 @@ export type LevelUserRow = {
   status: string
   display_name: string
   top_level: number
+  equipped_rank: string | null
 }
 
 /** 按用户名取档案；停用 / 已注销的区分交给服务层（与公开资料页口径一致）。 */
@@ -22,10 +23,35 @@ export async function findLevelUser(
   executor: MetricsExecutor = pool,
 ): Promise<LevelUserRow | null> {
   const result = await executor.query(
-    `SELECT id, status, display_name, top_level FROM users WHERE username = $1`,
+    `SELECT id, status, display_name, top_level, equipped_rank FROM users WHERE username = $1`,
     [username],
   )
   return (result.rows as LevelUserRow[])[0] ?? null
+}
+
+/** 按 id 取历史最高等级——设置徽标时只需这两个字段，不必拉整行。 */
+export async function findTopLevelById(
+  userId: string,
+  executor: MetricsExecutor = pool,
+): Promise<number | null> {
+  const result = await executor.query(`SELECT top_level FROM users WHERE id = $1`, [userId])
+  const row = (result.rows as { top_level: number }[])[0]
+  return row ? row.top_level : null
+}
+
+/**
+ * 设置佩戴的段位；`null` 表示不戴。
+ *
+ * 不加 `WHERE` 之外的任何守卫：是否已解锁由服务层在调用前判定，
+ * 这里只负责落库。分成两层是为了让「未解锁却佩戴」的拒绝理由能带上具体段位名，
+ * 而不是在 SQL 里静默更新 0 行。
+ */
+export async function setEquippedRank(
+  userId: string,
+  rank: string | null,
+  executor: MetricsExecutor = pool,
+): Promise<void> {
+  await executor.query(`UPDATE users SET equipped_rank = $2 WHERE id = $1`, [userId, rank])
 }
 
 /**

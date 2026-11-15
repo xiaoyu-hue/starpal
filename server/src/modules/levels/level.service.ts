@@ -2,8 +2,36 @@
 import { DELETED_DISPLAY_NAME } from '../../config/constants.js'
 import { DomainError } from '../../shared/errors.js'
 import { collectMetrics, toMetrics, type MetricsExecutor } from '../../shared/metrics.js'
-import { findLevelUser, raiseTopLevel } from './level.repository.js'
-import { LEVEL_BASIS, computeExperience, levelOf, rankOf } from './level.rules.js'
+import { findLevelUser, findTopLevelById, raiseTopLevel, setEquippedRank } from './level.repository.js'
+import {
+  LEVEL_BASIS,
+  RANKS,
+  computeExperience,
+  isRankKey,
+  levelOf,
+  minLevelOf,
+  rankByKey,
+  rankOf,
+  unlockedRanks,
+  type RankKey,
+} from './level.rules.js'
+
+/** 对外：一个成员佩戴在名字旁的段位徽标。`null` 表示没戴。 */
+export type RankBadge = {
+  key: RankKey
+  /** 中文段位名，直接展示。 */
+  nameZh: string
+}
+
+/** 设置页渲染一个选项所需的全部信息。 */
+export type RankOption = {
+  key: RankKey
+  nameZh: string
+  /** 解锁所需的最低等级。 */
+  minLevel: number
+  /** 当前是否已解锁（= 等级是否到过这一段）。 */
+  unlocked: boolean
+}
 
 /** 对外：一个成员的等级与段位。 */
 export type LevelProgress = {
@@ -20,6 +48,13 @@ export type LevelView = {
   username: string
   displayName: string
   progress: LevelProgress | null
+  /** 佩戴中的段位徽标；没戴或佩戴值已失效时为 null。 */
+  badge: RankBadge | null
+  /**
+   * 五个段位目录，带 `unlocked` 标记，供设置页渲染选项。
+   * 由服务端下发而不是前端硬编码：段位名与门槛只在 `level.rules.ts` 有一份真源。
+   */
+  catalog: RankOption[]
   /** 等级怎么来的，服务端生成，前端不复制文案。 */
   basis: string
 }
@@ -52,6 +87,8 @@ export async function getLevel(
       username,
       displayName: DELETED_DISPLAY_NAME,
       progress: null,
+      badge: null,
+      catalog: catalogFor(1).map((item) => ({ ...item, unlocked: false })),
       basis: LEVEL_BASIS,
     }
   }
@@ -71,10 +108,73 @@ export async function getLevel(
     await raiseTopLevel(user.id, current, executor)
   }
 
+  // 佩戴值可能落在已解锁范围之外：正常不会（只升不降 + 服务层写入校验），
+  // 但手工改库或未来规则调整都可能造成历史数据越界。这时按「没戴」处理——
+  // 宁可少显示一个徽标，也不能在页面上挂出用户还没资格拥有的段位。
+  const worn = user.equipped_rank ? rankByKey(user.equipped_rank) : null
+  const badge: RankBadge | null =
+    worn && effective >= minLevelOf(worn) ? { key: worn.key, nameZh: worn.nameZh } : null
+
   return {
     username,
     displayName: user.display_name,
     progress: { level: effective, rank: rankOf(effective).nameZh, experience },
+    badge,
+    catalog: catalogFor(effective),
     basis: LEVEL_BASIS,
   }
+}
+
+/**
+ * 设置自己佩戴的段位；`null` 表示摘下来。
+ *
+ * 三条规则：
+ * - 只能戴**已解锁**的段位。解锁由 `top_level` 派生，未到过的段位直接拒绝，
+ *   而不是静默不生效——用户点了「老友」却什么都没发生，比报错更让人困惑。
+ * - 可以戴比自己当前等级更低的段位。有人 `L45` 愿意自称「常客」，那是他的选择；
+ *   等级牌仍如实显示 `LV 45`，两者不一致是刻意的，不做「修正」。
+ * - 已注销 / 停用账户不允许改：与公开视图口径一致，这类账户不再展示资历。
+ */
+export async function setOwnRank(
+  userId: string,
+  raw: unknown,
+  executor?: MetricsExecutor,
+): Promise<{ badge: RankBadge | null }> {
+  // `undefined` 与 `null` 语义不同：前者是「没传这个字段」，后者是「显式摘下」。
+  if (raw === undefined) {
+    throw new DomainError('VALIDATION_FAILED', '缺少 rank 字段')
+  }
+  if (raw !== null && !isRankKey(raw)) {
+    throw new DomainError('VALIDATION_FAILED', '段位不存在')
+  }
+
+  const topLevel = await findTopLevelById(userId, executor)
+  if (topLevel === null) {
+    throw new DomainError('NOT_FOUND', '用户不存在')
+  }
+
+  if (raw !== null) {
+    const target = rankByKey(raw)!
+    if (topLevel < minLevelOf(target)) {
+      throw new DomainError(
+        'FORBIDDEN',
+        `「${target.nameZh}」尚未解锁：需要达到 L${minLevelOf(target)}`,
+      )
+    }
+  }
+
+  await setEquippedRank(userId, raw, executor)
+  const picked = raw === null ? null : rankByKey(raw)!
+  return { badge: picked ? { key: picked.key, nameZh: picked.nameZh } : null }
+}
+
+/** 段位目录 + 解锁状态。`unlockedRanks` 与这里同源，避免两处各判一次。 */
+function catalogFor(level: number): RankOption[] {
+  const unlocked = new Set(unlockedRanks(level).map((rank) => rank.key))
+  return RANKS.map((rank) => ({
+    key: rank.key,
+    nameZh: rank.nameZh,
+    minLevel: minLevelOf(rank),
+    unlocked: unlocked.has(rank.key),
+  }))
 }

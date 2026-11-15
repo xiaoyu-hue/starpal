@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import type { PGlite } from '@electric-sql/pglite'
 import { createMigratedDb, expectRejected, seedUser } from '../helpers/db.js'
 import type { MetricsExecutor } from '../../src/shared/metrics.js'
-import { getLevel } from '../../src/modules/levels/index.js'
+import { getLevel, setOwnRank } from '../../src/modules/levels/index.js'
 
 /**
  * 等级 M5.5-S2：在 PGlite 内存真库上跑与线上同一段 SQL。
@@ -16,10 +16,12 @@ import { getLevel } from '../../src/modules/levels/index.js'
  * 4. 停用按不存在处理、已注销不展示资历，库层拦住越界等级。
  */
 
-describe('等级 M5.5-S2', () => {
-  let db: PGlite
-  let ex: MetricsExecutor
+// 库与执行器放在模块作用域：同一份内存库被下面两组用例共用，
+// 避免为「段位徽标」再建一次库（一次建库要跑完全部迁移，十秒级）。
+let db: PGlite
+let ex: MetricsExecutor
 
+describe('等级 M5.5-S2', () => {
   before(async () => {
     db = await createMigratedDb()
     ex = { query: (sql, params) => db.query(sql, params) as never }
@@ -28,6 +30,7 @@ describe('等级 M5.5-S2', () => {
     await seedUser(db, 62, 'demoted')
     await seedUser(db, 63, 'gone')
     await seedUser(db, 64, 'banned')
+    await seedUser(db, 65, 'rookie')
   })
 
   it('新成员是 L1 萌新，零经验', async () => {
@@ -114,5 +117,93 @@ describe('等级 M5.5-S2', () => {
   it('私信不计经验：收发再多私信也不升级', async () => {
     const view = await getLevel('fresh', ex)
     assert.equal(view.progress?.experience, 0)
+  })
+})
+
+/**
+ * 段位徽标（M5.5 补充）：任何登录成员可给自己戴一个「已解锁」的段位。
+ *
+ * 这里守的是四条边界，而不是「能不能存进去」：
+ * 1. 默认不戴——不替人贴标签；
+ * 2. 未解锁的段位必须被拒，且理由要能看懂（提示差到哪一级）；
+ * 3. 摘下来（null）与「没传字段」是两件事，前者是合法操作、后者是请求错误；
+ * 4. 库层与读路径各有一道兜底：非法键写不进，历史越界值读出来当没戴。
+ */
+describe('段位徽标 M5.5 补充', () => {
+  it('默认不戴，五种段位都列出来但只有萌新已解锁', async () => {
+    const view = await getLevel('rookie', ex)
+    assert.equal(view.badge, null, '新人不该被自动挂上任何段位')
+    assert.equal(view.catalog.length, 5, '未解锁的段位也要列出来，否则用户不知道上面还有四段')
+    assert.deepEqual(
+      view.catalog.filter((item) => item.unlocked).map((item) => item.key),
+      ['newcomer'],
+    )
+    assert.deepEqual(
+      view.catalog.map((item) => item.minLevel),
+      [1, 11, 21, 31, 41],
+    )
+  })
+
+  it('戴上已解锁的段位，公开视图能读到；摘下后归零', async () => {
+    const set = await setOwnRank('65', 'newcomer', ex)
+    assert.equal(set.badge?.nameZh, '萌新')
+    assert.equal((await getLevel('rookie', ex)).badge?.nameZh, '萌新')
+
+    const cleared = await setOwnRank('65', null, ex)
+    assert.equal(cleared.badge, null)
+    assert.equal((await getLevel('rookie', ex)).badge, null, '摘下后不应还挂着')
+  })
+
+  it('未解锁的段位被拒绝，提示里带上解锁等级', async () => {
+    await assert.rejects(setOwnRank('65', 'veteran', ex), (error: unknown) => {
+      const typed = error as { code?: string; message?: string }
+      assert.equal(typed.code, 'FORBIDDEN')
+      assert.match(typed.message ?? '', /元老.*L41/)
+      return true
+    })
+    // 被拒之后状态不变，不能出现「报错了但其实写进去了」。
+    assert.equal((await getLevel('rookie', ex)).badge, null)
+  })
+
+  it('非法段位键与缺失字段都按 VALIDATION_FAILED 处理', async () => {
+    await assert.rejects(setOwnRank('65', 'legend', ex), (error: unknown) => {
+      return (error as { code?: string }).code === 'VALIDATION_FAILED'
+    })
+    // undefined 是「没传这个字段」，与显式的 null（摘下）语义不同，不能混为一谈。
+    await assert.rejects(setOwnRank('65', undefined, ex), (error: unknown) => {
+      return (error as { code?: string }).code === 'VALIDATION_FAILED'
+    })
+  })
+
+  it('等级高的人可以戴更低段位：等级牌仍显示真实等级，不做「修正」', async () => {
+    // 不硬编码等级：demoted 的 top_level 是前面「删帖不降级」用例留下的状态，
+    // 这里要验证的是「换徽标不改变等级」，而不是某个具体数字。
+    const before = await getLevel('demoted', ex)
+    const levelBefore = before.progress?.level
+    assert.ok(levelBefore && levelBefore >= 11, '前置条件：这个账号确实升过级')
+
+    await setOwnRank('62', 'newcomer', ex)
+    const after = await getLevel('demoted', ex)
+    assert.equal(after.badge?.nameZh, '萌新', '自主选择的结果要照实显示')
+    assert.equal(after.progress?.level, levelBefore, '徽标不影响等级牌')
+
+    await setOwnRank('62', null, ex)
+  })
+
+  it('库层拒绝不存在的段位键', async () => {
+    const message = await expectRejected(
+      db,
+      `UPDATE users SET equipped_rank = 'legend' WHERE id = 65`,
+    )
+    assert.match(message, /users_equipped_rank_check/)
+  })
+
+  it('佩戴值越界（写入后失去资格）时按没戴处理，不显示未解锁的段位', async () => {
+    // 模拟历史脏数据：L1 的账号被写入「元老」。读路径必须自己兜住，
+    // 不能指望数据库 CHECK 知道 top_level 是多少。
+    await db.exec(`UPDATE users SET equipped_rank = 'veteran' WHERE id = 65`)
+    const view = await getLevel('rookie', ex)
+    assert.equal(view.badge, null)
+    await db.exec(`UPDATE users SET equipped_rank = NULL WHERE id = 65`)
   })
 })

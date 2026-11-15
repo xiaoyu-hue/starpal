@@ -4,6 +4,7 @@ import { optionalAuth } from '../../middleware/optional-auth.js'
 import { requireAuth } from '../../middleware/require-auth.js'
 import { requireRole } from '../../middleware/require-role.js'
 import { ROLE_ADMIN } from '../../config/constants.js'
+import { updateRankController } from '../levels/index.js'
 import {
   deleteAccountController,
   eraseAccountController,
@@ -32,6 +33,9 @@ meRouter.get('/bookmarks', myBookmarksController)
 meRouter.get('/likes', myLikesController)
 meRouter.patch('/', updateProfileController)
 meRouter.patch('/titles', requireRole(ROLE_ADMIN), updateTitlesController)
+// 段位徽标：任何登录成员都能给自己挑一个「已解锁」的段位，不需要角色守卫。
+// 解锁校验在服务层（依赖 top_level），不在路由层——那里只看得到角色，看不到等级。
+meRouter.patch('/rank', updateRankController)
 meRouter.delete('/', deleteAccountController)
 meRouter.post('/erase', eraseAccountController)
 

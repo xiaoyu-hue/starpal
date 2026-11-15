@@ -9,7 +9,7 @@ import { mergeFeedPages } from '../../lib/pagination'
 import { PostCard } from '../feed'
 import { useAuth } from '../auth'
 import { ProfileAchievements } from '../achievements'
-import { ProfileLevel } from '../level'
+import { ProfileLevel, ProfileRankBadge } from '../level'
 import { TitleBadges } from '../users'
 import { usePublicProfileQuery, useUserPostsQuery } from './queries'
 
@@ -74,6 +74,7 @@ export function ProfilePage() {
                 {profile.displayName}
               </h1>
               <TitleBadges titles={profile.titles} />
+              <ProfileRankBadge username={profile.username} />
               {isSelf && (
                 <Link to="/settings" className={buttonClass('secondary', 'sm')}>
                   <Pencil size={14} /> 编辑资料

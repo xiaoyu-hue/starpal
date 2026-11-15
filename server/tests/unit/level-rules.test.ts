@@ -6,9 +6,12 @@ import {
   MAX_LEVEL,
   RANKS,
   computeExperience,
+  isRankKey,
   levelOf,
+  minLevelOf,
   rankOf,
   thresholdOf,
+  unlockedRanks,
 } from '../../src/modules/levels/index.js'
 
 /**
@@ -183,5 +186,54 @@ describe('经验计算', () => {
     assert.equal(active, 415)
     assert.equal(levelOf(active), 15)
     assert.equal(rankOf(levelOf(active)).nameZh, '入门')
+  })
+})
+
+describe('段位解锁（M5.5 补充：可佩戴徽标）', () => {
+  it('按 top_level 派生已解锁段位，五个边界逐一验证', () => {
+    // 段位区间：萌新 1–10、入门 11–20、常客 21–30、老友 31–40、元老 41–50。
+    assert.deepEqual(unlockedRanks(1).map((r) => r.key), ['newcomer'])
+    assert.deepEqual(unlockedRanks(10).map((r) => r.key), ['newcomer'])
+    assert.deepEqual(unlockedRanks(11).map((r) => r.key), ['newcomer', 'starter'])
+    assert.deepEqual(unlockedRanks(20).map((r) => r.key), ['newcomer', 'starter'])
+    assert.deepEqual(unlockedRanks(21).map((r) => r.key), [
+      'newcomer',
+      'starter',
+      'regular',
+    ])
+    assert.deepEqual(unlockedRanks(31).map((r) => r.key), [
+      'newcomer',
+      'starter',
+      'regular',
+      'friend',
+    ])
+    assert.equal(unlockedRanks(41).length, 5)
+    assert.equal(unlockedRanks(50).length, 5)
+  })
+
+  it('越界等级收敛到合法区间，不抛错也不多解锁', () => {
+    // 宁可当成 L1 也不让页面崩；这段代码在渲染路径上，抛错等于整页白屏。
+    assert.equal(unlockedRanks(0).length, 1)
+    assert.equal(unlockedRanks(-99).length, 1)
+    assert.equal(unlockedRanks(999).length, 5)
+  })
+
+  it('段位下限与上一段上限首尾相接，不留空档也不重叠', () => {
+    RANKS.forEach((rank, index) => {
+      const min = minLevelOf(rank)
+      assert.equal(min, index === 0 ? 1 : RANKS[index - 1]!.maxLevel + 1)
+      // 下限与上限必须落在同一段位，否则会出现「L21 既算入门又算常客」。
+      assert.equal(rankOf(min).key, rank.key)
+      assert.equal(rankOf(rank.maxLevel).key, rank.key)
+    })
+  })
+
+  it('isRankKey 只认五个键', () => {
+    for (const key of ['newcomer', 'starter', 'regular', 'friend', 'veteran']) {
+      assert.equal(isRankKey(key), true)
+    }
+    for (const bad of ['', 'legend', 'Veteran', ' veteran', null, undefined, 0, {}, []]) {
+      assert.equal(isRankKey(bad), false, `应拒绝 ${JSON.stringify(bad)}`)
+    }
   })
 })
