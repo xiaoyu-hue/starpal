@@ -721,7 +721,7 @@ sequenceDiagram
 
 > 实现口径（与 §7.7 的规划一致，三处细化）：① **响应体直写，不套 `{ data }` 包络**——导出物是一个文件，包一层会让任何外部工具读不出顶层 `user`，与 `scripts/export-check.mjs` 的契约冲突；② **图片只导出 `/api/images/<storage_key>` 引用**，不含 `image_blobs` 二进制，因为 Serverless 响应体上限 4.5 MB，含二进制会让下载随机失败；③ **没有导入端点，且不计划新增**——一份个人文件重建不出作者关系、时间线与互动，整站恢复由 `pg_dump` 逻辑备份承担（`DEPLOYMENT.md §10`）。范围在 SQL 层用 `WHERE author_id = $1` 收敛，不在应用层过滤。响应带 `Content-Disposition: attachment`、`Cache-Control: no-store`、`X-Content-Type-Options: nosniff`。
 
-**当前已落地：社区公告（2026-11-15，迁移 `016_announcements.sql`；文本口径修正见 `017_status_announcement_scope.sql`）**
+**当前已落地：社区公告（2026-11-15，迁移 `016_announcements.sql`；文本口径修正见 `017_status_announcement_scope.sql` 与 `018_status_summary_no_enumeration.sql`）**
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
