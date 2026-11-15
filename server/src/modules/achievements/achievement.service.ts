@@ -29,7 +29,6 @@ export type AchievementItem = {
   code: string
   nameZh: string
   description: string
-  icon: string
   /** 达成条件的人话描述，由服务端统一生成，前端不复制文案。 */
   goal: string
   unlockedAt: string | null
@@ -69,7 +68,6 @@ function toItem(row: AchievementRow, unlockedAt: Date | undefined): AchievementI
     code: row.code,
     nameZh: row.name_zh,
     description: row.description,
-    icon: row.icon,
     // 数据写坏时给一句可读的降级文案，而不是让整页 500；库里已有 CHECK 兜住结构。
     goal: condition ? describeCondition(condition) : '条件暂不可用',
     unlockedAt: unlockedAt ? unlockedAt.toISOString() : null,

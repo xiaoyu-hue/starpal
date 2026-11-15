@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+### 变更（成就印章 · M5-S2 修订）
+
+- **成就徽章换成自绘几何印章**。原实现借用 lucide 的线性图标（`pen-line` / `message-circle` / `compass` / `layers` / `heart` / `send` / `user-plus` / `calendar`），与站内功能性图标完全重合：笔是「发帖」导航、气泡是帖子卡片的评论数、心是点赞按钮、纸飞机是私信发送键、层叠是「话题」入口。结果是用户无法从视觉上区分「这里可以点」和「你做到了」——同一颗心既是点赞按钮又是「被看见」成就。改由 `web/src/features/achievements/achievement.seals.tsx` 自绘九枚印章（统一 24×24 视框、2.6 粗笔画、实心块面），图形按成就 `code` 查表，未知 `code` 落「空环」兜底而非空白。线性图标从此只表示操作，实心图形只表示记录。
+- 数据库新增 `015_drop_achievement_icon.sql`：移除 `achievements.icon` 列。该列存的是 `pen-line` 这类图标库内部键名，属于表现层实现细节，不该由数据承担；成就的语义身份本就是 `code`。接口类型、仓库层 `SELECT`、前端类型同步去掉 `icon` 字段。
+- 验证：`npm run verify` 全绿（**124** 项测试、lint 硬规则 0 违规、源文件均在行数预算内）。迁移链（`014` → `015`）由 PGlite 新建库跑通全部 10 项成就断言验证；印章以本地桩接口 + 无头浏览器复核，**非端到端验证**。
+- 文档同步：`AGENTS.md` / `DOC_SYNC.md` 迁移口径顺延至 `015`（下一个 `016`）、`README.md` 迁移范围改为 `001`–`015`、`ARCHITECTURE.md` 的 `achievements` 表定义去掉 `icon` 并注明图形归表现层、`IMPLEMENTATION-PLAN.md` 的 `M5-S2-T1` 补记 `015`。
+
 ### 新增（成就与每周热门 · M5-S2）
 
 - 数据库新增 `014_achievements.sql`：`achievements`（`code` 主键、`condition` JSONB、`CHECK` 钉住「有 `metric` 且 `gte` 为非负数字」、`sort_order`、`is_active`）与 `user_achievements`（复合主键 `(user_id, achievement_code)` + `(user_id, unlocked_at DESC)` 索引）。随结构写入九条种子成就：初次发声、回声、跨界的、笔耕不辍、被看见、共鸣、递出第一句话、引路人、同行三十天。

@@ -16,7 +16,6 @@ export type AchievementRow = {
   code: string
   name_zh: string
   description: string
-  icon: string
   condition: unknown
   sort_order: number
 }
@@ -80,13 +79,13 @@ export async function collectMetrics(
   return rows[0] ?? null
 }
 
-/** 成就定义目录：只取启用中的，按展示顺序。 */
+/** 成就定义目录：只取启用中的，按展示顺序。图标不进 SQL——图形属于表现层，由前端按 code 自绘。 */
 export async function listDefinitions(
   executor: RowExecutor = pool,
 ): Promise<AchievementRow[]> {
   return rowsOf<AchievementRow>(
     executor,
-    `SELECT code, name_zh, description, icon, condition, sort_order
+    `SELECT code, name_zh, description, condition, sort_order
        FROM achievements
       WHERE is_active = true
       ORDER BY sort_order, code`,

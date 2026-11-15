@@ -573,7 +573,7 @@ flowchart LR
 
 **前置条件**：`M4` 完成。
 
-> **迁移编号口径（M5 / M5.5 / M6 通用）**：`server/src/db/migrations/` 的顺序编号以**目录实际占用**为准。`M4` 收尾时已用到 `009_invite_codes.sql`，其后「我的点赞」列表占用 `010_likes_user_idx.sql`，「举报 + 申诉最小闭环」又占用 `011_reports.sql`，因此 `M5` / `M5.5` / `M6` 的新迁移一律从下一个可用序号（现为 `012`）起顺编，且只增不改已应用的历史迁移。`M5.5-S1`（头衔列）已占用 `012_user_titles.sql`（见 `VR-M5.5-01`），`M5-S1`（私信）占用 `013_messages.sql`（见 `VR-M5-S1-01`），`M5-S2`（成就与每周热门）占用 `014_achievements.sql`（见 `VR-M5-S2-01`）。下表文件名统一用 `NNN_` 占位前缀（`NNN` = 开工时目录里的下一个可用序号，现为 `015`），不再预填具体编号——早期计划中的 `005` / `006` / `007` / `008` 已被 M1–M4 实际占用，照抄会导致文件覆盖或迁移账本冲突。
+> **迁移编号口径（M5 / M5.5 / M6 通用）**：`server/src/db/migrations/` 的顺序编号以**目录实际占用**为准。`M4` 收尾时已用到 `009_invite_codes.sql`，其后「我的点赞」列表占用 `010_likes_user_idx.sql`，「举报 + 申诉最小闭环」又占用 `011_reports.sql`，因此 `M5` / `M5.5` / `M6` 的新迁移一律从下一个可用序号（现为 `012`）起顺编，且只增不改已应用的历史迁移。`M5.5-S1`（头衔列）已占用 `012_user_titles.sql`（见 `VR-M5.5-01`），`M5-S1`（私信）占用 `013_messages.sql`（见 `VR-M5-S1-01`），`M5-S2`（成就与每周热门）占用 `014_achievements.sql`（见 `VR-M5-S2-01`），其图标方案修订又占用 `015_drop_achievement_icon.sql`。下表文件名统一用 `NNN_` 占位前缀（`NNN` = 开工时目录里的下一个可用序号，现为 `016`），不再预填具体编号——早期计划中的 `005` / `006` / `007` / `008` 已被 M1–M4 实际占用，照抄会导致文件覆盖或迁移账本冲突。
 
 #### `M5-S1` 私信（留言式）✅ 已完成（2026-11-15）
 
@@ -588,7 +588,7 @@ flowchart LR
 
 | 编号 | 任务 | 具体动作 | 产出 | 验证 |
 | --- | --- | --- | --- | --- |
-| `M5-S2-T1` | 成就表 | `014_achievements.sql` 建立 `achievements`（`condition` JSONB，`CHECK` 钉住 `metric` + 数值 `gte` 结构）与 `user_achievements`（复合主键 `(user_id, achievement_code)` 即唯一性）；随结构写入九条种子成就 | `migrations/014_achievements.sql` | 同一用户对同一成就唯一（重复判定只留一条） |
+| `M5-S2-T1` | 成就表 | `014_achievements.sql` 建立 `achievements`（`condition` JSONB，`CHECK` 钉住 `metric` + 数值 `gte` 结构）与 `user_achievements`（复合主键 `(user_id, achievement_code)` 即唯一性）；随结构写入九条种子成就。`015` 随后移除 `icon` 列——图标属表现层，改由前端按 `code` 自绘 | `migrations/014_*.sql`、`015_*.sql` | 同一用户对同一成就唯一（重复判定只留一条） |
 | `M5-S2-T2` | 解锁服务 | 七个指标一次 SQL 算完，引擎只认「指标 + 阈值」，不改业务写路径；采用**读时判定**：读取时间线时补写达标记录，`ON CONFLICT DO NOTHING` 保证幂等 | `modules/achievements/` | 新增成就只插一行数据，不改 TypeScript |
 | `M5-S2-T3` | 时间线前端 | `/achievements` 替换占位页，已解锁（按时间倒序）+ 未解锁两块；资料页新增「成就」区块 | `web/src/features/achievements/` | 无排行榜 / 签到 / 无限滚动 / 进度百分比 |
 | `M5-S2-T4` | 每周热门 | **改为服务层只读聚合**，不建视图、不落表、不跑定时任务；按东八区周一为界，`赞 + 评论×2` 排序，取 5 条，至少 1 个互动才入榜 | `modules/achievements/achievement.repository.ts` | 刷新即变，无任何额外写入 |

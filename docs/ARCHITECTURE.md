@@ -996,7 +996,7 @@ erDiagram
 
 | 表 | 字段 | 说明 |
 | --- | --- | --- |
-| `achievements` | `code` PK、`name_zh`、`description`、`icon`、`condition` JSONB、`sort_order`、`is_active` | 用 `code` 作主键而非代理键：成就的身份就是它的语义名；解锁条件以数据表达，新增成就只插一行、不改业务代码 |
+| `achievements` | `code` PK、`name_zh`、`description`、`condition` JSONB、`sort_order`、`is_active` | 用 `code` 作主键而非代理键：成就的身份就是它的语义名；解锁条件以数据表达，新增成就只插一行、不改业务代码。**图标不进数据库**（`015` 移除了 `icon` 列）：用哪个图形属表现层决策，前端按 `code` 自绘 |
 | `user_achievements` | `user_id` FK、`achievement_code` FK、`unlocked_at`、`PRIMARY KEY(user_id, achievement_code)` | 复合主键即「同一用户对同一成就只解锁一次」（`FR-ACH-02`） |
 
 #### `reports`

@@ -1,40 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import {
-  Award,
-  Calendar,
-  Compass,
-  Heart,
-  Layers,
-  MessageCircle,
-  PenLine,
-  Send,
-  Sparkles,
-  UserPlus,
-  type LucideIcon,
-} from 'lucide-react'
 import { cn } from '../../lib/cn'
 import type { AchievementItem } from '../../types/api'
-
-/**
- * 图标白名单：服务端只存键名，前端按此映射到组件。
- * 不放行任意字符串是刻意的——数据进渲染层时只有一个确定集合，未知键走 Award 兜底。
- */
-const ICONS: Record<string, LucideIcon> = {
-  'pen-line': PenLine,
-  'message-circle': MessageCircle,
-  compass: Compass,
-  layers: Layers,
-  heart: Heart,
-  sparkles: Sparkles,
-  send: Send,
-  'user-plus': UserPlus,
-  calendar: Calendar,
-}
-
-/** 供资料页等紧凑展示复用同一套映射，避免两处各写一份图标表导致键名漂移。 */
-export function achievementIcon(key: string): LucideIcon {
-  return ICONS[key] ?? Award
-}
+import { AchievementSeal } from './achievement.seals'
 
 function formatDay(iso: string): string {
   const date = new Date(iso)
@@ -48,7 +15,6 @@ function formatDay(iso: string): string {
  * 精确进度会变成催促式追踪，越界到 PRD `FR-ACH-04` 要避免的成瘾设计。
  */
 export function AchievementCard({ item }: { item: AchievementItem }) {
-  const Icon = achievementIcon(item.icon)
   const unlocked = item.unlockedAt !== null
 
   return (
@@ -73,7 +39,7 @@ export function AchievementCard({ item }: { item: AchievementItem }) {
             : undefined
         }
       >
-        <Icon size={18} />
+        <AchievementSeal code={item.code} size={18} />
       </span>
 
       <div className="min-w-0 flex-1">

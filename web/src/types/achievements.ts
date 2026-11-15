@@ -10,7 +10,6 @@ export type AchievementItem = {
   code: string
   nameZh: string
   description: string
-  icon: string
   goal: string
   unlockedAt: string | null
 }

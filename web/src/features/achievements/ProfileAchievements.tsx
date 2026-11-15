@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link } from 'react-router-dom'
-import { achievementIcon } from './AchievementCard'
+import { AchievementSeal } from './achievement.seals'
 import { useTimelineQuery } from './achievements.queries'
 
 /** 资料页最多显示几枚徽章：一行内可读，多了会把主页挤成荣誉墙。 */
@@ -62,24 +62,21 @@ export function ProfileAchievements({
         </Link>
       </div>
       <ul className="flex flex-wrap gap-1.5">
-        {unlocked.slice(0, PROFILE_BADGES_MAX).map((item) => {
-          const Icon = achievementIcon(item.icon)
-          return (
-            <li
-              key={item.code}
-              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
-              style={{
-                color: 'var(--sp-achievement)',
-                borderColor: 'var(--sp-achievement)',
-                background: 'var(--sp-achievement-soft)',
-              }}
-              title={item.description}
-            >
-              <Icon size={13} aria-hidden="true" />
-              {item.nameZh}
-            </li>
-          )
-        })}
+        {unlocked.slice(0, PROFILE_BADGES_MAX).map((item) => (
+          <li
+            key={item.code}
+            className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs"
+            style={{
+              color: 'var(--sp-achievement)',
+              borderColor: 'var(--sp-achievement)',
+              background: 'var(--sp-achievement-soft)',
+            }}
+            title={item.description}
+          >
+            <AchievementSeal code={item.code} size={15} />
+            {item.nameZh}
+          </li>
+        ))}
         {unlocked.length > PROFILE_BADGES_MAX && (
           <li className="inline-flex items-center px-1 text-xs text-faint">
             还有 {unlocked.length - PROFILE_BADGES_MAX} 枚

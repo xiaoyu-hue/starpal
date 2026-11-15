@@ -103,7 +103,7 @@
    - 旧版本号残留：`grep -rn "旧版本号" --include="*.md" --include="*.json" .`（命中仅允许是历史记录）。
    - 公告「未完成」清单里的项，逐条与代码核对，删掉已实现的（如「自行删除帖子」实际已有）。
    - `.env.example` 键名与 `env.ts` 一致，无已下线变量残留（如旧的 `INVITE_CODE`）；`DEPLOYMENT.md` 的 §3 / §4 / §15 / §18.9 现行变量表与 `.env.example` 同口径（§18 历史验证记录里的已下线变量属当时口径，靠「历史记录时效说明」覆盖，不改写原文）。
-   - 迁移编号：`IMPLEMENTATION-PLAN.md` 中 M5 / M6 计划的文件名编号须与 `server/src/db/migrations/` 实际占用不冲突（现到 `014`，新迁移从 `015` 起，计划里用 `NNN_` 占位）。迁移只增不改，照抄旧编号会覆盖历史迁移。
+   - 迁移编号：`IMPLEMENTATION-PLAN.md` 中 M5 / M6 计划的文件名编号须与 `server/src/db/migrations/` 实际占用不冲突（现到 `015`，新迁移从 `016` 起，计划里用 `NNN_` 占位）。迁移只增不改，照抄旧编号会覆盖历史迁移。
 3. **公告 status 条自洽**：`summary` 的数字 == `未完成` 清单条数 == 实际未完成能力数。
 4. **许可文件互相一致**：`README.md` 表 ↔ `COPYRIGHT` 表 ↔ `LICENSE-docs` 适用范围 ↔ 实际文件。
 5. **CHANGELOG**：本次用户可见变更已入 `[Unreleased]`，未把「计划」写成「已交付」。
