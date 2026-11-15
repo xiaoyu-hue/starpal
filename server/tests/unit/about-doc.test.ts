@@ -8,14 +8,12 @@ import { ANNOUNCEMENT_ITEMS } from '../../src/config/docs/announcements.doc.js'
 
 /**
  * 关于页正文的合规与一致性不变量。
- * 把四条最容易漂移的口径钉在测试里：
+ * 把三条最容易漂移的口径钉在测试里：
  * ① 分离式许可三类必须写全；② 源码获取途径必须存在；
- * ③ 未完成能力清单必须与公告 status 条（面向用户的唯一真源）一致；
- * ④ 已交付能力不得再被写成未完成（收藏列表即最新一例）。
+ * ③ 已交付 / 未完成的能力清单必须与公告「当前状态」条的种子文本一致。
+ *
+ * 历史上的第 ④ 条（「已交付能力不得再被写成未完成」）仍在下面以 `stale` 短语表形式保留。
  */
-
-/** 当前对社区用户公示的未完成能力，公告 status 条与关于页自述必须逐条一致。 */
-const PENDING_GAPS = ['数据导出'] as const
 
 describe('关于页许可与源码信息', () => {
   it('三类许可齐全，且各自写明适用对象与范围', () => {
@@ -40,16 +38,25 @@ describe('关于页许可与源码信息', () => {
 })
 
 /**
- * 一致性真源改为**迁移 016 的种子**，不再是代码常量里的 status 条。
+ * 一致性真源改为**迁移里的种子文本**，不再是代码常量里的 status 条。
  *
  * 2026-11-15 的公告分层改造把「当前状态」搬进了数据库（运营者要能随时改），
  * 代码里只剩「发布记录」档案。测试若继续找 `kind === 'status'` 的常量会全线失败，
  * 而正确的真源变成了「数据库里那条种子最初长什么样」——即迁移文件本身。
+ *
+ * 拼接 016 与 017：016 是初始种子，017 修正了摘要并追加通知范围说明。
+ * 只读 016 会漏掉后续修正，等于让真源停在旧版本上。
  */
-const STATUS_SEED_SQL = readFileSync(
-  fileURLToPath(new URL('../../src/db/migrations/016_announcements.sql', import.meta.url)),
-  'utf8',
-)
+const STATUS_SEED_SQL = [
+  readFileSync(
+    fileURLToPath(new URL('../../src/db/migrations/016_announcements.sql', import.meta.url)),
+    'utf8',
+  ),
+  readFileSync(
+    fileURLToPath(new URL('../../src/db/migrations/017_status_announcement_scope.sql', import.meta.url)),
+    'utf8',
+  ),
+].join('\n')
 
 /** 已交付能力：关于页与公告种子必须同时列出，任一处漏写即为漂移。 */
 const DELIVERED = [
@@ -102,5 +109,43 @@ describe('关于页自述与公告种子口径一致', () => {
   it('发布记录里不再残留与事实相反的说法', () => {
     const all = JSON.stringify(ANNOUNCEMENT_ITEMS)
     assert.ok(!all.includes('私信仍在开发中'), '发布记录里仍有与事实相反的描述')
+  })
+
+  /**
+   * 摘要与正文不得自相矛盾。016 的种子摘要曾写「暂无公示的未完成项」，
+   * 而同一行正文列着三项「尚未开始」；右栏卡片只显示摘要，用户会以为全站完工。
+   * 017 修正了摘要并追加通知范围说明，这里把两条都钉住。
+   */
+  it('017 已修正摘要，不再声称「没有未完成项」', () => {
+    const fix = readFileSync(
+      fileURLToPath(
+        new URL('../../src/db/migrations/017_status_announcement_scope.sql', import.meta.url),
+      ),
+      'utf8',
+    )
+    assert.ok(fix.includes('尚未开始'), '017 的新摘要未写出未开始项')
+    assert.ok(
+      fix.includes('核心功能已交付'),
+      '017 的摘要应改为「核心功能已交付；…尚未开始」的口径',
+    )
+  })
+
+  it('017 对用户讲明了通知范围', () => {
+    const fix = readFileSync(
+      fileURLToPath(
+        new URL('../../src/db/migrations/017_status_announcement_scope.sql', import.meta.url),
+      ),
+      'utf8',
+    )
+    assert.ok(
+      fix.includes('通知只在你收到评论时发出'),
+      '017 未向用户说明「只有评论会产生通知」',
+    )
+    // 只做评论通知是已登记的范围收窄，PRD 里必须有对应偏差说明，否则用户看到公告却查不到依据。
+    const prd = readFileSync(
+      fileURLToPath(new URL('../../../docs/PRD.md', import.meta.url)),
+      'utf8',
+    )
+    assert.ok(prd.includes('已知范围偏差'), 'PRD 缺少 FR-AUX-01 的范围偏差记录')
   })
 })
