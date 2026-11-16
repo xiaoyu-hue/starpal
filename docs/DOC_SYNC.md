@@ -98,7 +98,7 @@
 
 ## 四、提交 / 推送前验证（必须跑）
 
-1. `npm run verify` 全绿（typecheck / build / check:size / lint / test）——贴出真实输出。
+1. `npm run verify` 全绿（typecheck / build / check:size / lint / scan:secrets / test）——贴出真实输出。
 2. **事实一致性 grep**：
    - 旧版本号残留：`grep -rn "旧版本号" --include="*.md" --include="*.json" .`（命中仅允许是历史记录）。
    - 公告「未完成」清单里的项，逐条与代码核对，删掉已实现的（如「自行删除帖子」实际已有）。

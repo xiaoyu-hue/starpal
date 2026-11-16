@@ -4,7 +4,14 @@
 
 ## [Unreleased]
 
-（暂无未发布的用户可见变更。下一个里程碑为 `M7` 验收加固，尚未开始。）
+### 变更（M7 第一批：把手工验收变成自动测试，并加一道凭据扫描）
+
+- **管理端点权限矩阵自动化**（`M7-S1-T5`）：新增 HTTP 层夹具 `server/tests/helpers/http.ts`——把 `pool.query` / `pool.connect` 接到 PGlite 上，中间件、控制器、仓储、事务全部走真实代码路径，只把数据库换掉，不为测试改造生产代码。`admin-permissions.test.ts` 的路由清单**从 `adminRouter.stack` 现取**（当前 18 个端点），逐条断言访客 `401`、普通成员 `403`、管理员不被守卫拦下。此前 `AC-11` 靠手工 curl，改完代码就无人重跑；现在每次 `npm test` 都重验。变异实验（临时移除 `adminRouter.use(requireAuth, requireRole(ROLE_ADMIN))`）确认 4 项用例全部失败，还原后全通过——用例不是空转。
+- **错误响应不泄露内部信息**（`M7-S2-T2`）：`error-envelope.test.ts` 模拟数据库异常（报错里带表名与 SQL），断言 500 只回「服务暂时不可用」，响应体不含 SQL、表名、文件路径、堆栈；领域错误按码映射且响应头 `x-request-id` 与响应体 `requestId` 一致；未知路径回 404 包络；`x-powered-by` 不回送。另对全仓 `DomainError` 与 `catch` 做了一次人工审查：只有 `error-handler` 引用 `error.message`，且所有动态文案都是常量插值，无用户输入或数据库原文透出。
+- **图片管线安全用例**（`M7-S1-T4`）：`image-pipeline.test.ts` 8 项——EXIF（含 GPS）在重编码后消失、SVG 内嵌脚本被拒、伪装成 PNG 的 HTML 被拒、GIF 被拒、魔数与内容不符被拒、空文件按 `VALIDATION_FAILED` 处理、不足 12 字节不参与格式判定；`upload-guard.test.ts` 5 项走 HTTP 边界——未登录 `401`、字段名不是 `image` 时 `400`、超过单张上限 `413`、扩展名伪装成 `.jpg` 的 SVG `415`、合法 PNG 上传成功并统一转成 WebP。
+- **凭据扫描**（`M7-S2-T6`）：新增 `scripts/scan-secrets.mjs`（7 条规则 + `.env` 是否被纳入版本控制 + `--history` 扫全部提交历史），并接入 `npm run verify` 成为**第六道门禁**。当前实测：547 个文件 0 命中；87 个提交的全历史 0 命中；`.env` 未入库，仓库内只有 `.env.example` 占位符。
+- 质量门口径随之变化：`npm run verify` = `typecheck` → `build` → `check:size` → `lint` → `scan:secrets` → `test`，六项全绿才可交付；`AGENTS.md`、`README.md`、`docs/DOC_SYNC.md` 已同步。
+- 验证：`npm run verify` 全绿，测试由 **206** 增至 **227** 项、`fail 0`。
 
 ## [1.5.0] - 2026-11-16
 

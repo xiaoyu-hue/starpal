@@ -91,7 +91,7 @@
 
 ## 七、质量门与工程约束（硬性的，别绕过）
 
-唯一入口：**`npm run verify`** = `typecheck && build && check:size && lint && test`，必须全绿才可交付。
+唯一入口：**`npm run verify`** = `typecheck && build && check:size && lint && scan:secrets && test`，必须全绿才可交付。
 
 - **行数预算** `check:size`：`web/src`、`server/src` 下 `.ts/.tsx ≤ 300 行`、`.css ≤ 400 行`。
   超预算要**拆分文件**（如把类型/组件拆到同目录新文件并 re-export），不是删功能、不是调高阈值。

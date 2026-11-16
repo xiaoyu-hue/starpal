@@ -242,9 +242,9 @@ npm run verify
 | `npm run migrate` / `migrate:prod` | 执行未应用迁移（后者跑编译产物，不依赖 `tsx`） |
 | `npm run seed` | 写入示例话题与帖子（可选、明确标注「示例」） |
 | `npm run init:admin` | 一次性创建初始管理员 |
-| `npm run typecheck` / `lint` / `check:size` | 类型检查 / lint 硬规则 / 单文件行数预算 |
+| `npm run typecheck` / `lint` / `check:size` / `scan:secrets` | 类型检查 / lint 硬规则 / 单文件行数预算 / 明文凭据扫描 |
 | `npm test` | 单元与集成测试（PGlite 内存库） |
-| `npm run verify` | **唯一质量门**：typecheck → build → check:size → lint → test，必须全绿 |
+| `npm run verify` | **唯一质量门**：typecheck → build → check:size → lint → scan:secrets → test，必须全绿 |
 | `npm run export:check` | 校验导出文件可读性 |
 | `npm run preview` | 预览前端构建产物 |
 
@@ -297,7 +297,7 @@ npm run verify
 
 ### 质量门与测试
 
-`npm run verify` 是**唯一交付入口**，五项全绿才可提交：
+`npm run verify` 是**唯一交付入口**，六项全绿才可提交：
 
 | 环节 | 内容 |
 | --- | --- |
