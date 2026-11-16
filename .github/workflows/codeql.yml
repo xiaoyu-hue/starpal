@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # JS/TS 用 build-mode: none——不做编译，直接对源码建数据流图。
       # 这是官方对解释型语言推荐的方式，也避免在 CI 里再跑一次完整构建。
@@ -52,10 +52,11 @@ jobs:
         with:
           languages: javascript-typescript
           build-mode: none
-          # default 套件已覆盖注入、XSS、路径遍历、原型污染、不安全反序列化等
-          # 高危类别；security-extended 会把告警量放大数倍，单人维护下容易疲劳，
-          # 先用 default 跑顺，确有需要再升。
-          queries: default
+          # 不写 `queries`：默认就是 default 套件（注入、XSS、路径遍历、原型污染、
+          # 不安全反序列化等）。试过写 `queries: default` —— 它被当成 query pack 名
+          # 去找，直接报 "Query pack default cannot be found"，首跑就是被这个卡住的。
+          # 要扩到安全+质量的全量规则时，写 `queries: security-extended`；
+          # 代价是告警量翻数倍，单人维护下容易疲劳，先不升。
 
       - name: 执行分析
         uses: github/codeql-action/analyze@v4
