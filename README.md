@@ -318,12 +318,22 @@ npm run verify
 
 ### 持续集成（CI）
 
+两个 workflow，职责分开：`verify.yml` 管质量门，`codeql.yml` 管代码安全。
+
 `.github/workflows/verify.yml`：`main` 分支推送与所有 PR 触发，执行 `npm ci` + `npm run verify`。
 
 - **只做门禁，不做部署**。部署由 Vercel 的 Git 集成负责；两套部署并存会导致「同一提交部署两次、线上版本不确定」。
 - **不需要任何仓库密钥**：测试用 PGlite 内存库，不连真实数据库、不读 `.env`。这是刻意的——CI 里出现凭证就是新的泄露面。
 - 权限最小化（`contents: read`）、同分支并发取消旧运行、20 分钟超时。
 - Node 版本固定 `22.13.1`，与本地一致；`engines` 已锁 `>=22.12 <23`，不跑多版本矩阵。
+
+`.github/workflows/codeql.yml`：CodeQL 静态分析，`main` 推送、PR 与每周一全量各跑一次。
+
+- **为什么免费**：GitHub 对 **public 仓库** 的 code scanning（含 CodeQL）不收费，无需购买 GitHub Code Security。本项目仓库是 public，成本为零。
+- **为什么用 workflow 文件而非网页里的默认配置**：默认配置不进仓库，看不到、改不了、无法 review。写在文件里，删掉文件即回滚。
+- **扫什么**：JavaScript / TypeScript，`build-mode: none`（不编译，直接对源码建数据流图），查询套件用 `default`（注入、XSS、路径遍历、原型污染等），不升 `security-extended`——告警量会翻数倍，单人维护下容易疲劳。
+- **结果去哪**：上传到仓库 **Security → Code scanning** 面板，按严重度排序；`security-events: write` 是它唯一的额外权限。
+- **不阻塞合并**：CodeQL 只报告不拦人。要不要把某类告警设成必须修复，属于需要拍板的策略，不在接入阶段默认打开。
 
 ### 部署
 

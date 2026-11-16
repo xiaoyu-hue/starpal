@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+### 新增（安全审查：接入 CodeQL 静态分析）
+
+- **接入 CodeQL**（`.github/workflows/codeql.yml`）：`main` 推送、PR、每周一全量各跑一次，对 JavaScript / TypeScript 做数据流分析，结果进仓库 **Security → Code scanning**。GitHub 对 **public 仓库** 的 code scanning 免费，无需购买 GitHub Code Security，也不需要任何仓库密钥。
+- **用高级配置而不是网页里的默认配置**：默认配置不进仓库、无法 review、改不了；写在文件里则删文件即回滚，符合本项目「配置进仓库」的约定。
+- **为什么只扫 `javascript-typescript`、只用 `default` 查询套件**：`security-extended` 会把告警量放大数倍，`actions` 语言只覆盖少数 YAML；单人维护下首次接入就堆几十条低优先级告警，结果往往是整个扫描被无视。先让 default 跑顺，确有需要再升。
+- **不阻塞合并**：CodeQL 只报告不拦人。把某类告警设为必须修复属于策略决定，接入阶段不默认打开。
+- **能力边界写在明处**：`scan:secrets` 只抓已知形态密钥，CodeQL 只抓数据流类缺陷，两者都不能证明「没有漏洞」；对外不得表述为「已通过安全审计」。
+- 调研过但**本轮不引入**的方案与理由：Semgrep（与 CodeQL 检测面大量重叠，规则噪声更大，且 `semgrep-rules` 是自定义许可）、Trivy（强项是容器与 IaC，本项目部署在 Vercel Serverless，无镜像可扫）、TruffleHog（AGPL 且偏密钥，与原生 secret scanning 重复）、OSV-Scanner（`npm audit` 当前 0 漏洞、430 个依赖，暂未到需要第二套依赖扫描的规模）、OpenSSF Scorecard（单人项目在「代码审查 / 贡献者多样性」等项天然低分，容易变成看不懂的分数）。
+
 ### 新增（M7 第三批：组件测试、路由冒烟、数据库不变量）
 
 - **修掉一个一直在污染测试的夹具缺陷**：`pg` 把 `int8`（BIGINT）解析成**字符串**，PGlite 默认解析成 `number`。而「是不是作者」的判断写的是 `String(authorId) === viewer.id`——内存库里变成 `'11' !== '1'`，于是**本人改自己的帖子被误判成 403**，测试只能借管理员身份绕开。现在 `tests/helpers/db.ts` 用 PGlite 的 `parsers` 把 OID 20 映射为字符串，与生产一致；`upload-guard` 里那条「用管理员走成功路径」的妥协已删除，改回作者本人。**这类差异不会报错，只会让测试悄悄测不到真实行为**，所以值得单独记一笔。

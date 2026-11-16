@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# 代码安全扫描（CodeQL）：把「靠人读代码找漏洞」变成「每次推送自动做数据流分析」。
+#
+# 为什么用高级配置（workflow 文件）而不是 GitHub 的默认配置（default setup）：
+# 默认配置在网页里点开，仓库里看不到、改不了、无法 review，与本项目「配置进仓库、
+# 可回滚、文档与代码一致」的约定冲突。写在文件里，删掉文件就等于回滚。
+#
+# 为什么免费：GitHub 对 **public 仓库** 的 code scanning（含 CodeQL）不收费，
+# 不需要购买 GitHub Code Security。本项目仓库是 public，因此零成本。
+#
+# 为什么不加 `actions` 语言：那会额外扫 workflow 文件本身的权限配置，
+# 收益集中在少数几个 YAML 上；先用 `javascript-typescript` 覆盖全部业务代码，
+# 需要时再加一门语言，避免首次接入就堆一堆低优先级告警。
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # 每周一次全量：依赖与查询包都在变，只在推送时扫会漏掉「代码没动但规则更新了」的情况。
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+# 同一分支连续推送时取消旧运行；PR 与分支分开计数，避免互相顶掉。
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: 分析 JavaScript / TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      # 上传 SARIF 结果到 Security 面板需要写权限，这是本 workflow 唯一的额外权限。
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # JS/TS 用 build-mode: none——不做编译，直接对源码建数据流图。
+      # 这是官方对解释型语言推荐的方式，也避免在 CI 里再跑一次完整构建。
+      - name: 初始化 CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          # default 套件已覆盖注入、XSS、路径遍历、原型污染、不安全反序列化等
+          # 高危类别；security-extended 会把告警量放大数倍，单人维护下容易疲劳，
+          # 先用 default 跑顺，确有需要再升。
+          queries: default
+
+      - name: 执行分析
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:javascript-typescript'
