@@ -55,18 +55,20 @@ describe('社区公告 M6-S0', () => {
     assert.ok(feed.history.length > 0, '发布记录应保留在代码里')
   })
 
-  it('等级上线后，状态公告正文不再说「经验 / 签到 / 等级尚未开始」', async () => {
+  it('等级与治理后台上线后，状态公告正文不再把它们列为「尚未开始」', async () => {
     const feed = await getFeed(ex)
     const body = feed.pinned[0]!.points.join('\n')
-    // 020 用子串 replace 改写正文：这条断言跑在真库上，验证拼接后的迁移确实生效，
+    // 020 / 023 用子串 replace 改写正文：这条断言跑在真库上，验证拼接后的迁移确实生效，
     // 而不是只改了迁移文件、线上仍是旧文案。
     assert.ok(body.includes('等级与段位已上线'), '正文应写明等级已交付')
+    assert.ok(body.includes('治理后台已上线'), '正文应写明治理后台已交付')
     assert.ok(
       !body.includes('尚未开始：经验 / 签到 / 等级'),
       '等级与签到已不再是「尚未开始」项',
     )
-    assert.ok(body.includes('尚未开始：完整治理后台与审核日志'), '真正未完成的能力仍要如实列出')
-    // 017 追加的通知范围说明不能被 020 的替换误伤
+    assert.ok(!body.includes('完整治理后台与审核日志'), '治理后台已交付，不得再列为缺口')
+    assert.ok(body.includes('尚未开始：验收与性能加固'), '真正未完成的能力仍要如实列出')
+    // 017 追加的通知范围说明不能被 020 / 023 的替换误伤
     assert.ok(body.includes('通知只在你收到评论时发出'), '通知范围说明应保留')
   })
 

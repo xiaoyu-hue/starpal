@@ -53,6 +53,7 @@ const STATUS_SEED_SQL = [
   '017_status_announcement_scope.sql',
   '018_status_summary_no_enumeration.sql',
   '020_status_announcement_level.sql',
+  '023_status_announcement_moderation.sql',
 ]
   .map((file) =>
     readFileSync(fileURLToPath(new URL(`../../src/db/migrations/${file}`, import.meta.url)), 'utf8'),
@@ -67,6 +68,7 @@ const DELIVERED = [
   '站内私信',
   '每周热门',
   '等级与段位',
+  '治理后台',
   '数据导出',
 ] as const
 
@@ -75,11 +77,11 @@ const DELIVERED = [
  *
  * 「经验 / 签到 / 等级」已从这份清单移除：经验与等级于 2026-11-15 交付，
  * 签到经评审取消（与 `FR-ACH-04`「不得实现连续签到」冲突）。
- * 断言用「治理后台」而非全称，是因为关于页写「完整的治理后台与审核日志」、
- * 公告正文写「完整治理后台与审核日志」，差一个「的」字——测的是能力是否存在，
- * 不是同一份文案被复制粘贴。
+ * 「治理后台与审核日志」于 2026-11-16 随 `v1.5.0` 交付，同样移出清单（迁移 `023`）。
+ * 现在只剩 `M7` 的「验收与性能加固」——若它也做完，这份清单应当为空，
+ * 而不是再找一个新缺口来填。
  */
-const PENDING = ['治理后台'] as const
+const PENDING = ['验收与性能加固'] as const
 
 describe('关于页自述与公告种子口径一致', () => {
   const intro = ABOUT.intro.join('')
