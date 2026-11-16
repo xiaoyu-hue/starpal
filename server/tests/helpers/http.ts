@@ -26,14 +26,25 @@ export type RunningApp = {
 /** 适配 pg.Result 的形状差异：PGlite 用 affectedRows，pg 用 rowCount。 */
 type PgLikeResult = { rows: unknown[]; rowCount: number }
 
+/**
+ * 把 PGlite 的结果换算成 pg 的形状。
+ *
+ * 坑：PGlite 对 SELECT 也返回 `affectedRows: 0`，若直接用它当 `rowCount`，
+ * 任何「查到了没有」的判断（`rowCount === 0` → 抛 NOT_FOUND）都会在测试里假失败。
+ * 所以先看行数，再看影响行数——SELECT 有行就是有行，UPDATE 无返回行才看 affectedRows。
+ */
+function toPgLike(result: { rows: unknown[]; affectedRows?: number }): PgLikeResult {
+  const affected = result.affectedRows
+  return { rows: result.rows, rowCount: result.rows.length > 0 ? result.rows.length : (affected ?? 0) }
+}
+
 export async function startTestServer(db: PGlite): Promise<RunningApp> {
   const originalQuery = pool.query.bind(pool)
   const originalConnect = pool.connect.bind(pool)
   const patched = pool as unknown as { query: unknown; connect: unknown }
   patched.query = async (text: string, params?: unknown[]): Promise<PgLikeResult> => {
     const result = await db.query(text, params as never)
-    const affected = (result as { affectedRows?: number }).affectedRows
-    return { rows: result.rows, rowCount: affected ?? result.rows.length }
+    return toPgLike(result as { rows: unknown[]; affectedRows?: number })
   }
   // `withTransaction` 走 `pool.connect()`，一并接到同一个内存库上；
   // PGlite 是单连接实现，串行执行即可满足测试里的短事务。
@@ -41,8 +52,7 @@ export async function startTestServer(db: PGlite): Promise<RunningApp> {
     const client = {
       query: async (text: string, params?: unknown[]): Promise<PgLikeResult> => {
         const result = await db.query(text, params as never)
-        const affected = (result as { affectedRows?: number }).affectedRows
-        return { rows: result.rows, rowCount: affected ?? result.rows.length }
+        return toPgLike(result as { rows: unknown[]; affectedRows?: number })
       },
       release: () => {},
     }

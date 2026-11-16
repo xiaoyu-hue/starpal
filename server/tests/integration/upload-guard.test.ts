@@ -109,12 +109,11 @@ describe('M7-S1-T4 上传接口边界', () => {
   })
 
   it('合法图片通过并被统一转成 WebP', async () => {
-    // 用管理员身份走成功路径：PGlite 的 BIGINT 回读是 number，而生产 pg 回读是 string，
-    // 「是否作者」的比对（`String(authorId) === viewer.id`）在内存库下会误判；
-    // 管理员分支不看归属，绕开这层夹具差异，测的仍是上传链路本身。
+    // 走作者本人身份：`tests/helpers/db.ts` 已把 int8 解析对齐到 pg（返回字符串），
+    // 「是不是作者」的判定在内存库里与生产一致，不再需要借管理员身份绕开。
     const res = await post(
       { field: 'image', filename: '../../etc/passwd.png', contentType: 'image/png', content: png },
-      'starpal_session=sess-admin',
+      'starpal_session=sess-alice',
     )
     if (res.status !== 201) assert.fail(`实际 ${res.status}：${await res.text()}`)
     const body = (await res.json()) as {

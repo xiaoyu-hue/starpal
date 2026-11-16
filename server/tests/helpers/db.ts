@@ -20,9 +20,19 @@ export function migrationSql(filename: string): string {
   return readFileSync(join(MIGRATIONS_DIR, filename), 'utf8')
 }
 
+/**
+ * 与生产 pg 对齐 BIGINT 的返回类型。
+ *
+ * `pg`（node-postgres）默认把 `int8` 解析成**字符串**，而 PGlite 默认解析成 `number`。
+ * 差异会直接改变业务结果：`String(authorId) === viewer.id`（判断「是不是作者」）
+ * 在内存库里会得到 `'11' !== '1'` 这种假阴性，测试因此误报 403。
+ * OID 20 = int8；int4 / int2 不受影响。
+ */
+const PG_PARSERS = { 20: (value: string) => value }
+
 /** 按版本序执行全部迁移，返回已就绪的数据库句柄。 */
 export async function createMigratedDb(): Promise<PGlite> {
-  const db = new PGlite()
+  const db = new PGlite({ parsers: PG_PARSERS })
   for (const filename of migrationFiles()) {
     try {
       await db.exec(migrationSql(filename))

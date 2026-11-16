@@ -872,7 +872,7 @@ flowchart LR
 
 ### M7 · 测试、加固、文档与交付验收
 
-**M7 状态：🚧 进行中**（第一批 2026-11-16 完成：`S1-T4` / `S1-T5` / `S2-T2` / `S2-T6`，见 `VR-M7-01`；第二批同日完成：`S1-T6` 前端测试体系、覆盖率门槛与 CI 门禁，见 `VR-M7-02`）。
+**M7 状态：🚧 进行中**（第一批 2026-11-16 完成：`S1-T4` / `S1-T5` / `S2-T2` / `S2-T6`，见 `VR-M7-01`；第二批同日完成：`S1-T6` 前端测试体系、覆盖率门槛与 CI 门禁，见 `VR-M7-02`；第三批同日完成：`S1-T8` 组件与路由冒烟、`S1-T9` 数据库不变量，见 `VR-M7-03`）。
 
 **目标**：完成质量加固、文档齐备与全量验收，形成可交付版本。
 
@@ -891,6 +891,8 @@ flowchart LR
 | `M7-S1-T5` | 权限回归自动化 | 将 `M6-S4` 矩阵检查转为可重复用例（✅ 2026-11-16 完成） | `tests/helpers/http.ts`（真 Express 链路 + PGlite）、`tests/integration/admin-permissions.test.ts`（路由清单从 `adminRouter.stack` 现取） | 与手工记录一致；变异实验证明移除守卫即失败 |
 | `M7-S1-T6` | 前端测试体系 | 前端此前零测试；建 vitest + jsdom + Testing Library 地基并覆盖纯逻辑层（✅ 2026-11-16 完成） | `web/vitest.config.ts`、`web/tests/setup.ts`、`web/tests/lib/*.test.ts`（6 个文件 48 项）、`web/tsconfig.test.json` | `npm test` 通过；`src/lib/**` 覆盖率 100% 行 / 98.46% 分支 |
 | `M7-S1-T7` | 覆盖率门槛与 CI | 覆盖率接入质量门 + GitHub Actions 每次推送自动跑（✅ 2026-11-16 完成） | `server/package.json`（`test:coverage`）、`web/vitest.config.ts`（阈值）、`.github/workflows/verify.yml` | 门槛生效：后端 85.63/79.11/68.47 对 84/78/66；前端 100/98.46/100 对 95/90/95 |
+| `M7-S1-T8` | 组件与路由冒烟 | 前端补登录 / 三态 / 后台成员页组件测试；后端每个端点至少过一次真实 HTTP（✅ 2026-11-16 完成） | `web/tests/features/auth/AuthForm.test.tsx`(20)、`web/tests/features/admin/AdminUsersPage.test.tsx`(8)、`web/tests/components/States.test.tsx`(5)、`server/tests/integration/routes-smoke.test.ts`(49) | 停用二次确认、开放重定向防护、普通成员改他人帖 403 均有断言 |
+| `M7-S1-T9` | 数据库不变量 | 迁移编号规范、空库建表完整性、事务提交 / 回滚语义（✅ 2026-11-16 完成） | `server/tests/integration/db-invariants.test.ts`(7) | 回滚后无残留；角色名稳定 |
 
 #### `M7-S2` 错误、性能与加固
 
@@ -948,6 +950,17 @@ flowchart LR
 - **测试代码也做类型检查**：`tsc` 默认不检查 `web/tests/`，专门加 `tsconfig.test.json`——否则测试文件可以带着类型错误通过，等于把「测试通过」变成虚假保证。
 - **如实标注的短板**：① 后端函数覆盖 68.47%，根因是多数模块的集成测试直接调 service、未走 controller，HTTP 入口只被管理端点那批用例覆盖；已在下一批（路由级冒烟）列为首要补强项，不靠调低门槛掩盖。② `theme.ts` 的 `typeof window === 'undefined'` 分支在 jsdom 下不可达（SSR 保护），保持未覆盖并在此登记。③ 前端目前只测到纯逻辑层，组件与交互仍未覆盖。
 - **CI 的边界**：只做门禁不做部署（部署归 Vercel），CI 内零凭据（PGlite 内存库、不读 `.env`），权限 `contents: read`。首次线上运行结果待推送后观察，见下一次验证记录。
+
+##### `VR-M7-03` · 第三批（组件测试 + 路由冒烟 + 数据库不变量）验证记录（通过）
+
+- **目标**：补齐前端组件层，补齐后端控制层，给数据库地基单独一层断言。
+- **真实命令与输出**：`npm run verify` 全绿（退出码 `0`）——测试 **364** 项（后端 283 + 前端 81）、`fail 0`；`typecheck`（含 `tests/`）/ `build` / `check:size`（350 文件）/ `lint` / `scan:secrets`（562 文件 0 命中）全过。
+- **覆盖率实测**：后端 `src/**` 行 92.09 / 分支 73.56 / 函数 88.87（对比第二批 85.63 / 79.11 / 68.47——行与函数大幅上升，分支百分比下降是因为此前未加载的文件不进分母，现在被真实执行并暴露了未覆盖分支）；前端 行 98.84 / 分支 94.83 / 函数 97.87。门槛随之上调为 91/72/87 与 95/90/95。
+- **两个夹具缺陷（本轮最有价值的产出）**：
+  1. `int8` 类型解析不一致——`pg` 返回字符串、PGlite 返回 number，「是不是作者」的判断（`String(authorId) === viewer.id`）在内存库下恒为假，**本人改自己的帖子被判 403**。此前靠「用管理员身份上传」绕开，属于用测试掩盖问题；本轮改为对齐 PGlite 的 `parsers`（OID 20 → 字符串），并把绕开的用例改回作者本人。
+  2. `rowCount` 换算错误——PGlite 对 SELECT 返回 `affectedRows: 0`，原写法把它当行数，导致 `rowCount === 0` 一律成立，发帖在测试里永远「话题不存在」。改为「先看行数，再看影响行数」。
+- **`AC-11` 之外的权限补充**：普通成员改他人帖子 403、未登录访问 `/api/auth/me` `/api/users/me` `/api/notifications` `/api/export` 统一 `AUTH_REQUIRED`、无效会话不被当成登录态。
+- **真实局限**：① 分支覆盖 73.56% 仍是弱项，缺口在异常分支，继续补需要构造大量非常规输入；② 前端只覆盖 3 个组件文件，治理后台其余五页、发帖器、图片选择器仍未测；③ 路由冒烟只断言「2xx + 包络」，业务正确性依赖各模块自己的集成测试，两者不重复。
 
 **M7 交付物**：自动化测试、加固成果、部署与配置文档、README / CHANGELOG、全量验证记录、交付物清单。
 

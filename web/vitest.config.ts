@@ -39,7 +39,14 @@ export default defineConfig({
        * 毫无指导意义的百分比；等组件测试那一批落地后再逐个把目录加进来。
        * 门槛值取实测值向下留 5 个点，作用是防倒退，不是催人刷数字。
        */
-      include: ['src/lib/**/*.ts'],
+      include: [
+        'src/lib/**/*.ts',
+        // 已写用例的组件逐个纳入，而不是整目录纳入：没测的页面不计入分母，
+        // 否则「覆盖率」会被未测代码稀释成一个无法指导决策的数字。
+        'src/features/auth/AuthForm.tsx',
+        'src/components/feedback/States.tsx',
+        'src/features/admin/AdminUsersPage.tsx',
+      ],
       thresholds: {
         lines: 95,
         functions: 95,
