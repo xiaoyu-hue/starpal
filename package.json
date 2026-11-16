@@ -28,7 +28,8 @@
     "preview": "npm run preview --workspace web",
     "check:size": "node scripts/check-file-size.mjs",
     "scan:secrets": "node scripts/scan-secrets.mjs",
-    "verify": "npm run typecheck && npm run build && npm run check:size && npm run lint && npm run scan:secrets && npm test",
-    "test": "npm test --workspace server"
+    "verify": "npm run typecheck && npm run build && npm run check:size && npm run lint && npm run scan:secrets && npm run test:coverage",
+    "test": "npm run test --workspace web && npm run test --workspace server",
+    "test:coverage": "npm run test:coverage --workspace web && npm run test:coverage --workspace server"
   }
 }

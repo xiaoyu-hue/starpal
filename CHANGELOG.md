@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+### 新增（M7 第二批：前端测试体系、覆盖率门槛与 CI）
+
+- **前端从零建起测试地基**：新增 `vitest` + jsdom + Testing Library（`web/vitest.config.ts`、`web/tests/setup.ts`）。此前前端**一行测试都没有**，治理后台六个页面、发帖与登录表单的唯一验证手段是人手点。配置刻意不写进 `vite.config.ts`：生产构建不该依赖测试框架。`globals` 关闭、显式 import，避免为几个全局变量去改 `tsconfig`；`cleanup` 手动注册——RTL 的自动清理依赖全局 `afterEach`，不开 globals 时不注册会跨用例残留节点，出现假通过。
+- **48 项前端用例，全部打在真实会坏的地方**：`api-client`（14 项）——无体 POST 不带 `Content-Type`（否则登出被判 415）、上传不手写 `Content-Type`（否则丢 boundary）、`AbortError` 不被误报成网络故障、5xx 缺包络时不把 `undefined` 当错误码、`file://` 预览下不发请求；`pagination`（8 项）——跨页重复帖子去重（游标分页下新帖插入会让同一篇出现在相邻两页，不去重就渲染重复 key）；`theme`（8 项）——存储里保存**用户选择**而非解析结果，否则切到「跟随系统」后再也回不去；`query-keys`（10 项）——缓存键结构一旦漂移，表现是「点赞了但列表不刷新」，不报错只是数据陈旧；`query-client`（5 项）——4xx 不重试、5xx 最多两次；`cn`（3 项）。
+- **覆盖率门槛接入质量门**：前端 `src/lib/**` 行 ≥ 95 / 分支 ≥ 90 / 函数 ≥ 95（实测 100 / 98.46 / 100）；后端 `server/src/**` 行 ≥ 84 / 分支 ≥ 78 / 函数 ≥ 66（实测 85.63 / 79.11 / 68.47）。门槛取实测值下方留一点余量，作用是**防倒退**，不是催人刷数字；`README` 与 `AGENTS.md` 都写明「为凑数字写无断言用例等同编造测试结果」。
+- **测试代码纳入类型检查**：新增 `web/tsconfig.test.json`。`tsc` 默认不检查 `tests/`，漏配等于测试本身可以带类型错误通过。
+- **CI 门禁**：新增 `.github/workflows/verify.yml`，`main` 推送与所有 PR 触发 `npm ci` + `npm run verify`。只做门禁不做部署——部署归 Vercel 的 Git 集成，两套部署会让同一提交部署两次、线上版本不确定。权限最小化到 `contents: read`，同分支并发取消旧运行，20 分钟超时，Node 固定 `22.13.1`。**CI 内不引入任何凭据**：测试用 PGlite 内存库，不连真实库、不读 `.env`。
+- 质量门口径变化：`npm test` 现在跑前后端全部测试（快速反馈），`npm run test:coverage` 额外校验覆盖率，`verify` 末位改为 `test:coverage`。测试总数由 **227** 增至 **275** 项。
+- **如实标注的短板**：后端函数覆盖只有 68.47%，原因是多数模块的集成测试直接调 service，没有走 controller——同一份逻辑的 HTTP 入口仍只被管理端点那批用例覆盖到。这是下一步（`M7-S1` 路由级冒烟测试）要补的地方，不靠调低门槛掩盖。
+
 ### 变更（M7 第一批：把手工验收变成自动测试，并加一道凭据扫描）
 
 - **管理端点权限矩阵自动化**（`M7-S1-T5`）：新增 HTTP 层夹具 `server/tests/helpers/http.ts`——把 `pool.query` / `pool.connect` 接到 PGlite 上，中间件、控制器、仓储、事务全部走真实代码路径，只把数据库换掉，不为测试改造生产代码。`admin-permissions.test.ts` 的路由清单**从 `adminRouter.stack` 现取**（当前 18 个端点），逐条断言访客 `401`、普通成员 `403`、管理员不被守卫拦下。此前 `AC-11` 靠手工 curl，改完代码就无人重跑；现在每次 `npm test` 都重验。变异实验（临时移除 `adminRouter.use(requireAuth, requireRole(ROLE_ADMIN))`）确认 4 项用例全部失败，还原后全通过——用例不是空转。

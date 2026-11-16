@@ -10,6 +10,9 @@ build/
 server/public/
 *.log
 
+# 覆盖率产物（本地生成，每次跑测试都会变，不入库）
+coverage/
+
 # 历史运行时上传目录（ADR-014 后图片改存数据库，此处仅防旧本地目录误入库）
 # 必须锚定根路径：写成 `uploads/` 会匹配任意层级同名目录，连源码 modules/uploads 一起忽略。
 /server/uploads/

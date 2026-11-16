@@ -118,7 +118,7 @@
 | `M5` | 私信、成就时间线、每周热门、搜索、导出 | ✅ 已交付：私信、成就与每周热门、搜索、数据导出（通知仅覆盖评论，范围收窄见 `PRD.md` §4.11） | **`v1.3.0`** |
 | `M5.5` | 头衔与等级：站长授权头衔 / 经验 / `L1`–`L50` 等级 / 五段位 | ✅ 已交付：站长头衔（`M5.5-S1`）、经验与等级（`M5.5-S2`）；每日签到经评审取消（与 `FR-ACH-04` 冲突） | **`v1.4.0`** |
 | `M6` | 管理后台、举报、审核、权限校验、审计日志 | ✅ 已交付：举报 / 申诉、社区公告、治理后台六分区（用户 / 内容 / 话题处置）、只追加审核日志、基础统计与权限回归（详见 `VR-M6-01` / `VR-M6-02`） | **`v1.5.0`** |
-| `M7` | 测试与性能加固、部署文档、验收 | ⬜ 未开始 | — |
+| `M7` | 测试与性能加固、部署文档、验收 | 🚧 进行中：权限矩阵与上传安全用例自动化、前端测试体系与覆盖率门槛、CI 门禁已落地（`VR-M7-01` / `VR-M7-02`）；部署文档与全量验收待做 | — |
 
 **当前对社区用户公示的未完成项**（与站内公告一致）：`M5` 四类能力（私信 / 成就与每周热门 / 搜索 / 导出）已交付；其中**通知只覆盖「评论」一种**——点赞、收藏、私信、公告都不单独提醒，这是已登记的范围收窄（见 `PRD.md` §4.11），不是待补的遗漏。`M5.5` 的经验与等级已于 2026-11-15 交付，原计划的**每日签到按 `FR-ACH-04` 取消**（该条明确「不得实现连续签到」，取消理由见 `CHANGELOG.md` 与 `IMPLEMENTATION-PLAN.md` 的 `M5.5-S3`），不再列为待补；`M6` 治理后台与审核日志已交付（`reviewing` 状态与「不当行为」举报的数据层已就绪，但服务层与界面未启用，仍列增强项），`M7` 的验收加固仍未开始。导航目的地现已全部有实际内容，不再有功能占位页（仅 404 页保留明确标注的占位样式），不提供点击无效果的伪交互控件。
 
@@ -156,7 +156,7 @@
 | 前端 | React 19 + TypeScript、Vite、React Router、TanStack Query、Tailwind CSS、**Radix UI 原语 + 自研组件**、lucide-react |
 | 后端 | Express 5、PostgreSQL（`pg`，全部参数化查询）、`hash-wasm`（Argon2id）、`sharp`（图片重编码）、`multer`（上传）、`dotenv` |
 | 存储 | PostgreSQL：结构化数据与图片二进制同库（`ADR-014`），无对象存储、无本地文件目录 |
-| 测试 | Node 内置 `node:test` + `tsx` + `@electric-sql/pglite`（WASM 内存库，不连真实库） |
+| 测试 | 后端：Node 内置 `node:test` + `tsx` + `@electric-sql/pglite`（WASM 内存库，不连真实库）；前端：`vitest` + jsdom + Testing Library，覆盖率由 `v8` 采集 |
 | 部署 | Vercel Serverless Function（`api/index.ts`）+ Neon PostgreSQL；前端静态产物构建至 `server/public/` |
 
 精确版本以各 `package.json` 与 `package-lock.json` 为准，不在文档中另写一份。项目**未引入** shadcn/ui、ALTCHA、全局状态库、ORM、Redis、消息队列、对象存储 SDK、外部验证码与 SSR 框架；防刷与组件均为自研。
@@ -243,8 +243,9 @@ npm run verify
 | `npm run seed` | 写入示例话题与帖子（可选、明确标注「示例」） |
 | `npm run init:admin` | 一次性创建初始管理员 |
 | `npm run typecheck` / `lint` / `check:size` / `scan:secrets` | 类型检查 / lint 硬规则 / 单文件行数预算 / 明文凭据扫描 |
-| `npm test` | 单元与集成测试（PGlite 内存库） |
-| `npm run verify` | **唯一质量门**：typecheck → build → check:size → lint → scan:secrets → test，必须全绿 |
+| `npm test` | 前后端全部测试（后端 PGlite 内存库，前端 jsdom）；本地快速反馈用 |
+| `npm run test:coverage` | 同上，并采集覆盖率与门槛校验（`verify` 实际调用这一项） |
+| `npm run verify` | **唯一质量门**：typecheck → build → check:size → lint → scan:secrets → test:coverage，必须全绿 |
 | `npm run export:check` | 校验导出文件可读性 |
 | `npm run preview` | 预览前端构建产物 |
 
@@ -253,6 +254,8 @@ npm run verify
 ```text
 ├── api/                     # Vercel Serverless 入口（index.ts）
 ├── web/                     # 前端 workspace
+│   ├── tests/               # 前端测试（vitest + jsdom，按 src 目录镜像分层）
+│   ├── vitest.config.ts     # 前端测试配置与覆盖率门槛
 │   └── src/
 │       ├── app/             # 路由、Provider、应用外壳（顶栏/抽屉/侧栏）
 │       ├── features/        # 按业务域划分的功能模块（含公共 index 出口）
@@ -264,11 +267,12 @@ npm run verify
 ├── server/                  # 后端 workspace
 │   └── src/
 │       ├── config/          # 环境变量、常量、说明页与公告文案（docs/）
-│       ├── db/              # 连接池、迁移执行器、迁移 SQL（001–019）
+│       ├── db/              # 连接池、迁移执行器、迁移 SQL（001–023）
 │       ├── middleware/      # requireAuth / requireRole / optionalAuth 等
 │       ├── modules/         # 按业务域四层同构（routes/controller/service/repository）
 │       ├── shared/          # 错误码、响应包络、分页、事务、校验原语
 │       └── storage/         # 图片管线（校验 + WebP 重编码）
+├── .github/workflows/       # CI：每次推送与 PR 跑 npm run verify
 ├── scripts/                 # 迁移、种子、初始化、质量门脚本
 ├── docs/                    # PRD / ARCHITECTURE / IMPLEMENTATION-PLAN / DEPLOYMENT / DOC_SYNC
 ├── CHANGELOG.md             # 变更记录
@@ -305,9 +309,21 @@ npm run verify
 | `build` | Vite 构建 + 后端编译 |
 | `check:size` | `web/src`、`server/src` 下 `.ts/.tsx ≤ 300 行`、`.css ≤ 400 行`；超预算须拆分文件，不得调高阈值 |
 | `lint` | 硬规则 `R1` 模块导入边界 / `R2` 设计令牌（禁硬编码颜色）/ `R3` 导入扩展名 / `R4` 四处版本号一致；任一命中即失败 |
-| `test` | `node:test` + PGlite 内存库，测试间互不影响、不连真实库 |
+| `scan:secrets` | 7 条规则扫全仓（GitHub / AWS / OpenAI 令牌、私钥、带口令的连接串），并检查 `.env` 是否被纳入版本控制 |
+| `test:coverage` | 后端 `node:test` + PGlite（`src/` 行覆盖 ≥ 84、分支 ≥ 80、函数 ≥ 66）；前端 `vitest` + jsdom（`src/lib/` 行 ≥ 95、分支 ≥ 90、函数 ≥ 95） |
 
 新增功能须同步新增/更新测试；新增源码文件须带 `SPDX-License-Identifier: AGPL-3.0-or-later` 头。版本号唯一真源是根 `package.json`，构建期注入 `__APP_VERSION__`，由 `R4` 保证四处同源。
+
+**覆盖率怎么算，写在明处**：门槛的作用是「防倒退」，不是「催人刷数字」。后端统计 `server/src/**`（排除测试文件），前端当前只统计 `src/lib/**`——尚未测的页面不计入分母，否则总数会被稀释成一个没有指导意义的百分比；组件测试落地后再逐目录纳入。任何为了凑数字而写的无断言用例，视为违规。
+
+### 持续集成（CI）
+
+`.github/workflows/verify.yml`：`main` 分支推送与所有 PR 触发，执行 `npm ci` + `npm run verify`。
+
+- **只做门禁，不做部署**。部署由 Vercel 的 Git 集成负责；两套部署并存会导致「同一提交部署两次、线上版本不确定」。
+- **不需要任何仓库密钥**：测试用 PGlite 内存库，不连真实数据库、不读 `.env`。这是刻意的——CI 里出现凭证就是新的泄露面。
+- 权限最小化（`contents: read`）、同分支并发取消旧运行、20 分钟超时。
+- Node 版本固定 `22.13.1`，与本地一致；`engines` 已锁 `>=22.12 <23`，不跑多版本矩阵。
 
 ### 部署
 

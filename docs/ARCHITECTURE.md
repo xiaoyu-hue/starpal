@@ -1443,7 +1443,7 @@ export interface StorageAdapter {
 | 上传 | multipart 中间件 | 显式大小上限，内存缓冲 |
 | 图像处理 | `sharp`（要求 Node ≥ 20.9.0） | 魔术字节后重新编码、剥离元数据 |
 | 安全响应 | 安全响应头中间件 | 含禁止类型嗅探 |
-| 测试 | 单元测试 + API 集成测试 + 端到端检查 | 见实施计划 |
+| 测试 | 后端单元 + API 集成（PGlite 真库、真 Express 链路）；前端 vitest + jsdom；覆盖率门槛与 CI 门禁 | 见实施计划与 `.github/workflows/verify.yml` |
 | 质量 | ESLint / Prettier / TypeScript 严格模式 | 导入边界由 lint 规则约束 |
 
 **明确不引入**：全局状态库、图表库、动效库、拖拽库、可调整面板库、特效组件集、Redis、消息队列、对象存储 SDK、外部验证码、SSR 框架、容器编排。

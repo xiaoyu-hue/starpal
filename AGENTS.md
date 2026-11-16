@@ -91,7 +91,7 @@
 
 ## 七、质量门与工程约束（硬性的，别绕过）
 
-唯一入口：**`npm run verify`** = `typecheck && build && check:size && lint && scan:secrets && test`，必须全绿才可交付。
+唯一入口：**`npm run verify`** = `typecheck && build && check:size && lint && scan:secrets && test:coverage`，必须全绿才可交付。
 
 - **行数预算** `check:size`：`web/src`、`server/src` 下 `.ts/.tsx ≤ 300 行`、`.css ≤ 400 行`。
   超预算要**拆分文件**（如把类型/组件拆到同目录新文件并 re-export），不是删功能、不是调高阈值。
@@ -104,6 +104,9 @@
   公告按政策不含版本号，日常变更累积在 `CHANGELOG.md` 的 `[Unreleased]`。**别擅自 bump 版本或打 tag**——发版是 🟡 先问类决策，须作者拍板后统一处理。
 - **迁移**：`server/src/db/migrations/` 顺序编号（现到 `023`），只增不改已应用的历史迁移。
 - 新功能**必须同时新增/更新测试**；测试数、文件数等一切数字以 `npm run verify` 实际输出为准，不写死在文档里。
+- **前端测试**放 `web/tests/`（镜像 `src` 分层，不受 `web/src` 行数预算约束），框架是 `vitest` + jsdom + Testing Library；配置在 `web/vitest.config.ts`，测试代码由 `web/tsconfig.test.json` 单独类型检查（`tsc` 不会自动检查 `tests/`，漏配等于测试可以带类型错误上线）。
+- **覆盖率是地板不是 KPI**：门槛用于防倒退，实测值 −1～2 个点即为门槛；不许为了凑数字写无断言用例（等同「编造测试结果」）。前端覆盖率当前只统计 `src/lib/**`，新增目录须连同门槛一起提交。
+- **CI** 在 `.github/workflows/verify.yml`，只做门禁不做部署（部署归 Vercel，两套部署会让线上版本不确定）；CI 内不引入任何凭据。
 - 新增源码文件带 `SPDX-License-Identifier: AGPL-3.0-or-later` 头；`shebang` 脚本插在 `#!` 下一行。
 
 ---

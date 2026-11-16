@@ -872,7 +872,7 @@ flowchart LR
 
 ### M7 · 测试、加固、文档与交付验收
 
-**M7 状态：🚧 进行中**（第一批 2026-11-16 完成：`S1-T4` / `S1-T5` / `S2-T2` / `S2-T6`，见 `VR-M7-01`）。
+**M7 状态：🚧 进行中**（第一批 2026-11-16 完成：`S1-T4` / `S1-T5` / `S2-T2` / `S2-T6`，见 `VR-M7-01`；第二批同日完成：`S1-T6` 前端测试体系、覆盖率门槛与 CI 门禁，见 `VR-M7-02`）。
 
 **目标**：完成质量加固、文档齐备与全量验收，形成可交付版本。
 
@@ -889,6 +889,8 @@ flowchart LR
 | `M7-S1-T3` | 端到端检查 | 关键路径：注册 → 发帖 → 互动 → 举报 → 处置 → 导出 | `tests/e2e/` | `test:e2e` 通过 |
 | `M7-S1-T4` | 上传安全用例 | 伪造扩展名 / MIME、超限、含 EXIF 的样例（✅ 2026-11-16 完成） | `tests/unit/image-pipeline.test.ts`（8 项，EXIF / SVG / HTML / GIF / 魔数不符 / 空文件）、`tests/integration/upload-guard.test.ts`（5 项，401 / 字段名 / 413 / 415 / 成功转 WebP） | 全部被拒或净化；EXIF 含 GPS 样本处理后无残留 |
 | `M7-S1-T5` | 权限回归自动化 | 将 `M6-S4` 矩阵检查转为可重复用例（✅ 2026-11-16 完成） | `tests/helpers/http.ts`（真 Express 链路 + PGlite）、`tests/integration/admin-permissions.test.ts`（路由清单从 `adminRouter.stack` 现取） | 与手工记录一致；变异实验证明移除守卫即失败 |
+| `M7-S1-T6` | 前端测试体系 | 前端此前零测试；建 vitest + jsdom + Testing Library 地基并覆盖纯逻辑层（✅ 2026-11-16 完成） | `web/vitest.config.ts`、`web/tests/setup.ts`、`web/tests/lib/*.test.ts`（6 个文件 48 项）、`web/tsconfig.test.json` | `npm test` 通过；`src/lib/**` 覆盖率 100% 行 / 98.46% 分支 |
+| `M7-S1-T7` | 覆盖率门槛与 CI | 覆盖率接入质量门 + GitHub Actions 每次推送自动跑（✅ 2026-11-16 完成） | `server/package.json`（`test:coverage`）、`web/vitest.config.ts`（阈值）、`.github/workflows/verify.yml` | 门槛生效：后端 85.63/79.11/68.47 对 84/78/66；前端 100/98.46/100 对 95/90/95 |
 
 #### `M7-S2` 错误、性能与加固
 
@@ -935,6 +937,17 @@ flowchart LR
 - **变异实验（证明用例不是空转）**：临时注释掉 `adminRouter.use(requireAuth, requireRole(ROLE_ADMIN))` → 该测试 4 项**全部失败**；还原后 4 项全部通过。`git diff` 确认生产代码零改动。
 - **`AC-18` 实测**：`node scripts/scan-secrets.mjs` → 检查 547 个文件、7 条规则、未发现明文凭据；`--history` 扫 87 个提交的变更历史，0 条规则命中；`git ls-files` 确认 `.env` 未入库，仅有 `.env.example` 占位符。
 - **真实局限（如实标注）**：① 内存库的 `BIGINT` 回读是 `number`，而生产 `pg` 回读是 `string`，「是否作者」的比对在夹具下会误判，故上传成功用例改用管理员身份走通（错误码类用例不受影响）；② 凭据扫描只覆盖已知模式，无法证明「不存在任何未知形态的密钥」；③ 本轮为本地验证，线上以部署后实际为准。
+
+##### `VR-M7-02` · 第二批（前端测试体系 + 覆盖率门槛 + CI）验证记录（通过）
+
+- **目标**：`M7-S1-T6` 前端测试地基、`M7-S1-T7` 覆盖率门槛与 CI 门禁。
+- **环境**：`vitest 5.1.0` + `jsdom 29.1.1` + `@testing-library/react 16.3.3`；后端 `node --import tsx --test` + Node 22 内置覆盖率（`--experimental-test-coverage`）；CI 为 GitHub Actions（public 仓库，标准 runner）。
+- **真实命令与输出**：`npm run verify` 全绿——测试 **275** 项（后端 227 + 前端 48）、`fail 0`；`typecheck`（含新增的 `web/tsconfig.test.json`）/ `build` / `check:size` / `lint` / `scan:secrets` 全过。
+- **覆盖率实测（连续两次一致，非取样一次）**：后端 `src/**` 行 85.63 / 分支 79.11 / 函数 68.47；前端 `src/lib/**` 行 100 / 分支 98.46 / 函数 100。门槛取实测下方留余量（后端 84/78/66，前端 95/90/95），作用是防倒退。
+- **为什么前端只统计 `src/lib/**`**：尚未测的页面若计入分母，总数会被稀释成没有指导意义的百分比，反而掩盖真实覆盖情况。组件测试落地后逐目录纳入，门槛随之上调。
+- **测试代码也做类型检查**：`tsc` 默认不检查 `web/tests/`，专门加 `tsconfig.test.json`——否则测试文件可以带着类型错误通过，等于把「测试通过」变成虚假保证。
+- **如实标注的短板**：① 后端函数覆盖 68.47%，根因是多数模块的集成测试直接调 service、未走 controller，HTTP 入口只被管理端点那批用例覆盖；已在下一批（路由级冒烟）列为首要补强项，不靠调低门槛掩盖。② `theme.ts` 的 `typeof window === 'undefined'` 分支在 jsdom 下不可达（SSR 保护），保持未覆盖并在此登记。③ 前端目前只测到纯逻辑层，组件与交互仍未覆盖。
+- **CI 的边界**：只做门禁不做部署（部署归 Vercel），CI 内零凭据（PGlite 内存库、不读 `.env`），权限 `contents: read`。首次线上运行结果待推送后观察，见下一次验证记录。
 
 **M7 交付物**：自动化测试、加固成果、部署与配置文档、README / CHANGELOG、全量验证记录、交付物清单。
 

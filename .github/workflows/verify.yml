@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# 质量门（CI）：把 `npm run verify` 从「我和作者记得跑」变成「每次推送自动跑」。
+#
+# 刻意只做门禁，不做部署——部署由 Vercel 的 Git 集成负责。两套部署并存会
+# 造成「同一提交部署两次、线上版本不确定」，所以这里不碰发布。
+#
+# 不需要任何仓库密钥：测试用 PGlite 内存库，不连真实数据库，不读 .env。
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# 权限最小化：只读代码，不写任何资源。
+permissions:
+  contents: read
+
+# 同一分支连续推送时取消旧运行，避免排队浪费额度、也让红灯更早出现。
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · build · size · lint · secrets · test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          # 与本地开发版本一致；engines 锁 >=22.12 <23，不跑多版本矩阵。
+          node-version: '22.13.1'
+          cache: npm
+
+      # 用 ci 而不是 install：严格按 package-lock.json 安装，
+      # 锁文件与 package.json 不一致时直接失败，不让 CI 悄悄换版本。
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 质量门
+        run: npm run verify
