@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Award, Bookmark, Check, Flag, Heart, KeyRound, UserRound } from 'lucide-react'
+import { Award, Bookmark, Check, Flag, Heart, KeyRound, ShieldCheck, UserRound } from 'lucide-react'
 import { Avatar, Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
@@ -102,9 +102,12 @@ export function SettingsPage() {
             <KeyRound size={16} /> 运营管理
           </h2>
           <p className="text-sm leading-relaxed text-muted">
-            生成与撤销邀请码，控制谁能注册；查看并处理社区里的举报与申诉；编辑社区公告与置顶通知。
+            查看社区概览与治理记录；管理用户、内容与话题；处理举报与公告；控制谁能注册。
           </p>
           <div className="flex flex-wrap gap-2">
+            <Link to="/admin" className={buttonClass('primary', 'sm')}>
+              <ShieldCheck size={15} className="mr-1.5 inline-block align-[-2px]" /> 治理后台
+            </Link>
             <Link to="/invite-codes" className={buttonClass('secondary', 'sm')}>
               邀请码管理
             </Link>

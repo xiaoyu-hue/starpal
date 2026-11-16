@@ -12,6 +12,7 @@ import { PlaceholderPage } from '../features/placeholder'
 // 话题目录是外壳级共享数据（左右栏都在读），必然进主包，故静态导入而非假装懒加载。
 import { TopicPage, TopicsPage } from '../features/topics'
 import { RequireAuth, RequireRole } from './guards'
+import { AdminLayout } from '../features/admin/AdminLayout'
 
 // 路由级懒加载边界：首页与设计系统预览页独立分包。
 const HomePage = lazy(() =>
@@ -80,6 +81,25 @@ const AdminReportsPage = lazy(() =>
 const AdminAnnouncementsPage = lazy(() =>
   import('../features/announcements').then((m) => ({ default: m.AdminAnnouncementsPage })),
 )
+// 治理后台六分区：统一懒加载，路由层以 RequireRole + AdminLayout 包裹。
+const AdminHomePage = lazy(() =>
+  import('../features/admin').then((m) => ({ default: m.AdminHomePage })),
+)
+const AdminUsersPage = lazy(() =>
+  import('../features/admin').then((m) => ({ default: m.AdminUsersPage })),
+)
+const AdminPostsPage = lazy(() =>
+  import('../features/admin').then((m) => ({ default: m.AdminPostsPage })),
+)
+const AdminCommentsPage = lazy(() =>
+  import('../features/admin').then((m) => ({ default: m.AdminCommentsPage })),
+)
+const AdminTopicsPage = lazy(() =>
+  import('../features/admin').then((m) => ({ default: m.AdminTopicsPage })),
+)
+const AdminStatsPage = lazy(() =>
+  import('../features/admin').then((m) => ({ default: m.AdminStatsPage })),
+)
 const AboutPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.AboutPage })),
 )
@@ -108,6 +128,17 @@ function PreviewRoute() {
 
 function Suspended({ children }: { children: ReactNode }) {
   return <Suspense fallback={<FeedSkeleton count={2} />}>{children}</Suspense>
+}
+
+/** 治理后台统一包裹：角色守卫 + 六分区导航骨架。服务端仍有第二道角色校验。 */
+function AdminRoute() {
+  return (
+    <RequireRole role="admin">
+      <AdminLayout>
+        <Outlet />
+      </AdminLayout>
+    </RequireRole>
+  )
 }
 
 function placeholder(title: string, milestone: string, description: string) {
@@ -167,20 +198,18 @@ const routes: RouteObject[] = [
         ),
       },
       {
-        path: 'admin/reports',
-        element: (
-          <RequireRole role="admin">
-            <Suspended><AdminReportsPage /></Suspended>
-          </RequireRole>
-        ),
-      },
-      {
-        path: 'admin/announcements',
-        element: (
-          <RequireRole role="admin">
-            <Suspended><AdminAnnouncementsPage /></Suspended>
-          </RequireRole>
-        ),
+        path: 'admin',
+        element: <AdminRoute />,
+        children: [
+          { index: true, element: <Suspended><AdminHomePage /></Suspended> },
+          { path: 'users', element: <Suspended><AdminUsersPage /></Suspended> },
+          { path: 'posts', element: <Suspended><AdminPostsPage /></Suspended> },
+          { path: 'comments', element: <Suspended><AdminCommentsPage /></Suspended> },
+          { path: 'topics', element: <Suspended><AdminTopicsPage /></Suspended> },
+          { path: 'stats', element: <Suspended><AdminStatsPage /></Suspended> },
+          { path: 'reports', element: <Suspended><AdminReportsPage /></Suspended> },
+          { path: 'announcements', element: <Suspended><AdminAnnouncementsPage /></Suspended> },
+        ],
       },
       {
         path: 'messages',

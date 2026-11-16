@@ -4,15 +4,17 @@
 
 ## [Unreleased]
 
-### 进行中（M6 治理后台 · 步 1–3，尚未上线）
+### 新增（M6 治理后台：处置、审核日志、六分区）
 
-> M6 分六步推进，此处只记录**已完成并本地验证**的步 1–3；步 4 话题管理 / 统计、步 5 前端六分区、步 6 权限回归与完整文档同步尚未开始。完整能力将在 M6 收尾时统一补记，不把半成品写成已交付。
+> M6 分六步推进，六步已全部完成并本地验证；尚未发版，线上部署状态以实际为准。
 
-- **步 1 · 治理数据模型**（迁移 `022_moderation.sql`）：新增 `moderation_logs` 只追加日志表、`moderation_public_log` 脱敏公开视图（只暴露动作类型 / 对象类型 / 时间，不含操作者与内部备注）；`reports` 用 `ALTER` 补 `reviewing` 状态与 `user` 举报目标类型，不改历史迁移。`weekly_highlights` 视图刻意不建——「每周热门」现由 `achievement.repository.ts` 实时计算且有测试，再建视图等于两套实现。验证：新增 14 项约束测试。
-- **步 2 · 审核日志接入举报处置**：新增 `moderation` 模块（`insertLog` / `listLogs`，**只提供写入与读取，无改删函数**，从接口层保证只追加）。举报 resolve / dismiss 的「改状态 + 写日志」走同一执行器——生产由 `withTransaction` 原子提交，测试注入 PGlite；终态不可重复决策，因此不产生重复日志。日志 metadata 只存结构化追溯字段，不写处置备注全文。验证：新增 5 项测试。
-- **步 3 · 用户管理与内容管理**：管理端新增 4 个端点（`GET /api/admin/users`、`PATCH /api/admin/users/:id/status`、`GET /api/admin/content/:kind`、`PATCH /api/admin/content/:kind/:id/status`）。停用 / 恢复账号改 `users.status`（`suspended`↔`active`），移除 / 恢复内容改 `posts`/`comments.status`（`published`↔`removed`），均复用现有状态字段不动表结构；`removed` 态 `deleted_at` 保持 NULL 以守 `CHECK`；评论计数随移除 / 恢复增减。角色经 `role_id` JOIN `roles` 取 `roles.name`（`users` 无 `role` 列）。所有动作写审核日志并复用现有 `adminRouter` 的登录 + 管理员守卫，服务层二次校验角色。
-- **步 3 的幂等修正**：状态变更加 `status <> 目标态` 条件，重复点「移除 / 停用」不再重复扣计数或重复写日志；未命中时回查当前行区分「已是目标态」与「真不存在」。验证：新增 9 项集成测试含幂等用例。
-- **阶段验证**：`npm run verify` 全绿（**198** 项测试、`fail 0`，`typecheck` / `build` / `size` / `lint` 通过，新增文件均在行数预算内）。迁移 022 与步 1–3 代码本次首次推送，线上尚未部署；上线后由 `api/index.ts` 惰性执行迁移。
+- **步 1 · 治理数据模型**（迁移 `022_moderation.sql`）：新增 `moderation_logs` 只追加日志表、`moderation_public_log` 脱敏公开视图（只暴露动作类型 / 对象类型 / 时间，不含操作者与内部备注）；`reports` 用 `ALTER` 补 `reviewing` 状态与 `user` 举报目标类型，不改历史迁移。`weekly_highlights` 视图刻意不建——「每周热门」现由 `achievement.repository.ts` 实时计算且有测试，再建视图等于两套实现。新增 14 项约束测试。
+- **步 2 · 审核日志接入举报处置**：新增 `moderation` 模块（`insertLog` / `listLogs`，**只提供写入与读取，无改删函数**，从接口层保证只追加）。举报 resolve / dismiss 的「改状态 + 写日志」走同一执行器——生产由 `withTransaction` 原子提交，测试注入 PGlite；终态不可重复决策，因此不产生重复日志。日志 metadata 只存结构化追溯字段，不写处置备注全文。新增 5 项测试。
+- **步 3 · 用户管理与内容管理**：管理端新增 4 个端点（`GET /api/admin/users`、`PATCH /api/admin/users/:id/status`、`GET /api/admin/content/:kind`、`PATCH /api/admin/content/:kind/:id/status`）。停用 / 恢复账号改 `users.status`（`suspended`↔`active`），移除 / 恢复内容改 `posts`/`comments.status`（`published`↔`removed`），均复用现有状态字段不动表结构；`removed` 态 `deleted_at` 保持 NULL 以守 `CHECK`；评论计数随移除 / 恢复增减。角色经 `role_id` JOIN `roles` 取 `roles.name`（`users` 无 `role` 列）。所有动作写审核日志并复用现有 `adminRouter` 守卫，服务层二次校验。状态变更加 `status <> 目标态` 条件保证**幂等**——重复点「移除 / 停用」不再重复扣计数或写日志。新增 9 项测试。
+- **步 4 · 话题管理与基础统计**：话题管理内聚到 `topics` 模块，新增 `GET/POST /api/admin/topics`、`PATCH /api/admin/topics/:id`、`PATCH /api/admin/topics/:id/archive`；slug 是对外定位符不可改，归档用 `deleted_at` 软删（可恢复，不物理删以免帖子失分类），每个动作写日志且归档幂等。基础统计 `GET /api/admin/stats` 给成员 / 帖子 / 评论 / 待处理举报四个数字，纯 SQL 聚合、口径与前台可见性对齐（停用作者、归档话题下的帖子不计）、**不引入图表库**。新增 8 项测试。
+- **步 5 · 前端六分区后台**：新增 `web/src/features/admin/`，治理后台 `/admin` 下六分区（概览 / 用户 / 帖子 / 评论 / 话题 / 统计）加既有举报 / 公告，统一 `RequireRole` + 导航骨架；设置页「运营管理」加「治理后台」总入口。停用 / 移除均二次确认，所有写操作失效管理域缓存。桌面 1440 截图复核六页；端到端实测停用成员 → 其帖子从统计 60 降到 20、恢复回到 60。
+- **步 6 · 权限回归与文档同步**：`AC-11` 实测 12 个管理端点——访客全部 `401`、普通用户全部 `403`，无一遗漏（Router 统一守卫 + 服务层二次复核）；`AC-12` 实测创建 / 归档话题均产生对应审核日志。文档按 `DOC_SYNC.md` 全项同步。
+- **完成验证**：`npm run verify` 全绿（**206** 项测试、`fail 0`，`typecheck` / `build` / `size` / `lint` 通过，新增文件均在行数预算内）。数字以实测为准。
 
 ### 新增（段位徽标：可佩戴、可更换、可隐藏）
 
@@ -32,7 +34,7 @@
 - 两处都不新增接口、不新增迁移：复用已有的 `GET /api/levels/:username` 与 `LevelCard`，只改挂载位置。等级仍只升不降、仍不排名、仍不进帖子与评论署名行——`FR-ACH-05` 的克制边界没有放宽，只是把「自己能看的两处」补全。
 - 验证：`npm run verify` 全绿；本地以演示账号登录，桌面 1440 / 移动 390 截图复核，等级牌与资料卡同宽、无换行错乱；点「查看主页」跳转到 `/u/starpal_demo` 正确。
 
-（下一个里程碑为 `M6` 的完整治理后台、审核日志与六分区。）
+（`M6` 治理后台已在本节交付；下一个里程碑为 `M7` 验收加固。）
 
 ## [1.4.0] - 2026-11-15
 

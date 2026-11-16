@@ -40,3 +40,12 @@ export const reportKeys = {
   mine: ['reports', 'mine'] as const,
   queue: (status: string | null) => ['reports', 'queue', status ?? 'all'] as const,
 }
+
+/** 管理后台：任一处置动作都可能同时改变多个列表与统计数字，故共用一个根键便于整体失效。 */
+export const adminKeys = {
+  all: ['admin'] as const,
+  users: ['admin', 'users'] as const,
+  content: (kind: string) => ['admin', 'content', kind] as const,
+  topics: ['admin', 'topics'] as const,
+  stats: ['admin', 'stats'] as const,
+}

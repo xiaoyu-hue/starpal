@@ -17,6 +17,13 @@ import {
 } from '../invite/index.js'
 import { adminReportsController, decideReportController } from '../reports/index.js'
 import { announcementAdminRouter } from '../announcements/index.js'
+import {
+  adminCreateTopicController,
+  adminSetTopicArchivedController,
+  adminTopicsController,
+  adminUpdateTopicController,
+} from '../topics/index.js'
+import { adminStatsController } from './admin.stats.controller.js'
 
 /**
  * 管理路由组（挂载于 /api/admin）。
@@ -39,5 +46,12 @@ adminRouter.get('/users', adminUsersController)
 adminRouter.patch('/users/:id/status', adminSetUserStatusController)
 adminRouter.get('/content/:kind', adminContentController)
 adminRouter.patch('/content/:kind/:id/status', adminSetContentStatusController)
+// 话题管理：创建 / 编辑 / 归档（软删，可恢复）；每个动作写审核日志。
+adminRouter.get('/topics', adminTopicsController)
+adminRouter.post('/topics', adminCreateTopicController)
+adminRouter.patch('/topics/:id', adminUpdateTopicController)
+adminRouter.patch('/topics/:id/archive', adminSetTopicArchivedController)
+// 基础统计：用户数 / 帖子数 / 评论数 / 待处理举报数，纯数字不引图表库。
+adminRouter.get('/stats', adminStatsController)
 // 公告管理：运营通知与「当前状态」的增删改与草稿 / 发布 / 置顶。发布记录不在其中（随代码走）。
 adminRouter.use('/announcements', announcementAdminRouter)

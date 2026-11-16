@@ -419,7 +419,7 @@ server/
 
 ### 5.3 模块清单（v1.0 冻结）
 
-> 本表是架构设计阶段的模块划分。其中 `search`（M5-S3）、`messages`（M5-S1）、`achievements`（M5-S2）、`export`（M5-S4）、`announcements`（M6-S0）与 `levels`（M5.5-S2）已落地，职责与表归属与本表一致；`moderation` 仍未实现。当前已落地的举报 / 申诉、私信、成就、导出与公告端点见 §6.2 末尾的「当前已落地」小表。
+> 本表是架构设计阶段的模块划分。其中 `search`（M5-S3）、`messages`（M5-S1）、`achievements`（M5-S2）、`export`（M5-S4）、`announcements`（M6-S0）、`levels`（M5.5-S2）与 `moderation`（M6，只追加审核日志）均已落地，职责与表归属与本表一致。当前已落地的举报 / 申诉、私信、成就、导出、公告、等级与治理端点见 §6.2 末尾的「当前已落地」小表。
 
 | 模块 | 主要职责 | 主要表 |
 | --- | --- | --- |
@@ -668,7 +668,7 @@ sequenceDiagram
 
 **举报与管理（v1.0 规划基线，多数未实现）**
 
-> 下表是架构设计阶段的端点清单。除后面「当前已落地」四个端点外，其余（用户 / 帖子 / 评论管理、审核日志、公开脱敏视图、统计）属 M6 及以后的计划，尚未实现。保留历史基线但不改写它，**不要把它当成现状**。
+> 下表是架构设计阶段的端点清单，部分路径与最终实现不同（如用户 / 内容管理实际合并为 `/api/admin/content/:kind`）。M6 治理已落地，实际端点见下方「当前已落地：M6 治理后台」。保留历史基线但不改写它，**不要把它当成现状**。
 
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
@@ -696,6 +696,18 @@ sequenceDiagram
 | POST | `/api/admin/reports/:id/decision` | 管理员 | 标记「已处理 / 已驳回」并写答复；`WHERE status = 'pending'` 条件更新保证终态不可重决，不做内容处置 |
 
 > 用户侧 `/api/reports` 整组挂 `requireAuth`；管理侧复用 `adminRouter` 已有的 `requireAuth + requireRole(ROLE_ADMIN)`，不另起一套角色校验。举报目标存在性与可见性由服务层参数化查询校验（草稿、已移除、已删除、停用作者的内容按不存在处理），多态目标不建外键。决策只改 `reports` 表的状态与答复字段，不写 `moderation_logs`、不改内容可见性、不停用账号。
+
+**当前已落地：M6 治理后台（2026-11-16，迁移 `022_moderation.sql`）**
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| GET / PATCH | `/api/admin/users`、`/api/admin/users/:id/status` | 管理员 | 用户列表 / 停用恢复（改 `users.status`），停用即隐藏其内容 |
+| GET / PATCH | `/api/admin/content/:kind`、`/api/admin/content/:kind/:id/status` | 管理员 | 内容列表（含已移除）/ 移除恢复；`:kind` 为 `posts` / `comments`，评论计数联动 |
+| GET / POST | `/api/admin/topics` | 管理员 | 话题列表（含归档）/ 新建；slug 不可改 |
+| PATCH | `/api/admin/topics/:id`、`/api/admin/topics/:id/archive` | 管理员 | 编辑 / 归档恢复（软删 `deleted_at`） |
+| GET | `/api/admin/stats` | 管理员 | 成员 / 帖子 / 评论 / 待处理举报四数字，纯 SQL 聚合 |
+
+> 全部端点挂同一 `adminRouter`（`requireAuth + requireRole(ROLE_ADMIN)`），服务层二次复核；复核通过（`VR-M6-02`）：访客 12 端点全 `401`、普通用户全 `403`。所有处置在 `withTransaction` 内「改状态 + 写 `moderation_logs`」原子提交，幂等；日志只提供写入 / 读取无改删。规划表里的 `/api/admin/posts`、`/api/admin/comments`（分开形式）、`/api/admin/logs` 未实现，实际用 `:kind` 合并形式，完整日志暂无读取端点（只写库）。
 
 **当前已落地：站内私信（2026-11-15，迁移 `013_messages.sql`）**
 
@@ -1102,18 +1114,20 @@ erDiagram
 
 > 两条跨字段约束：`reports_target_valid` 要求举报必须带目标、申诉必须无目标；`reports_resolution_valid` 要求 `pending` 时决策人与时间为空、终态时时间非空。多态目标不建外键。索引见 §7.4。
 
-#### `moderation_logs`（v1.0 规划，尚未落盘）
+#### `moderation_logs`（迁移 `022`，M6 已落盘）
 
 | 字段 | 类型 | 约束 | 说明 |
 | --- | --- | --- | --- |
 | `id` | `BIGSERIAL` | PK | — |
-| `actor_id` | `BIGINT` | FK → `users.id`, NOT NULL | 操作者 |
-| `action` | `VARCHAR(64)` | NOT NULL | 如 `post.remove` / `user.suspend` / `report.dismiss` |
+| `actor_id` | `BIGINT` | FK → `users.id` `ON DELETE SET NULL` | 操作者；账号清理时置空保留日志，不级联删除 |
+| `action` | `VARCHAR(64)` | NOT NULL, `btrim<>''` | 点分命名，如 `post.remove` / `user.suspend` / `report.dismiss` |
 | `target_type` / `target_id` | `VARCHAR(16)` / `BIGINT` | NOT NULL | 目标 |
-| `metadata` | `JSONB` | NULL | 附加信息 |
+| `metadata` | `JSONB` | NULL | 结构化追溯字段，不存敏感明文 |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | 时间 |
 
-**视图**：`weekly_highlights` 为按周聚合的只读视图，不建独立写表；公开审核记录通过 `moderation_public_log` 视图投影，仅暴露动作类型、时间与对象类型。
+**只追加**：约束层不强制不可改（单一 DB 角色无法用 `REVOKE` 真正隔离），由服务层不提供改删接口 + 权限守卫保证；索引 `created_idx` / `target_idx` 支撑翻页与单对象筛选。
+
+**视图**：公开审核记录经 `moderation_public_log` 投影，**只暴露动作类型、对象类型、时间**，不含 `actor_id` / `target_id` / `metadata`——让人看见「治理在发生」，但不反推是谁操作、针对哪条内容。`weekly_highlights` 视图**未建**：「每周热门」由 `achievement.repository.ts` 实时计算，再建视图等于两套实现。
 
 ### 7.4 索引策略
 
@@ -1157,10 +1171,11 @@ server/src/db/migrations/
 ├── 018_status_summary_no_enumeration.sql
 ├── 019_user_level.sql
 ├── 020_status_announcement_level.sql
-└── 021_user_rank_badge.sql
+├── 021_user_rank_badge.sql
+└── 022_moderation.sql
 ```
 
-明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。`011_reports.sql` 建 `reports` 表（用 `kind` 区分举报 / 申诉，CHECK 约束钉死目标形态与终态字段）及 `reports_mine_idx` / `reports_queue_idx` / 带 `WHERE` 条件的 `reports_pending_target_idx`；这一版不含 `moderation_logs`。`012_user_titles.sql` 在 `users` 表加 `titles TEXT[]` 列（CHECK 约束只允许 `community_leader` / `founder` / `admin` 三种枚举）并给现有 `role = admin` 账号回填三种头衔，头衔纯展示、不提升权限。`013_messages.sql` 建 `conversations`（`participant_a/b` 外键、`CHECK` 禁止自聊、`UNIQUE(participant_a, participant_b)`——两人会话由插入时 `LEAST/GREATEST` 归一化保证唯一，不写表达式唯一约束，因 PGlite 不支持）与 `messages`（`body` 非空 `CHECK`、`(conversation_id, created_at DESC, id DESC)` 复合索引）；本期不含已读状态与实时推送。`014_achievements.sql` 建 `achievements`（条件以 `condition` JSONB 表达，只支持「单指标 + 阈值」）与 `user_achievements`（复合主键保证一次性解锁），并种入九条成就；`015_drop_achievement_icon.sql` 移除 `achievements.icon` 列——图形属表现层，前端按 `code` 自绘。`016_announcements.sql` 建 `announcements` 表（`kind` / `status` / `is_pinned` / `published_at` / `deleted_at`，`CHECK ((status='published') = (published_at IS NOT NULL))` 绑死发布态与时间），并把「当前进度与已知问题」作为置顶种子入库；`017` / `018` 仅修正该条公告的正文与摘要口径（精确匹配旧文案才更新，不覆盖运营者手动编辑）。`019_user_level.sql` 在 `users` 加 `top_level SMALLINT NOT NULL DEFAULT 1`（`CHECK 1–50`），只记历史最高等级，用于「只升不降」；等级本身是派生值，不落表。`020_status_announcement_level.sql` 用子串 `replace` 把状态公告正文里的「尚未开始：经验 / 签到 / 等级…」换成「等级与段位已上线…」——只替换仍为原文的那一段，运营者的手动编辑不受影响；用子串替换而非整段覆盖，是因为 `017` 在正文末尾追加过一句，整段匹配会因末尾差异静默失效。`021_user_rank_badge.sql` 在 `users` 加 `equipped_rank TEXT`（`CHECK` 只允许五个段位键或 `NULL`），只存「戴哪一个」——「解锁了哪些」由 `top_level` 派生，不另建表，避免两处真源分叉。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications`、M6 计划中的 `NNN_reports_moderation.sql` / `NNN_views.sql` 等属未来里程碑，未落盘，不在此列）。
+明细：`003_topics_posts.sql` 含九个内置话题（产品内置分类随结构迁移写入，保证 `FR-TOPIC-01`「初始化迁移后可直接查询」）；`004_post_images.sql` 建 `post_images` 与 `image_blobs`；互动表顺延至 `005_interactions.sql`；`006`–`009` 依次为评论长度口径、闲聊话题、注册勾选协议留痕与一人一码邀请制；`010_likes_user_idx.sql` 为「我的点赞」列表补 `likes_user_idx (user_id, created_at DESC)` 索引，与 `005` 的 `bookmarks_user_idx` 对称，纯新增索引、不改表结构。`011_reports.sql` 建 `reports` 表（用 `kind` 区分举报 / 申诉，CHECK 约束钉死目标形态与终态字段）及 `reports_mine_idx` / `reports_queue_idx` / 带 `WHERE` 条件的 `reports_pending_target_idx`；这一版不含 `moderation_logs`。`012_user_titles.sql` 在 `users` 表加 `titles TEXT[]` 列（CHECK 约束只允许 `community_leader` / `founder` / `admin` 三种枚举）并给现有 `role = admin` 账号回填三种头衔，头衔纯展示、不提升权限。`013_messages.sql` 建 `conversations`（`participant_a/b` 外键、`CHECK` 禁止自聊、`UNIQUE(participant_a, participant_b)`——两人会话由插入时 `LEAST/GREATEST` 归一化保证唯一，不写表达式唯一约束，因 PGlite 不支持）与 `messages`（`body` 非空 `CHECK`、`(conversation_id, created_at DESC, id DESC)` 复合索引）；本期不含已读状态与实时推送。`014_achievements.sql` 建 `achievements`（条件以 `condition` JSONB 表达，只支持「单指标 + 阈值」）与 `user_achievements`（复合主键保证一次性解锁），并种入九条成就；`015_drop_achievement_icon.sql` 移除 `achievements.icon` 列——图形属表现层，前端按 `code` 自绘。`016_announcements.sql` 建 `announcements` 表（`kind` / `status` / `is_pinned` / `published_at` / `deleted_at`，`CHECK ((status='published') = (published_at IS NOT NULL))` 绑死发布态与时间），并把「当前进度与已知问题」作为置顶种子入库；`017` / `018` 仅修正该条公告的正文与摘要口径（精确匹配旧文案才更新，不覆盖运营者手动编辑）。`019_user_level.sql` 在 `users` 加 `top_level SMALLINT NOT NULL DEFAULT 1`（`CHECK 1–50`），只记历史最高等级，用于「只升不降」；等级本身是派生值，不落表。`020_status_announcement_level.sql` 用子串 `replace` 把状态公告正文里的「尚未开始：经验 / 签到 / 等级…」换成「等级与段位已上线…」——只替换仍为原文的那一段，运营者的手动编辑不受影响；用子串替换而非整段覆盖，是因为 `017` 在正文末尾追加过一句，整段匹配会因末尾差异静默失效。`021_user_rank_badge.sql` 在 `users` 加 `equipped_rank TEXT`（`CHECK` 只允许五个段位键或 `NULL`），只存「戴哪一个」——「解锁了哪些」由 `top_level` 派生，不另建表，避免两处真源分叉。`022_moderation.sql`（M6 治理）建 `moderation_logs`（只追加）+ `moderation_public_log`（脱敏视图），并以 `ALTER` 放宽 `reports` 的状态 CHECK（补 `reviewing`）与目标 CHECK（补 `user`），不改历史迁移 `011`。上表以目录实际文件为准（早期计划稿里的 `006_messages_notifications`、`NNN_reports_moderation.sql` / `NNN_views.sql` 等旧名未落盘，不在此列）。
 
 | 规则 | 内容 |
 | --- | --- |
