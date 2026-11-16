@@ -1131,21 +1131,23 @@ erDiagram
 
 ### 7.4 索引策略
 
-| 目标查询 | 索引 |
+下表按 `pg_indexes` 的**实际定义**书写（索引名 + 列顺序 + 条件），由 `server/tests/integration/query-shape.test.ts` 守门：索引被删或列顺序被改，测试直接失败。
+
+| 目标查询 | 索引（实际定义） |
 | --- | --- |
-| 最新信息流 | `posts (created_at DESC)` 部分索引，`WHERE status='published' AND deleted_at IS NULL` |
-| 话题筛选流 | `posts (topic_id, created_at DESC)` 同上可见性条件 |
-| 作者帖子列表 | `posts (author_id, created_at DESC)` |
-| 热门排序 | `posts (like_count DESC, created_at DESC)` |
-| 评论列表 | `comments (post_id, created_at)` |
+| 最新信息流 | `posts_latest_idx (created_at DESC, id DESC) WHERE status='published' AND deleted_at IS NULL` —— 游标是 `(created_at, id)` 两列键集，索引必须带 `id`，否则翻页边界会跳项 |
+| 话题筛选流 | `posts_topic_idx (topic_id, created_at DESC, id DESC)`，同一可见性条件。**当前查询形态用不到它**：过滤条件写的是 `t.slug = $1`（与 `topics` 联表），规划器只能当 join filter，首屏实际走 `posts_latest_idx` 扫最近若干行再过滤；该索引是为「先解析 slug→id、再按 `topic_id` 过滤」这条路径预留的 |
+| 作者帖子列表 | `posts_author_idx (author_id, created_at DESC)` |
+| 热门排序 | `posts_popular_idx (like_count DESC, created_at DESC)`，部分索引。**当前不被任何查询使用**：热点排序的键是计算出的综合分（净赞对数 + 时间衰减），btree 无法提供该顺序，查询实际按时间窗口走 `posts_latest_idx` 取范围后排序。保留为后续「把分数算好落列」的预留 |
+| 评论列表 | `comments_post_idx (post_id, created_at DESC, id DESC) WHERE status='published' AND deleted_at IS NULL`；列表请求升序，由反向扫描该索引满足 |
 | 举报队列 | `reports_queue_idx (status, created_at DESC, id DESC)`（`011` 落地） |
 | 我的提交 | `reports_mine_idx (reporter_id, created_at DESC, id DESC)`（`011` 落地） |
 | 待处理去重 | `reports_pending_target_idx (reporter_id, target_type, target_id) WHERE kind='report' AND status='pending'`（`011` 落地，UNIQUE） |
-| 通知列表 | `notifications (user_id, is_read, created_at DESC)` |
-| 消息列表 | `messages (conversation_id, created_at)` |
-| 安全事件窗口统计 | `security_events (kind, subject_hash, created_at DESC)` |
+| 通知列表 | `notifications_user_idx (user_id, created_at DESC, id DESC)`；未读数另用 `notifications_unread_idx (user_id, is_read, created_at DESC) WHERE is_read = false` |
+| 消息列表 | `messages_conversation_idx (conversation_id, created_at, id)` |
+| 安全事件窗口统计 | `security_events_lookup_idx (kind, subject_hash, created_at DESC)` |
 
-信息流查询使用键集 / 游标方式，避免大偏移量分页；列表接口通过联表或批量查询避免 N+1。
+信息流查询使用键集 / 游标方式，避免大偏移量分页；列表接口通过联表或批量查询避免 N+1——图片用相关子查询在同一条语句内聚合，点赞 / 收藏标记由一次批量查询补齐，均不随条目数增加往返次数。这一性质由测试直接统计「单次请求经过连接池的 SQL 条数」来守（同一条请求返回 5 条与 25 条时条数必须相等），而不是靠人工复查代码。
 
 ### 7.5 迁移管理
 

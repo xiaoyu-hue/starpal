@@ -20,6 +20,14 @@ import { pool } from '../../src/db/pool.js'
 export type RunningApp = {
   /** 相对路径请求，自动拼上随机端口。 */
   request: (path: string, init?: RequestInit) => Promise<Response>
+  /**
+   * 所有经过连接池的 SQL 文本（含事务里的 BEGIN / COMMIT）。
+   *
+   * 供「一条请求打了几次数据库」这类断言使用（`M7-S2-T3` 的 N+1 回归）：
+   * 只记文本不记参数，避免把用户输入带进失败日志。
+   * 调用方自行清空（`sqlLog.length = 0`）以只统计目标请求。
+   */
+  sqlLog: string[]
   close: () => Promise<void>
 }
 
@@ -41,8 +49,10 @@ function toPgLike(result: { rows: unknown[]; affectedRows?: number }): PgLikeRes
 export async function startTestServer(db: PGlite): Promise<RunningApp> {
   const originalQuery = pool.query.bind(pool)
   const originalConnect = pool.connect.bind(pool)
+  const sqlLog: string[] = []
   const patched = pool as unknown as { query: unknown; connect: unknown }
   patched.query = async (text: string, params?: unknown[]): Promise<PgLikeResult> => {
+    sqlLog.push(text)
     const result = await db.query(text, params as never)
     return toPgLike(result as { rows: unknown[]; affectedRows?: number })
   }
@@ -51,6 +61,7 @@ export async function startTestServer(db: PGlite): Promise<RunningApp> {
   patched.connect = async () => {
     const client = {
       query: async (text: string, params?: unknown[]): Promise<PgLikeResult> => {
+        sqlLog.push(text)
         const result = await db.query(text, params as never)
         return toPgLike(result as { rows: unknown[]; affectedRows?: number })
       },
@@ -66,6 +77,7 @@ export async function startTestServer(db: PGlite): Promise<RunningApp> {
 
   return {
     request: (path, init) => fetch(`${base}${path}`, init),
+    sqlLog,
     close: async () => {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()))
