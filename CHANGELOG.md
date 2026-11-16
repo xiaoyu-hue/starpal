@@ -11,6 +11,7 @@
 - **为什么只扫 `javascript-typescript`、只用 `default` 查询套件**：`security-extended` 会把告警量放大数倍，`actions` 语言只覆盖少数 YAML；单人维护下首次接入就堆几十条低优先级告警，结果往往是整个扫描被无视。先让 default 跑顺，确有需要再升。
 - **不阻塞合并**：CodeQL 只报告不拦人。把某类告警设为必须修复属于策略决定，接入阶段不默认打开。
 - **能力边界写在明处**：`scan:secrets` 只抓已知形态密钥，CodeQL 只抓数据流类缺陷，两者都不能证明「没有漏洞」；对外不得表述为「已通过安全审计」。
+- **首次扫描结果与分诊**：6 条 `high` 全部核查为误报并逐条记录理由（`false positive`）。三类根因：`missing-rate-limiting`（限流在 `auth.service` 用 `security_events` 表计数以适配 Serverless，不是路由中间件，CodeQL 识别不了这种形态）、`xss-through-dom`（`src` 为 `blob:` URL 或服务端受控地址，React 转义属性且 `img.src` 不执行脚本）、`clear-text-logging`（只打 `error.message`，同函数有口令变量故被判为可能外泄）。**记这一笔的目的不是「证明没问题」，而是留下证据：工具的盲区在业务层设计，不核查就 dismiss 与不核查就照修，都是错的。**
 - 调研过但**本轮不引入**的方案与理由：Semgrep（与 CodeQL 检测面大量重叠，规则噪声更大，且 `semgrep-rules` 是自定义许可）、Trivy（强项是容器与 IaC，本项目部署在 Vercel Serverless，无镜像可扫）、TruffleHog（AGPL 且偏密钥，与原生 secret scanning 重复）、OSV-Scanner（`npm audit` 当前 0 漏洞、430 个依赖，暂未到需要第二套依赖扫描的规模）、OpenSSF Scorecard（单人项目在「代码审查 / 贡献者多样性」等项天然低分，容易变成看不懂的分数）。
 
 ### 新增（M7 第三批：组件测试、路由冒烟、数据库不变量）

@@ -334,6 +334,7 @@ npm run verify
 - **扫什么**：JavaScript / TypeScript，`build-mode: none`（不编译，直接对源码建数据流图），查询套件用 `default`（注入、XSS、路径遍历、原型污染等），不升 `security-extended`——告警量会翻数倍，单人维护下容易疲劳。
 - **结果去哪**：上传到仓库 **Security → Code scanning** 面板，按严重度排序；`security-events: write` 是它唯一的额外权限。
 - **不阻塞合并**：CodeQL 只报告不拦人。要不要把某类告警设成必须修复，属于需要拍板的策略，不在接入阶段默认打开。
+- **首次扫描的真实结果**：6 条 `high`，逐条人工核查后**全部为误报**，理由逐条写在告警上（`false positive`）。三类误报的原因值得记住：① `missing-rate-limiting`——本项目的限流在 `auth.service` 层用 `security_events` 表计数（专为 Vercel Serverless 跨实例设计），CodeQL 只认 `express-rate-limit` 那种中间件形态；② `xss-through-dom`——`src` 是 `blob:` URL 或服务端受控地址，React 转义属性值且 `img.src` 不执行脚本；③ `clear-text-logging`——只打印 `error.message`，同函数内存在口令变量故被判为可能外泄。**误报不等于安全，只说明工具的检测模型看不进业务层设计**。
 
 ### 部署
 
