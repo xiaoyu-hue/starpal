@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+### 进行中（M6 治理后台 · 步 1–3，尚未上线）
+
+> M6 分六步推进，此处只记录**已完成并本地验证**的步 1–3；步 4 话题管理 / 统计、步 5 前端六分区、步 6 权限回归与完整文档同步尚未开始。完整能力将在 M6 收尾时统一补记，不把半成品写成已交付。
+
+- **步 1 · 治理数据模型**（迁移 `022_moderation.sql`）：新增 `moderation_logs` 只追加日志表、`moderation_public_log` 脱敏公开视图（只暴露动作类型 / 对象类型 / 时间，不含操作者与内部备注）；`reports` 用 `ALTER` 补 `reviewing` 状态与 `user` 举报目标类型，不改历史迁移。`weekly_highlights` 视图刻意不建——「每周热门」现由 `achievement.repository.ts` 实时计算且有测试，再建视图等于两套实现。验证：新增 14 项约束测试。
+- **步 2 · 审核日志接入举报处置**：新增 `moderation` 模块（`insertLog` / `listLogs`，**只提供写入与读取，无改删函数**，从接口层保证只追加）。举报 resolve / dismiss 的「改状态 + 写日志」走同一执行器——生产由 `withTransaction` 原子提交，测试注入 PGlite；终态不可重复决策，因此不产生重复日志。日志 metadata 只存结构化追溯字段，不写处置备注全文。验证：新增 5 项测试。
+- **步 3 · 用户管理与内容管理**：管理端新增 4 个端点（`GET /api/admin/users`、`PATCH /api/admin/users/:id/status`、`GET /api/admin/content/:kind`、`PATCH /api/admin/content/:kind/:id/status`）。停用 / 恢复账号改 `users.status`（`suspended`↔`active`），移除 / 恢复内容改 `posts`/`comments.status`（`published`↔`removed`），均复用现有状态字段不动表结构；`removed` 态 `deleted_at` 保持 NULL 以守 `CHECK`；评论计数随移除 / 恢复增减。角色经 `role_id` JOIN `roles` 取 `roles.name`（`users` 无 `role` 列）。所有动作写审核日志并复用现有 `adminRouter` 的登录 + 管理员守卫，服务层二次校验角色。
+- **步 3 的幂等修正**：状态变更加 `status <> 目标态` 条件，重复点「移除 / 停用」不再重复扣计数或重复写日志；未命中时回查当前行区分「已是目标态」与「真不存在」。验证：新增 9 项集成测试含幂等用例。
+- **阶段验证**：`npm run verify` 全绿（**198** 项测试、`fail 0`，`typecheck` / `build` / `size` / `lint` 通过，新增文件均在行数预算内）。迁移 022 与步 1–3 代码本次首次推送，线上尚未部署；上线后由 `api/index.ts` 惰性执行迁移。
+
 ### 新增（段位徽标：可佩戴、可更换、可隐藏）
 
 - **成员可以把段位戴在名字旁，机制与站长头衔同类但不共用一套数据**：新增 `users.equipped_rank`（迁移 `021`），存「当前戴哪一个」，`NULL` 为不戴。头衔是权限身份（社区长 / 创始人 / 管理员，`users.titles`），段位是资历，两者混在一列会让「能做什么」和「来了多久」再也分不开。

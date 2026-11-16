@@ -102,11 +102,12 @@ describe('举报 / 申诉最小闭环', () => {
         INSERT INTO reports (kind, reporter_id, reason, detail) VALUES ('other', 1, 'spam', 'x')`)
       assert.match(badKind, /reports_kind_valid/)
 
-      // 给 resolved_at 让「半成品处置」约束先放行，才能单独命中 status 约束。
+      // 非法状态 'done' 同时违反 status 与 resolution 两条 CHECK（终态只认 resolved/dismissed），
+      // 数据库可命中任一；断言「被 reports 约束拒绝」即可，不绑定具体哪一条。
       const badStatus = await expectRejected(db, `
         INSERT INTO reports (kind, reporter_id, reason, detail, status, resolved_at)
         VALUES ('appeal', 1, 'appeal', 'x', 'done', now())`)
-      assert.match(badStatus, /reports_status_valid/)
+      assert.match(badStatus, /reports_(status|resolution)_valid/)
 
       const reportNoTarget = await expectRejected(db, `
         INSERT INTO reports (kind, reporter_id, reason, detail) VALUES ('report', 1, 'spam', 'x')`)

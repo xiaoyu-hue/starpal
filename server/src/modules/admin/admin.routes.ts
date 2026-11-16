@@ -5,6 +5,12 @@ import { requireAuth } from '../../middleware/require-auth.js'
 import { requireRole } from '../../middleware/require-role.js'
 import { adminWhoamiController } from './admin.controller.js'
 import {
+  adminContentController,
+  adminSetContentStatusController,
+  adminSetUserStatusController,
+  adminUsersController,
+} from './admin.moderation.controller.js'
+import {
   createInviteCodesController,
   listInviteCodesController,
   revokeInviteCodeController,
@@ -28,5 +34,10 @@ adminRouter.post('/invite-codes', createInviteCodesController)
 adminRouter.post('/invite-codes/:id/revoke', revokeInviteCodeController)
 adminRouter.get('/reports', adminReportsController)
 adminRouter.post('/reports/:id/decision', decideReportController)
+// 用户与内容治理：停用 / 恢复账号、移除 / 恢复帖子与评论；每个动作写审核日志。
+adminRouter.get('/users', adminUsersController)
+adminRouter.patch('/users/:id/status', adminSetUserStatusController)
+adminRouter.get('/content/:kind', adminContentController)
+adminRouter.patch('/content/:kind/:id/status', adminSetContentStatusController)
 // 公告管理：运营通知与「当前状态」的增删改与草稿 / 发布 / 置顶。发布记录不在其中（随代码走）。
 adminRouter.use('/announcements', announcementAdminRouter)

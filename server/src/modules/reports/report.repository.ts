@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { pool } from '../../db/pool.js'
+import { pool, withTransaction } from '../../db/pool.js'
+import type { PoolClient } from 'pg'
 import { DELETED_DISPLAY_NAME } from '../../config/constants.js'
 import { DomainError } from '../../shared/errors.js'
+import { insertLog } from '../moderation/index.js'
 import type { CursorPayload } from '../../shared/pagination.js'
 import type {
   ReportItem,
@@ -127,13 +129,36 @@ export async function listReportQueue(
   return { rows: rows.slice(0, limit), hasMore: rows.length > limit }
 }
 
-/** 决策：仅 pending → 终态，条件更新保证终态不可被重复决策或覆盖。 */
+/**
+ * 决策：仅 pending → 终态，条件更新保证终态不可被重复决策或覆盖。
+ *
+ * 与审核日志同事务：改举报状态 + 写日志要么一起成功、要么一起回滚，
+ * 绝不允许「处理了却没留痕」或「留痕了却没处理」。生产传 executor 时由调用方
+ * （service）用 withTransaction 包住；不传时本函数自建事务。测试注入 PGlite
+ * 执行器验 SQL 逻辑（同 auth / user 模块范式——PGlite 单连接不做显式事务）。
+ */
 export async function decideReport(
   id: number,
   status: 'resolved' | 'dismissed',
   note: string | null,
   adminId: string,
-  executor: Executor = poolExecutor,
+  executor?: Executor,
+): Promise<ReportItem> {
+  if (executor) {
+    return decideInExecutor(id, status, note, adminId, executor)
+  }
+  return withTransaction((client: PoolClient) =>
+    decideInExecutor(id, status, note, adminId, client),
+  )
+}
+
+/** 单次执行器内的决策：条件 UPDATE + 审核日志，共用同一连接。 */
+async function decideInExecutor(
+  id: number,
+  status: 'resolved' | 'dismissed',
+  note: string | null,
+  adminId: string,
+  executor: Executor,
 ): Promise<ReportItem> {
   const result = await executor.query(
     `UPDATE reports
@@ -146,6 +171,24 @@ export async function decideReport(
   if (row === undefined) {
     throw new DomainError('CONFLICT', '该提交不存在或已处理')
   }
+
+  // 日志元数据只记结构化追溯字段，不写处置备注全文（那是 resolution_note，
+  // 仅本人与管理员可见；公开视图本就不投影 metadata）。
+  await insertLog(
+    {
+      actorId: adminId,
+      action: status === 'resolved' ? 'report.resolve' : 'report.dismiss',
+      targetType: row.target_type ?? 'report',
+      targetId: row.target_id === null ? Number(row.id) : Number(row.target_id),
+      metadata: {
+        reportId: Number(row.id),
+        kind: row.kind,
+        reason: row.reason,
+        outcome: status,
+      },
+    },
+    executor,
+  )
   return toItem(row)
 }
 
