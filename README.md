@@ -449,7 +449,7 @@ npm run verify
 | 微博、小红书 | 评论长度口径的现实对照 |
 | OWASP | 口令哈希选型（Argon2id）与会话 Cookie 安全属性 |
 
-感谢所有上游依赖的维护者与贡献者——没有他们的工作，一个由个人维护的小社区不可能以零付费成本稳定运行。也感谢每一位社区成员：这是一个邀请制、小规模、由真实的人组成的社区，你们的信任与反馈是项目保持克制、不夸大能力的理由。
+感谢所有上游依赖的维护者与贡献者——没有他们的工作，一个由个人维护的小社区不可能以零付费成本稳定运行。其中两项值得特别致谢：**[DiceBear](https://dicebear.com/)** 提供了 31 种可自托管的头像风格，让本站的头像能在站内生成、不把访客的 IP 暴露给第三方头像服务，其中采用 CC BY 的图案已在站内「头像署名」页逐条署名；**[ALTCHA](https://altcha.org/)** 提供了自托管的工作量证明人机验证，不采集个人信息、不依赖第三方。也感谢每一位社区成员：这是一个邀请制、小规模、由真实的人组成的社区，你们的信任与反馈是项目保持克制、不夸大能力的理由。
 
 本项目代码在 AI 编程助手辅助下编写，由运营者负责审阅、验证与发布；这一点在站内产品声明中同样如实披露。
 
@@ -462,7 +462,8 @@ npm run verify
 | 前端运行时 | React、React DOM、React Router、TanStack Query、Radix UI 原语、lucide-react | MIT / ISC |
 | 构建与样式 | Vite、TypeScript、Tailwind CSS、PostCSS、Autoprefixer | MIT / Apache-2.0 |
 | 后端运行时 | Express、pg、hash-wasm、sharp、multer、dotenv | MIT / BSD-2-Clause / Apache-2.0 |
-| 测试 | Node 内置 `node:test`、tsx、PGlite | MIT / Apache-2.0 |
+| 头像与人机验证 | DiceBear（31 种风格，站内生成 SVG）、ALTCHA（自托管工作量证明） | MIT · CC BY 4.0（部分头像图案） |
+| 测试 | Node 内置 `node:test`、Vitest、jsdom、Testing Library、tsx、PGlite | MIT / Apache-2.0 |
 | 数据库与托管 | PostgreSQL、Vercel、Neon | 服务，非代码依赖 |
 
 上述直接与传递依赖均为 MIT / ISC / Apache-2.0 / BSD / MPL-2.0 / CC-BY-4.0 等宽松或弱传染许可，**可与 AGPL-3.0 组合，无冲突**。分发时须保留各依赖的版权声明与许可文本（Apache-2.0 另须随附 `NOTICE`，MPL-2.0 文件级修改须以 MPL 公开）。

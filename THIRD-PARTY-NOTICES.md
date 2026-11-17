@@ -14,12 +14,16 @@
 | `@radix-ui/react-dropdown-menu` | 2.2.1 | MIT |
 | `@radix-ui/react-tabs` | 1.2.1 | MIT |
 | `@tanstack/react-query` | 5.107.1 | MIT |
+| `@testing-library/jest-dom` | ^7.0.1 | MIT |
+| `@testing-library/react` | ^16.3.3 | MIT |
+| `@testing-library/user-event` | ^14.6.12 | MIT |
 | `@types/express` | 5.0.6 | MIT |
 | `@types/node` | 22.20.5 | MIT |
 | `@types/pg` | 8.23.1 | MIT |
 | `@types/react` | 19.3.0 | MIT |
 | `@types/react-dom` | 19.3.0 | MIT |
 | `@vitejs/plugin-react` | 6.3.0 | MIT |
+| `@vitest/coverage-v8` | ^5.1.0 | MIT |
 | `@dicebear/core` | 9.4.3 | MIT |
 | `@dicebear/*`（31 个风格包） | 9.4.2 / 9.4.3¹ | MIT · (MIT AND CC-BY-4.0) · See LICENSE file² |
 | `altcha` | 3.6.0 | MIT |
@@ -28,6 +32,7 @@
 | `dotenv` | 18.0.10 | BSD-2-Clause |
 | `express` | 5.3.0 | MIT |
 | `hash-wasm` | ^4.13.0 | MIT |
+| `jsdom` | ^29.1.1 | MIT |
 | `lucide-react` | 1.72.0 | ISC |
 | `pg` | 8.23.1 | MIT |
 | `postcss` | 8.5.32 | MIT |
@@ -38,6 +43,7 @@
 | `tsx` | 4.23.15 | MIT |
 | `typescript` | 5.9.3 | Apache-2.0 |
 | `vite` | 8.3.8 | MIT |
+| `vitest` | ^5.1.0 | MIT |
 
 ## 传递依赖许可证分布
 

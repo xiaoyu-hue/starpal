@@ -50,6 +50,8 @@ export const ABOUT_DOC = {
         { name: 'hash-wasm', role: '提供 Argon2id 密码哈希的 WebAssembly 实现，参数按 OWASP 推荐档位配置。' },
         { name: 'sharp', role: '图片解码与重编码。上传的图片统一转 WebP 并丢弃原文件，顺带剥离 EXIF 元数据。' },
         { name: 'multer', role: '处理上传流，限制体积与数量，避免大文件拖垮内存。' },
+        { name: 'DiceBear', role: '31 种开源头像风格的图案库，在站内生成 SVG，不把访客 IP 暴露给第三方头像服务；采用 CC BY 的图案在「头像署名」页逐条署名。' },
+        { name: 'ALTCHA', role: '自托管的工作量证明人机验证。真人无感、不采集个人信息、不依赖第三方，注册与登录前先过一道计算题。' },
       ],
     },
     {
@@ -67,8 +69,9 @@ export const ABOUT_DOC = {
     {
       group: '质量保障',
       items: [
-        { name: 'node:test', role: 'Node 官方测试运行器，零额外依赖。' },
+        { name: 'node:test', role: 'Node 官方测试运行器，后端测试零额外依赖。' },
         { name: 'PGlite', role: '在内存中运行真实 PostgreSQL，用于验证迁移与数据库约束，而非依赖模拟。' },
+        { name: 'Vitest + Testing Library + jsdom', role: '前端测试栈，在模拟浏览器环境里验证组件与交互；覆盖率门槛防能力倒退，而非追求数字。' },
       ],
     },
   ],
@@ -108,9 +111,10 @@ export const ABOUT_DOC = {
   credits: {
     heading: '致谢',
     paragraphs: [
-      '星聚站在大量开源工作上。上面列出的每一个库都遵循各自的开源许可（主要为 MIT、ISC、Apache-2.0 等），其版权归各自作者所有，完整清单随源码一并提供。没有它们，这个站在几个月内从零建成是不可能的。',
+      '星聚站在大量开源工作上。上面列出的每一个库都遵循各自的开源许可（代码主要为 MIT、ISC、Apache-2.0 等；DiceBear 中采用 CC BY 4.0 的图案已单独署名），其版权归各自作者所有，完整清单随源码一并提供。没有它们，这个站在几个月内从零建成是不可能的。',
       '界面字体使用系统自带字体栈（Inter、SF Pro、PingFang SC、微软雅黑等），没有加载任何第三方 Web 字体，因此不会向字体服务商暴露访客的访问行为。',
       '社区准则与隐私说明的结构参考了 Discourse、Reddit 与 GitHub 的公开文档，措辞全部重写以贴合本站实际能力。技术选型中的部分取舍参考了 OWASP 的密码存储建议与 NIST SP 800-63B 的认证指南。',
+      '本站代码主要由 AI 编程助手生成，运营者逐项审阅、验证并决定是否采用；产品判断、规则制定与上线决策由运营者本人做出。这一点在《产品声明》中同样如实披露——说明它不是为了推卸责任，而是让你在遇到缺陷时知道该期待什么。',
     ],
   },
   feedback: {
