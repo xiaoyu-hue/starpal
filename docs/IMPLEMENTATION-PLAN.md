@@ -1010,7 +1010,7 @@ flowchart LR
 - **两处"看着像漂移、核对后是对的"，保留了原文**：① `README`「十个内置话题（含闲聊）」——`003` 播种九个，`007_chat_topic.sql` 再加「闲聊」（`sort_order=0`），合计十个，核对过程中一度误改为九个，查明后回滚；② `ARCHITECTURE §13` 的 `sharp`——它确实在 `server/package.json` 且被 `image-pipeline.ts` 直接 import，与"Serverless 避开原生编译的密码哈希"是两回事（密码哈希走 `hash-wasm`，图像处理走 `sharp`）。**这条记下来是因为差点把对的改成错的**：数字和依赖必须查到源头再动。
 - **`S2-T7` 清理任务结论**：`pruneExpiredData()`（`auth.repository.ts`）由 `rate-limit.ts` 在 `recordEvent()` 时调用，清 `security_events`（超 `SECURITY_EVENT_RETENTION_DAYS`，默认 30 天）与 `sessions`（`expires_at` 已过）。**孤儿文件清理不适用**——图片字节存 `image_blobs`，与 `post_images` 元数据同事务提交（架构 §7.3），不产生孤儿。无独立定时循环，低流量实例的过期数据会滞留到下次限流事件才清，此为设计取舍，已在 `DEPLOYMENT §12` 写明。
 - **`S3-T5` 待配置清单**：10 项均有对应章节，无隐含依赖；邀请码一项关联 §4（该节说明"一人一码由后台生成、不再用环境变量"），指向略泛但不构成错误。
-- **`S3-T7` 变更记录**：根 / `web` / `server` 三处 `package.json` 与 `server/config/constants.ts` 的 `APP_VERSION` 均为 `1.6.0`；`CHANGELOG` 最新已发布条目 `[1.6.0]`，`[Unreleased]` 只收未发版改动。一致。
+- **`S3-T7` 变更记录**（当前口径，随 `v1.7.0` 更新）：根 / `web` / `server` 三处 `package.json` 与 `server/config/constants.ts` 的 `APP_VERSION` 均为 `1.7.0`；`CHANGELOG` 最新已发布条目 `[1.7.0]`，`[Unreleased]` 只收未发版改动。一致。（M7 当时的原始记录为 `1.6.0`，那是该里程碑收尾版本，属历史事实。）
 - **`S3-T8` / `AC-17` 演示内容（通过，附一条边界）**：`scripts/seed.mjs` 只创建示例账号 `starpal_demo`（显示名带「（示例）」后缀），**不插入任何示例帖子**——内容域分支只打印提示、不写库。因此信息流返回的是服务端真实空结果，空态是真空态，不被演示内容掩盖。**边界（记为待办，非当前失败）**：`posts.is_demo` 列存在，但 `post.projection.ts` 的 `VISIBLE` 条件未过滤该列；将来若播种 `is_demo=true` 的帖子，会与真实帖同列显示且前端无"示例"标注。当前无此类数据，故 `AC-17` 判通过，但该潜在风险须在启用演示帖播种前处理。
 - **仍未覆盖**：`S3-T2`「按文档在空环境可复现」与 `S4-T4` 重叠，本轮只做文档一致性核对，**未在全新空环境从零复现**；该取证留到 `S4`。
 
@@ -1043,7 +1043,7 @@ flowchart LR
 | 管理员 | `ADMIN_USERNAME=s4admin … node scripts/init-admin.mjs` | 创建 1 名 admin，凭据未打印未入仓 |
 | 构建 | `npm run build` | 退出码 0，前后端编译通过，23 迁移复制到 `dist/db/migrations` |
 | 启动 | `DATABASE_URL=… PORT=3100 NODE_ENV=production npm run start` | 2 秒就绪，日志 `nodeEnv=production` |
-| 健康检查 | `GET /api/health` | `{"status":"ok","database":"up","version":"1.6.0"}` |
+| 健康检查 | `GET /api/health` | `{"status":"ok","database":"up","version":"1.6.0"}`（该次 S4 复现记录于 v1.6.0；当前版本为 `1.7.0`） |
 | 静态资源 | `GET /` | 200，1370 bytes |
 | API 冒烟 | `GET /api/topics` | 200，10 个话题 |
 
@@ -1221,7 +1221,7 @@ flowchart LR
 
 ---
 
-### 安全加固增量验证记录（v1.6.0 之后，尚未发版）
+### 安全与头像增量验证记录（v1.6.0 之后，已随 v1.7.0 发版）
 
 #### `VR-SEC-01` · 纵深防御第一批：响应头与写接口限流（通过）
 
@@ -1231,7 +1231,7 @@ flowchart LR
 | 命令与真实输出 | `npm run verify` 全绿：`typecheck` → `build` → `check:size` → `lint`（硬规则 0 违规）→ `scan:secrets` → `test:coverage`；后端 `# tests 297` / `# pass 297` / `# fail 0`；前端覆盖率 `All files 96.96 / 95 / 98.03 / 98.88` |
 | 新增用例 | `server/tests/integration/security-hardening.test.ts`（4 项）：响应头 4 项断言 + HSTS 不重复注入；未达阈值发帖 201；预置 20 条同来源事件后 429；另一来源仍 201 |
 | 关键取舍 | HSTS 由平台注入（`curl -sSI https://starpal.cc.cd/api/health` 实测 `strict-transport-security: max-age=63072000`），应用层不重复；限流计数落库而非进程内存（Serverless 多实例）；`kind` 为 `VARCHAR(32)` 故新增 4 类无需迁移；限流挂在 `requireAuth` 之后、上传解析之前 |
-| 未完成边界 | 本批只解决同 IP 高频；无人机验证、无外部动态扫描、无运行时告警；未推送、未发版（第二批已补人机验证，见 `VR-SEC-02`） |
+| 未完成边界 | 本批只解决同 IP 高频；无人机验证、无外部动态扫描、无运行时告警；已随 `v1.7.0` 发版（第二批已补人机验证，见 `VR-SEC-02`） |
 
 #### `VR-SEC-02` · 纵深防御第二批：自托管人机验证 ALTCHA（通过）
 
@@ -1244,7 +1244,7 @@ flowchart LR
 | 闭环验证 | `altcha.test.ts`（5 项）：challenge 端点返回有效 PBKDF2 挑战、无载荷 / 畸形 / 篡改拒绝、有效载荷放行且同一载荷重放被拒、无用户被误建；`AltchaField.test.tsx`（3 项）：拉挑战下发、求解后经 ref 暴露载荷、失败提示 |
 | 测试诚实性 | 测试夹具 `mintAltcha()` 用同一 HKDF 密钥 + 同一算法真实求解，**无跳过验证的后门**；关键路径 E2E 改为注入真实载荷，守卫逻辑照常执行 |
 | 关键技术取舍 | 算法 `PBKDF2/SHA-256`、cost `10000`（实测求解 0.3—1.5 秒，后台 Worker 完成）；挑战有效期 20 分钟（官方建议区间）；密钥由 `SESSION_SECRET` 经 HKDF info `starpal-altcha-v1` 派生，不新增环境变量；一次性与过期清理落库而非进程内存（Serverless 多实例） |
-| 未完成边界 | 工作量证明提高批量自动化成本，不绝对阻断、对定向人工攻击无效；外部动态扫描（OWASP ZAP）与运行时告警仍未接入；未推送、未发版 |
+| 未完成边界 | 工作量证明提高批量自动化成本，不绝对阻断、对定向人工攻击无效；外部动态扫描（OWASP ZAP）与运行时告警仍未接入；已随 `v1.7.0` 发版 |
 
 #### `VR-AVATAR-01` · 自托管预设头像（通过）
 
@@ -1258,7 +1258,7 @@ flowchart LR
 | 安全 | 风格白名单 + 种子字符白名单（`\p{L}\p{N} _-`，≤64）；SVG 响应带沙箱 CSP（`default-src 'none'; style-src 'unsafe-inline'; sandbox`）+ `nosniff` + 不可变缓存；历史漏洞参数（rotate / fontSize / fontWeight）不进入生成路径且有回归断言 |
 | 命令与真实输出 | `npm run verify` 全绿（EXIT=0）：构建通过（31 包在 Vite 正常打包）、`check:size`（365 文件全部在预算内）、lint（硬规则 0 违规）、`scan:secrets`（583 文件无明文凭据）、前端 98 项 / 后端 317 项全过。前端 `avatar.api.ts` 覆盖率 100%，整体 96.42%；credentials / lint R1 曾各报 1 处（署名页越界 import），改用 `profile/index` 公共出口后归零 |
 | 合规 | 31 种图案许可分 CC0 / CC BY 4.0 / 免费商用三档，`/avatar-credits` 逐条列作者 + 许可 + 来源（CC BY 强制署名）；`THIRD-PARTY-NOTICES.md` 同步登记并实测更新传递依赖分布（此前分布表少记 MIT-0 / LGPL / BlueOak 等旧依赖许可，一并按 lock 实测值更正） |
-| 未完成边界 | 这是确定性图案生成，不是真实照片上传；真浏览器（Chromium）点选并渲染头像的巡检本轮未做，证据为构建 + 真 HTTP 生成测试 + 组件逻辑测试；未推送、未发版 |
+| 未完成边界 | 这是确定性图案生成，不是真实照片上传；真浏览器（Chromium）点选并渲染头像的巡检本轮未做，证据为构建 + 真 HTTP 生成测试 + 组件逻辑测试；已随 `v1.7.0` 发版 |
 
 ## 10. 收尾检查表
 

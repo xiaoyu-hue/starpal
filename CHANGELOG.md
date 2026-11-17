@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-17
+
+安全与体验加固版本：在 `v1.6.0` 质量收尾之上，补齐纵深防御两道（安全响应头 + 写接口限流、自托管人机验证 ALTCHA），并把头像从「填外链」改为 31 种自托管预设风格。无破坏性变更、无对外契约变化；新增迁移仅 `024_altcha_consumed`（ALTCHA 一次性消费）。
+
 ### 安全（纵深防御第一批：安全头 + 写接口限流）
 
 - **补齐四道安全响应头**：`Permissions-Policy`（关闭摄像头、麦克风、定位、支付等设备能力）、`Cross-Origin-Opener-Policy: same-origin`、`Cross-Origin-Resource-Policy: same-origin`、`X-Permitted-Cross-Domain-Policies: none`。**刻意没有**在应用层加 HSTS——实测线上已由 Vercel 注入 `max-age=63072000`，重复会产生双头；本地 HTTP 加 HSTS 也无效且可能被浏览器记住。
