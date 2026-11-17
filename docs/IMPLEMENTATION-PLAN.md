@@ -1246,6 +1246,20 @@ flowchart LR
 | 关键技术取舍 | 算法 `PBKDF2/SHA-256`、cost `10000`（实测求解 0.3—1.5 秒，后台 Worker 完成）；挑战有效期 20 分钟（官方建议区间）；密钥由 `SESSION_SECRET` 经 HKDF info `starpal-altcha-v1` 派生，不新增环境变量；一次性与过期清理落库而非进程内存（Serverless 多实例） |
 | 未完成边界 | 工作量证明提高批量自动化成本，不绝对阻断、对定向人工攻击无效；外部动态扫描（OWASP ZAP）与运行时告警仍未接入；未推送、未发版 |
 
+#### `VR-AVATAR-01` · 自托管预设头像（通过）
+
+| 项 | 内容 |
+| --- | --- |
+| 需求来源 | 作者看到外链头像体验差（多数人用占位图）+ 隐私泄露（外链向第三方暴露访客 IP），要求做 DiceBear 风格的海量预设头像 |
+| 决策 | 自托管本地生成（零外部请求，贴合隐私定位）；只做有独立 npm 包的 31 种，官网另 30 种动态风格仅官方 API 提供、与外部依赖冲突故不纳入；设置页移除外链输入框、只保留预设选择器；老用户外链照常显示、主动点选才覆盖 |
+| 改动范围 | `config/avatar-styles.ts`（31 风格清单 + 署名元数据 + 种子校验，唯一真相源）；`modules/images/avatar-generators.ts`（静态 import 31 包）、`avatar.service.ts`（生成）、`avatar.controller.ts`（含风格清单端点）、`avatar.routes.ts`；`shared/validation.ts` 新增 `requireAvatarUrl`（外链 + 站内格式，拒绝路径穿越 / 注入种子）；`user.service.ts` 切换校验；前端 `avatar.api.ts`、`AvatarPicker.tsx`、`AvatarCreditsPage.tsx`、`SettingsPage.tsx` 移除输入框改接选择器、`router.tsx` 加 `/avatar-credits` |
+| 依赖 | `@dicebear/core@9.4.3` + 31 个风格包（30 个 9.4.2、`initials` 9.4.3 修复漏洞）。**不用聚合包 `@dicebear/collection@9.4.2`**：它把 `initials` 锁在含 SVG 注入漏洞（GHSA-gcr2-9v8m-gq45）的 9.4.2，且 override 无法覆盖其嵌套约束；逐个安装后 `npm audit` 从 2 中危降为 **0 漏洞** |
+| 存储与契约 | 无新表、无迁移：只把 `/api/avatars/{slug}?seed={encoded}` 存入既有 `profiles.avatar_url`（`TEXT`）。前端所有头像显示位（信息流 / 评论 / 私信 / 通知 / 顶栏 / 主页）零改动自动生效；`parseAvatarUrl` 反解种子供选择器回填 |
+| 安全 | 风格白名单 + 种子字符白名单（`\p{L}\p{N} _-`，≤64）；SVG 响应带沙箱 CSP（`default-src 'none'; style-src 'unsafe-inline'; sandbox`）+ `nosniff` + 不可变缓存；历史漏洞参数（rotate / fontSize / fontWeight）不进入生成路径且有回归断言 |
+| 命令与真实输出 | `npm run verify` 全绿（EXIT=0）：构建通过（31 包在 Vite 正常打包）、`check:size`（365 文件全部在预算内）、lint（硬规则 0 违规）、`scan:secrets`（583 文件无明文凭据）、前端 98 项 / 后端 317 项全过。前端 `avatar.api.ts` 覆盖率 100%，整体 96.42%；credentials / lint R1 曾各报 1 处（署名页越界 import），改用 `profile/index` 公共出口后归零 |
+| 合规 | 31 种图案许可分 CC0 / CC BY 4.0 / 免费商用三档，`/avatar-credits` 逐条列作者 + 许可 + 来源（CC BY 强制署名）；`THIRD-PARTY-NOTICES.md` 同步登记并实测更新传递依赖分布（此前分布表少记 MIT-0 / LGPL / BlueOak 等旧依赖许可，一并按 lock 实测值更正） |
+| 未完成边界 | 这是确定性图案生成，不是真实照片上传；真浏览器（Chromium）点选并渲染头像的巡检本轮未做，证据为构建 + 真 HTTP 生成测试 + 组件逻辑测试；未推送、未发版 |
+
 ## 10. 收尾检查表
 
 | 检查项 | 判定 | 记录编号 |

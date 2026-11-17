@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { DomainError, type ErrorDetail } from './errors.js'
+import { avatarSeedError, findAvatarStyle } from '../config/avatar-styles.js'
 
 /**
  * 请求模式校验原语（架构 §5.7 模式层）。
@@ -122,4 +123,47 @@ export function requireHttpUrl(value: unknown, field: string, max: number): stri
     invalid([{ field, constraint: '仅支持 http / https 链接' }])
   }
   return text
+}
+
+/**
+ * 头像地址校验（头像功能专用）。
+ *
+ * 接受两类值：
+ * 1. 外链 http(s) 绝对路径——兼容此前已填外链的老用户，不打断其现有头像；
+ * 2. 站内生成路径 `/api/avatars/{已登记风格}?seed={合法种子}`——本功能新写入的格式。
+ *
+ * 站内路径严格校验：风格必须在白名单、种子必须符合规则、不得带额外路径段或哈希。
+ * 这样既让前端能直接把结果放进 <img src>，又不给路径穿越 / 注入留口子。
+ */
+export function requireAvatarUrl(value: unknown, field: string, max: number): string {
+  if (typeof value !== 'string') {
+    invalid([{ field, constraint: '必须为字符串' }])
+  }
+  const text = value as string
+  if (text.length > max) {
+    invalid([{ field, constraint: `长度须不超过 ${max}` }])
+  }
+  if (text.startsWith('http://') || text.startsWith('https://')) {
+    return requireHttpUrl(text, field, max)
+  }
+  if (!text.startsWith('/api/avatars/')) {
+    invalid([{ field, constraint: '头像须为 http(s) 链接或站内预设头像' }])
+  }
+  let parsed: URL
+  try {
+    parsed = new URL(text, 'https://starpal.invalid')
+  } catch {
+    invalid([{ field, constraint: '头像地址格式不正确' }])
+  }
+  const slug = decodeURIComponent(parsed.pathname.slice('/api/avatars/'.length))
+  if (slug.includes('/') || findAvatarStyle(slug) === undefined) {
+    invalid([{ field, constraint: '不支持的头像风格' }])
+  }
+  const seed = parsed.searchParams.get('seed') ?? ''
+  const seedError = avatarSeedError(seed)
+  if (seedError !== null) {
+    invalid([{ field, constraint: seedError }])
+  }
+  // 归一化：只保留规定的查询参数与路径，杜绝夹带 hash / 多余参数。
+  return `/api/avatars/${encodeURIComponent(slug)}?seed=${encodeURIComponent(seed)}`
 }

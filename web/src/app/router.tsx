@@ -103,6 +103,9 @@ const AdminStatsPage = lazy(() =>
 const AboutPage = lazy(() =>
   import('../features/_static').then((m) => ({ default: m.AboutPage })),
 )
+const AvatarCreditsPage = lazy(() =>
+  import('../features/_static').then((m) => ({ default: m.AvatarCreditsPage })),
+)
 // 内容域按 feature 分包：详情与发帖编辑独立成 chunk，首页不加载它们。
 const ComposePage = lazy(() =>
   import('../features/posts').then((m) => ({ default: m.ComposePage })),
@@ -247,6 +250,7 @@ const routes: RouteObject[] = [
       { path: 'disclaimer', element: <Suspended><DisclaimerPage /></Suspended> },
       { path: 'product', element: <Suspended><ProductPage /></Suspended> },
       { path: 'about', element: <Suspended><AboutPage /></Suspended> },
+      { path: 'avatar-credits', element: <Suspended><AvatarCreditsPage /></Suspended> },
       { path: '*', element: placeholder('页面不存在', '—', '请求的地址不存在，可返回首页继续浏览。') },
     ],
   },

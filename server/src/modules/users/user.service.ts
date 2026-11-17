@@ -2,9 +2,9 @@
 import { DomainError } from '../../shared/errors.js'
 import { decodeCursor } from '../../shared/pagination.js'
 import {
+  requireAvatarUrl,
   requireBoolean,
   requireEnum,
-  requireHttpUrl,
   requireObject,
   requireString,
 } from '../../shared/validation.js'
@@ -140,7 +140,7 @@ export async function updateOwnProfile(
   }
   if ('avatarUrl' in body) {
     input.avatarUrl =
-      body.avatarUrl === null ? null : requireHttpUrl(body.avatarUrl, 'avatarUrl', AVATAR_URL_MAX)
+      body.avatarUrl === null ? null : requireAvatarUrl(body.avatarUrl, 'avatarUrl', AVATAR_URL_MAX)
   }
   if ('biography' in body) {
     input.biography =

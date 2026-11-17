@@ -250,3 +250,14 @@ export type WeeklyPopular = {
   range: { start: string; end: string }
   items: FeedPost[]
 }
+
+/** 自托管头像风格及其图案署名，来自 GET /api/meta/avatar-styles。 */
+export type AvatarStyle = {
+  slug: string
+  styleKey: string
+  label: string
+  author: string
+  license: string
+  licenseUrl: string | null
+  sourceUrl: string
+}

@@ -19,7 +19,7 @@ import { interactionRouter } from './modules/interactions/index.js'
 import { commentRouter, postCommentRouter } from './modules/comments/index.js'
 import { postRouter } from './modules/posts/index.js'
 import { topicRouter } from './modules/topics/index.js'
-import { imageRouter } from './modules/images/index.js'
+import { avatarRouter, avatarStylesController, imageRouter } from './modules/images/index.js'
 import { imageUploadRouter } from './modules/uploads/index.js'
 import { searchRouter } from './modules/search/index.js'
 import { messageRouter } from './modules/messages/index.js'
@@ -47,6 +47,7 @@ apiRouter.get('/meta/announcements', announcementsFeedController)
 apiRouter.get('/meta/about', aboutController)
 apiRouter.get('/meta/disclaimer', disclaimerController)
 apiRouter.get('/meta/product', productController)
+apiRouter.get('/meta/avatar-styles', avatarStylesController)
 apiRouter.use('/auth', authRouter)
 apiRouter.use('/admin', adminRouter)
 apiRouter.use('/reports', reportRouter)
@@ -64,3 +65,4 @@ apiRouter.use('/achievements', achievementRouter)
 apiRouter.use('/levels', levelRouter)
 apiRouter.use('/export', exportRouter)
 apiRouter.use('/images', imageRouter)
+apiRouter.use('/avatars', avatarRouter)

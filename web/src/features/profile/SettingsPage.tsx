@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Award, Bookmark, Check, Flag, Heart, KeyRound, ShieldCheck, UserRound } from 'lucide-react'
-import { Avatar, Card } from '../../components/ui/Primitives'
+import { Card } from '../../components/ui/Primitives'
 import { buttonClass } from '../../components/ui/Button'
 import { ApiError } from '../../lib/api-client'
 import { useAuth } from '../auth'
@@ -24,6 +24,8 @@ import {
 import { PasswordSection } from './PasswordSection'
 import { TitlesSection } from './TitlesSection'
 import { ExportSection } from './ExportSection'
+import { AvatarPicker } from './AvatarPicker'
+import { useAvatarStylesQuery } from './queries'
 import { ProfileLevel, RankSection } from '../level'
 import type { OwnProfile } from '../../types/api'
 
@@ -55,7 +57,12 @@ export function SettingsPage() {
           用户点「我的」就该看到自己的等级，而不是必须先猜到公开主页地址。
           等级本身只给自己看（不排名、不进署名行），出现在私人设置页并不越界。 */}
       <ProfileLevel username={query.data.username} />
-      <ProfileSection key={query.data.username} profile={query.data} onSaved={refresh} />
+      <ProfileSection
+        key={query.data.username}
+        profile={query.data}
+        onSaved={refresh}
+        onAvatarSaved={refresh}
+      />
       <RankSection username={query.data.username} />
       <PasswordSection />
       <ThemeSection />
@@ -132,12 +139,14 @@ export function SettingsPage() {
 function ProfileSection({
   profile,
   onSaved,
+  onAvatarSaved,
 }: {
   profile: OwnProfile
   onSaved: () => void
+  onAvatarSaved: () => void
 }) {
+  const avatarStyles = useAvatarStylesQuery()
   const [displayName, setDisplayName] = useState(profile.displayName)
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl ?? '')
   const [biography, setBiography] = useState(profile.biography ?? '')
   const [zodiac, setZodiac] = useState(profile.zodiac ?? '')
   const [mbti, setMbti] = useState(profile.mbti ?? '')
@@ -151,13 +160,12 @@ function ProfileSection({
   const dirty = useMemo(
     () =>
       displayName !== profile.displayName ||
-      avatarUrl !== (profile.avatarUrl ?? '') ||
       biography !== (profile.biography ?? '') ||
       zodiac !== (profile.zodiac ?? '') ||
       mbti !== (profile.mbti ?? '') ||
       ageBand !== (profile.ageBand ?? '') ||
       showOptional !== profile.showOptional,
-    [displayName, avatarUrl, biography, zodiac, mbti, ageBand, showOptional, profile],
+    [displayName, biography, zodiac, mbti, ageBand, showOptional, profile],
   )
 
   async function handleSave(event: React.FormEvent) {
@@ -167,9 +175,6 @@ function ProfileSection({
     setMessage('')
     const payload: Record<string, unknown> = {}
     if (displayName !== profile.displayName) payload.displayName = displayName
-    if (avatarUrl !== (profile.avatarUrl ?? '')) {
-      payload.avatarUrl = avatarUrl.trim() === '' ? null : avatarUrl.trim()
-    }
     if (biography !== (profile.biography ?? '')) {
       payload.biography = biography.trim() === '' ? null : biography.trim()
     }
@@ -198,10 +203,18 @@ function ProfileSection({
     <form onSubmit={handleSave} className="sp-card space-y-4 p-6">
       <h2 className="text-base font-semibold text-ink">资料</h2>
 
-      <div className="flex items-center gap-3">
-        <Avatar name={displayName || profile.username} src={avatarUrl || null} size={56} />
-        <p className="text-xs text-faint">头像为图片链接；图片上传将在后续版本开放。</p>
-      </div>
+      {avatarStyles.isPending ? (
+        <div className="sp-skeleton h-40 w-full rounded-md" role="status" aria-live="polite" />
+      ) : avatarStyles.isError ? (
+        <p className="text-xs text-[var(--sp-danger)]">头像风格加载失败，请刷新后重试。</p>
+      ) : (
+        <AvatarPicker
+          currentUrl={profile.avatarUrl}
+          defaultSeed={profile.username}
+          styles={avatarStyles.data ?? []}
+          onSaved={onAvatarSaved}
+        />
+      )}
 
       <Field label="显示名" htmlFor="displayName" error={errors.displayName}>
         <input
@@ -212,19 +225,6 @@ function ProfileSection({
           onChange={(e) => setDisplayName(e.target.value)}
           aria-invalid={Boolean(errors.displayName)}
           autoComplete="nickname"
-        />
-      </Field>
-
-      <Field label="头像链接" htmlFor="avatarUrl" error={errors.avatarUrl}>
-        <input
-          id="avatarUrl"
-          className="sp-input"
-          type="url"
-          inputMode="url"
-          placeholder="https://…"
-          value={avatarUrl}
-          onChange={(e) => setAvatarUrl(e.target.value)}
-          aria-invalid={Boolean(errors.avatarUrl)}
         />
       </Field>
 

@@ -85,6 +85,7 @@
 - 注册 / 登录 / 登出、服务端会话（Cookie `HttpOnly` + `SameSite=Lax` + 生产环境 `Secure`）、受保护路由。
 - **自助改密**：登录后凭当前密码设置新密码；同事务撤销该用户其它设备的会话，当前设备不掉线；改密失败独立限流。
 - 账号注销与**彻底擦除本人数据**；公开个人页、资料编辑、浅色 / 深色主题切换。
+- **自托管预设头像**：设置页输入种子（默认用户名，可随机）+ 从 31 种开源风格里点选，服务端本地生成 SVG，零外部请求、无隐私外泄；同风格同种子恒定。既有外链头像照常显示，主动点选才覆盖；作者与许可见站内「头像署名」页。
 - **数据导出**：设置页「导出我的数据」可把本人全部帖子（含草稿与已删除，标注状态）、评论、图片链接与资料字段下载为 Markdown 或 JSON。`GET /api/export?format=md|json`，整组 `requireAuth`，范围严格限定本人，不含私信与他人内容；产物是标准文件，可被外部工具直接读取，并由 `npm run export:check` 校验结构与隐私边界。**只有导出、没有导入**——整站恢复走数据库备份，不让用户把文件传回来重建一堆无互动的空壳。
 - 口令用 **Argon2id**（经 `hash-wasm` 纯 WASM 实现，适配 Serverless，无原生编译依赖），参数随哈希串存储。
 - 分层防刷：注册 / 登录 / 改密限流，发帖 / 评论 / 举报 / 上传限流，蜜罐字段、登录失败限次、改密失败限次、安全事件留痕；注册与登录前置**自托管人机验证（ALTCHA，工作量证明）**，真人无感、不采集任何个人信息；注册勾选同意《用户协议》《隐私说明》《免责声明》并留痕。
@@ -154,12 +155,12 @@
 | --- | --- |
 | 运行时 | Node.js `>=22.12 <23`（由 `.nvmrc` 与 `engines.node` 锁定）、npm workspaces |
 | 前端 | React 19 + TypeScript、Vite、React Router、TanStack Query、Tailwind CSS、**Radix UI 原语 + 自研组件**、lucide-react |
-| 后端 | Express 5、PostgreSQL（`pg`，全部参数化查询）、`hash-wasm`（Argon2id）、`sharp`（图片重编码）、`multer`（上传）、`dotenv` |
+| 后端 | Express 5、PostgreSQL（`pg`，全部参数化查询）、`hash-wasm`（Argon2id）、`sharp`（图片重编码）、`multer`（上传）、`dotenv`、`@dicebear/core` + 31 个风格包（自托管头像） |
 | 存储 | PostgreSQL：结构化数据与图片二进制同库（`ADR-014`），无对象存储、无本地文件目录 |
 | 测试 | 后端：Node 内置 `node:test` + `tsx` + `@electric-sql/pglite`（WASM 内存库，不连真实库）；前端：`vitest` + jsdom + Testing Library，覆盖率由 `v8` 采集 |
 | 部署 | Vercel Serverless Function（`api/index.ts`）+ Neon PostgreSQL；前端静态产物构建至 `server/public/` |
 
-精确版本以各 `package.json` 与 `package-lock.json` 为准，不在文档中另写一份。项目**未引入** shadcn/ui、全局状态库、ORM、Redis、消息队列、对象存储 SDK、第三方验证码服务与 SSR 框架。人机验证采用**自托管**的 ALTCHA（工作量证明、无追踪、无外部服务），不采集手机号 / 邮箱，也不向第三方发送任何数据；其余防刷与组件均为自研。
+精确版本以各 `package.json` 与 `package-lock.json` 为准，不在文档中另写一份。项目**未引入** shadcn/ui、全局状态库、ORM、Redis、消息队列、对象存储 SDK、第三方验证码服务与 SSR 框架。人机验证采用**自托管**的 ALTCHA（工作量证明、无追踪、无外部服务），不采集手机号 / 邮箱，也不向第三方发送任何数据；头像采用**自托管 DiceBear**（31 种开源风格、确定性生成、零外部请求，另 30 种仅官方 API 提供的动态风格不纳入），作品作者与许可见站内「头像署名」页；其余防刷与组件均为自研。
 
 ### 环境要求
 

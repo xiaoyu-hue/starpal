@@ -2,7 +2,7 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { DomainError } from '../../src/shared/errors.js'
-import { requireString } from '../../src/shared/validation.js'
+import { requireAvatarUrl, requireString } from '../../src/shared/validation.js'
 
 /**
  * 字符串校验原语。
@@ -72,5 +72,42 @@ describe('requireString Unicode 合法性', () => {
 
   it('零宽连接符等格式字符是合法 Unicode，可通过', () => {
     assert.equal(requireString('a\u200Db', rule('body', 1, 10)), 'a\u200Db')
+  })
+})
+
+describe('requireAvatarUrl 头像地址校验', () => {
+  const max = 2048
+
+  it('接受前端拼装的站内预设头像 URL，并归一化为标准格式', () => {
+    const result = requireAvatarUrl('/api/avatars/bottts?seed=alice', 'avatarUrl', max)
+    assert.equal(result, '/api/avatars/bottts?seed=alice')
+    const withCn = requireAvatarUrl(
+      `/api/avatars/pixel-art?seed=${encodeURIComponent('星聚 用户')}`,
+      'avatarUrl',
+      max,
+    )
+    assert.equal(withCn, `/api/avatars/pixel-art?seed=${encodeURIComponent('星聚 用户')}`)
+  })
+
+  it('接受老用户的 http(s) 外链头像', () => {
+    assert.equal(
+      requireAvatarUrl('https://example.com/a.png', 'avatarUrl', max),
+      'https://example.com/a.png',
+    )
+  })
+
+  it('拒绝未登记风格与路径穿越', () => {
+    assertRejected(() => requireAvatarUrl('/api/avatars/nope?seed=alice', 'avatarUrl', max), '未知风格')
+    assertRejected(
+      () => requireAvatarUrl('/api/avatars/bottts/../../admin?seed=x', 'avatarUrl', max),
+      '路径穿越',
+    )
+    assertRejected(() => requireAvatarUrl('/api/other/path', 'avatarUrl', max), '非头像路径')
+  })
+
+  it('拒绝非法种子与缺失种子', () => {
+    assertRejected(() => requireAvatarUrl('/api/avatars/bottts?seed=%3Cscript%3E', 'avatarUrl', max), '注入种子')
+    assertRejected(() => requireAvatarUrl('/api/avatars/bottts', 'avatarUrl', max), '缺种子')
+    assertRejected(() => requireAvatarUrl(`/api/avatars/bottts?seed=${'a'.repeat(65)}`, 'avatarUrl', max), '超长种子')
   })
 })

@@ -437,6 +437,7 @@ server/
 | `reports` | 举报 / 申诉提交、目标可见性校验、我的提交、管理队列与决策（当前仅最小闭环，不含处置） | `reports` |
 | `moderation` | 处置动作、封禁、审核日志 | `reports` `moderation_logs` `users` `posts` `comments` |
 | `uploads` | 上传校验、重编码、存储与清理 | `post_images` |
+| `images` | 受控读取上传图片；自托管头像 SVG 的确定性生成与风格清单 | —（头像无表，URL 存 `profiles.avatar_url`） |
 | `search` | 帖子与话题检索 | `posts` `topics` |
 | `export` | 用户数据导出 | 跨表只读 |
 | `announcements` | 运营通知与「当前状态」的读写；发布记录（历史档案）仍走代码常量 | `announcements` |
@@ -636,6 +637,8 @@ sequenceDiagram
 | GET | `/api/posts/:id/related` | 公开 | 相关帖子 |
 | POST | `/api/posts/:id/images` | 作者 | 图片上传 |
 | DELETE | `/api/posts/:id/images/:imageId` | 作者 / 管理员 | 移除图片 |
+| GET | `/api/avatars/:style?seed=…` | 公开 | 自托管头像：`style` 限 31 种白名单，`seed` 校验字符与长度，确定性生成 SVG；响应带沙箱 CSP + `nosniff` + 不可变缓存，无数据库访问 |
+| GET | `/api/meta/avatar-styles` | 公开 | 头像风格清单与署名信息，前端选择器与署名页共用 |
 
 **互动**
 

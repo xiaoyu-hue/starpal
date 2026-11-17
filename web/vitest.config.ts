@@ -41,6 +41,7 @@ export default defineConfig({
        */
       include: [
         'src/lib/**/*.ts',
+        'src/features/profile/avatar.api.ts',
         // 已写用例的组件逐个纳入，而不是整目录纳入：没测的页面不计入分母，
         // 否则「覆盖率」会被未测代码稀释成一个无法指导决策的数字。
         'src/features/auth/AuthForm.tsx',
