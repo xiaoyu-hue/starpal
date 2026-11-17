@@ -7,7 +7,10 @@
  * 硬规则（任一命中即失败，退出码 1）：
  *   R1 模块导入边界：server/src/modules/<A> 不得 import modules/<B>(B≠A) 内部文件，
  *                    仅可经 modules/<B>/index.js 公共出口；web/src/features 同此约束。
- *   R2 设计令牌字面量：web/src 下不得硬编码颜色字面量（#hex / rgb() / hsl()），
+ *   R2 设计令牌字面量：web/src 下的代码文件（.ts/.tsx/.js/.jsx）不得硬编码颜色字面量
+ *                    （#hex / rgb() / hsl()）；walk() 只收代码文件，不扫 .css，
+ *                    故 CSS 内的字面量（如 globals.css 的蒙层色）不受本规则约束，
+ *                    需人工确保取自 styles/tokens.css 令牌。
  *                    允许清单：tailwind.config.ts、styles/tokens.css、lib/theme.ts。
  *   R3 导入扩展名一致性：server 相对导入必须以 .js 结尾；web 相对导入不得带扩展名。
  *   R4 版本号一致性：根 / web / server 三个 package.json 与 server 的 APP_VERSION 必须相同。
