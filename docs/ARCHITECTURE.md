@@ -1403,7 +1403,7 @@ export interface StorageAdapter {
 | 日志 | 结构化访问日志，含请求标识、路径、状态、耗时；不含凭据与正文 |
 | 错误 | 集中归一化，未预期错误记录服务端堆栈但**不返回**给客户端 |
 | 监控 | 健康检查端点；部署方可接入外部监控，不作为运行依赖 |
-| 清理 | 过期会话、过期安全事件、孤儿文件的定期清理在应用进程内完成 |
+| 清理 | 过期会话、过期安全事件在应用进程内随限流事件顺带清理；图片与元数据同事务，不产生孤儿文件，无对应清理任务 |
 
 ---
 
@@ -1446,7 +1446,7 @@ export interface StorageAdapter {
 | 图像处理 | `sharp`（要求 Node ≥ 20.9.0） | 魔术字节后重新编码、剥离元数据 |
 | 安全响应 | 安全响应头中间件 | 含禁止类型嗅探 |
 | 测试 | 后端单元 + API 集成（PGlite 真库、真 Express 链路）；前端 vitest + jsdom；覆盖率门槛与 CI 门禁 | 见实施计划与 `.github/workflows/verify.yml` |
-| 质量 | ESLint / Prettier / TypeScript 严格模式 | 导入边界由 lint 规则约束 |
+| 质量 | TypeScript 严格模式 + 仓库自研零依赖检查脚本（`scripts/lint.mjs` / `check-file-size.mjs` / `scan-secrets.mjs`） | 导入边界、行数预算、密钥扫描为硬规则；未使用 ESLint / Prettier |
 
 **明确不引入**：全局状态库、图表库、动效库、拖拽库、可调整面板库、特效组件集、Redis、消息队列、对象存储 SDK、外部验证码、SSR 框架、容器编排。
 
