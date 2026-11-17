@@ -22,6 +22,7 @@
     "@radix-ui/react-dropdown-menu": "2.2.1",
     "@radix-ui/react-tabs": "1.2.1",
     "@tanstack/react-query": "5.107.1",
+    "altcha": "^3.6.0",
     "lucide-react": "1.72.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",

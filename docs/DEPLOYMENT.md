@@ -353,7 +353,7 @@ pg_dump "<DATABASE_URL>" > starpal-YYYYMMDD.dump
 | 反向代理与 TLS 证书 | §9 |
 | 备份计划、执行频率与保留期 | §10 |
 | 社区准则与隐私说明的最终文案 | [PRD §3.3 / §4.12](./PRD.md) |
-| 可选自托管人机验证（默认关闭） | [ARCHITECTURE §10.1](./ARCHITECTURE.md#101-预留扩展点) |
+| 人机验证密钥（由 `SESSION_SECRET` 派生，无需单独配置） | [ARCHITECTURE §10.1](./ARCHITECTURE.md#101-预留扩展点) |
 | 监控接入（基于健康检查端点，可选） | §8 |
 | 项目许可文件 | `README.md` |
 

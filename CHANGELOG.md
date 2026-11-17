@@ -4,6 +4,22 @@
 
 ## [Unreleased]
 
+### 安全（纵深防御第一批：安全头 + 写接口限流）
+
+- **补齐四道安全响应头**：`Permissions-Policy`（关闭摄像头、麦克风、定位、支付等设备能力）、`Cross-Origin-Opener-Policy: same-origin`、`Cross-Origin-Resource-Policy: same-origin`、`X-Permitted-Cross-Domain-Policies: none`。**刻意没有**在应用层加 HSTS——实测线上已由 Vercel 注入 `max-age=63072000`，重复会产生双头；本地 HTTP 加 HSTS 也无效且可能被浏览器记住。
+- **把已落库的限流从认证扩展到四类写接口**：发帖、评论、举报、上传图片各按「来源不可逆摘要」独立计数，复用 `security_events` 表与 `RATE_LIMIT_MAX`（默认 1 小时 20 次），达阈值返回统一 429 包络。不用进程内存计数器（Serverless 多实例各自为政），**无新增依赖、无新增迁移**（`kind` 是 `VARCHAR(32)`，不是枚举）。
+- 新增 `server/tests/integration/security-hardening.test.ts`（4 项）：真 HTTP 链路验证响应头存在、未达阈值不误伤、达阈值被拒、不同来源互不干扰。后端测试 293 → 297；`npm run verify` 全绿（前端覆盖率仍 96.96%）。
+- **边界如实说明**：本批只补纵深防御的一层，**挡不住换 IP 的分布式低速灌水**；人机验证随后作为第二批接入，外部动态扫描（OWASP ZAP）仍未接入。
+
+### 安全（纵深防御第二批：自托管人机验证 ALTCHA）
+
+- **注册 / 登录前置人机验证**：采用自托管 ALTCHA（工作量证明，MIT），真人后台自动完成一小段计算、无需点选图片，不采集任何个人信息、不依赖第三方 API、不发外部请求。前端 `altcha@3.6.0`（Web Component），服务端 `altcha-lib@2.8.0` 负责生成与校验；**这是一处经作者授权的既有决策变更**——此前规格书与 README 写的是「预留但不默认启用 ALTCHA」。
+- **防重放按官方要求自建**：新增迁移 `024_altcha_consumed`，以载荷摘要为主键原子消费（`INSERT ... ON CONFLICT DO NOTHING`），同一载荷只能用一次；过期记录随认证链路顺带清理。校验失败统一 400、不区分畸形 / 过期 / 重放，避免给脚本探测内部状态。
+- **零新增部署配置**：ALTCHA 的 HMAC 密钥从已有 `SESSION_SECRET` 经 HKDF 派生（info 域隔离），不新增环境变量、不新增密钥管理负担；挑战生成本身也按来源限流，避免被当作免费算力池。
+- 测试：新增 `server/tests/integration/altcha.test.ts`（5 项：挑战端点、无载荷 / 畸形 / 篡改拒绝、有效载荷放行 + 重放拒绝）与 `web/tests/features/auth/AltchaField.test.tsx`（3 项）；关键路径端到端测试改为注入真实求解载荷（测试夹具 `mintAltcha()` 走完整密码学闭环，**无跳过验证的后门**）。后端测试 297 → 302、前端 87 → 90；`npm run verify` 全绿。
+- 新增两个直接依赖均为 MIT，且未引入新传递依赖（`altcha` 仅依赖已有的 `hash-wasm`，`altcha-lib` 零依赖）；已登记 `THIRD-PARTY-NOTICES.md`。
+- **边界如实说明**：工作量证明提高的是**批量自动化的单位成本**，不是绝对阻断；对定向的人工攻击无效，也不替代邀请码、限流与蜜罐。它仍是与它们叠加的一层。外部动态扫描与运行时告警仍未接入。
+
 ## [1.6.0] - 2026-11-17
 
 `M7` 收尾版本，本项目第一个专注**可复核质量**的版本：不新增面向用户的功能，把力气花在自动化测试（后端 293 项 + 前端 87 项）、CI 质量门禁与 CodeQL 静态分析、真浏览器三态 / 图片 / 无障碍巡检，以及 18 项验收标准的全量复核。修复了全站对比度与两处 critical ARIA 缺陷，达到 WCAG AA；逐条修正了文档「说未完成、实际已完成」的漂移。本版本**无破坏性变更、无新增迁移、无对外契约变化**。

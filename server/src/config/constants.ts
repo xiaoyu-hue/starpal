@@ -208,7 +208,16 @@ export const SECURITY_EVENT_KINDS = [
   'honeypot',
   'password_change_ok',
   'password_change_fail',
+  // 写接口防刷（安全加固）：kind 落在 VARCHAR(32)，新增类型无需数据库迁移。
+  'post_create',
+  'comment_create',
+  'report_submit',
+  'image_upload',
+  // 人机验证：挑战生成与校验失败各自计数，避免被当免费算力池或无限试探。
+  'altcha_challenge',
+  'altcha_fail',
 ] as const
+
 export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number]
 
 // ── M2-S3 角色 ───────────────────────────────────────────────────────

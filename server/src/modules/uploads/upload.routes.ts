@@ -2,6 +2,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../../middleware/require-auth.js'
 import { singleImageUpload } from '../../middleware/upload.js'
+import { writeRateLimit } from '../auth/index.js'
 import { attachImageController, removeImageController } from './upload.controller.js'
 
 /**
@@ -13,7 +14,13 @@ import { attachImageController, removeImageController } from './upload.controlle
  */
 export const imageUploadRouter = Router({ mergeParams: true })
 
-imageUploadRouter.post('/', requireAuth, singleImageUpload, attachImageController)
+imageUploadRouter.post(
+  '/',
+  requireAuth,
+  writeRateLimit('image_upload'),
+  singleImageUpload,
+  attachImageController,
+)
 
 // 移除不经过 multer：DELETE 无请求体，走 multipart 解析只会白等一次流。
 imageUploadRouter.delete('/:imageId', requireAuth, removeImageController)

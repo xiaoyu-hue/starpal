@@ -3,6 +3,7 @@ import { after, before, describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import type { PGlite } from '@electric-sql/pglite'
 import { createMigratedDb, seedUser } from '../helpers/db.js'
+import { mintAltcha } from '../helpers/altcha.js'
 import { startTestServer, type RunningApp } from '../helpers/http.js'
 import { hashInviteCode } from '../../src/modules/invite/index.js'
 
@@ -76,6 +77,8 @@ before(async () => {
   topicId = list[0]?.id ?? 1
 
   // 用邀请码真实注册，再真实登录拿会话（注册本身不建会话）。
+  // 每步各用一份独立求解的人机验证载荷（一次性消费，不可复用）。
+  const registerProof = await mintAltcha()
   const registered = await call(
     '/api/auth/register',
     json('POST', {
@@ -84,15 +87,21 @@ before(async () => {
       displayName: '端到端爱丽丝',
       inviteCode: plain,
       acceptTerms: true,
+      altcha: registerProof.payload,
     }),
   )
   // 注册沿用 sendData 默认 200（不是 201）；这里钉的是「真的写进去并返回用户」。
   assert.equal(registered.status, 200, `注册应成功：${registered.text.slice(0, 300)}`)
   assert.equal((registered.body?.data as { registered?: boolean }).registered, true)
 
+  const loginProof = await mintAltcha()
   const logged = await call(
     '/api/auth/login',
-    json('POST', { username: 'e2e_alice', password: 'E2ePassw0rd!' }),
+    json('POST', {
+      username: 'e2e_alice',
+      password: 'E2ePassw0rd!',
+      altcha: loginProof.payload,
+    }),
   )
   assert.equal(logged.status, 200, `登录应成功：${logged.text.slice(0, 300)}`)
   // 会话 Cookie 由响应 Set-Cookie 下发；这里直接取库里发给该用户的最新会话 id，
@@ -200,6 +209,7 @@ describe('M7-S1-T3 关键路径端到端', () => {
 
   it('同一邀请码不能注册第二个账号（防重放）', async () => {
     // 上一条 it 已用掉 E2EKEY1234567ABCDE；这里直接再走一次注册，应被拒。
+    const replayProof = await mintAltcha()
     const replay = await call(
       '/api/auth/register',
       json('POST', {
@@ -207,6 +217,7 @@ describe('M7-S1-T3 关键路径端到端', () => {
         password: 'E2ePassw0rd!',
         displayName: '端到端鲍勃',
         inviteCode: 'E2EKEY1234567ABCDE',
+        altcha: replayProof.payload,
       }),
     )
     assert.equal(replay.status, 400, `重复用码应失败：${replay.text.slice(0, 300)}`)

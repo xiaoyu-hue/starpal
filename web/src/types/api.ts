@@ -115,6 +115,8 @@ export type PublicUser = {
 export type LoginPayload = {
   username: string
   password: string
+  /** 人机验证载荷：一次性，由 ALTCHA widget 求解后生成。 */
+  altcha?: string
 }
 
 export type RegisterPayload = {
@@ -126,6 +128,8 @@ export type RegisterPayload = {
   acceptTerms?: boolean
   /** 蜜罐字段：真人不可见，随请求体提交；命中后由服务端静默丢弃。 */
   website?: string
+  /** 人机验证载荷：一次性，由 ALTCHA widget 求解后生成。 */
+  altcha?: string
 }
 
 /** 他人视角的公开资料投影，与 server/src/modules/users/user.types.ts 一致。 */

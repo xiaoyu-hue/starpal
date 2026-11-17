@@ -20,6 +20,8 @@
 | `@types/react` | 19.3.0 | MIT |
 | `@types/react-dom` | 19.3.0 | MIT |
 | `@vitejs/plugin-react` | 6.3.0 | MIT |
+| `altcha` | 3.6.0 | MIT |
+| `altcha-lib` | 2.8.0 | MIT |
 | `autoprefixer` | 10.6.2 | MIT |
 | `dotenv` | 18.0.10 | BSD-2-Clause |
 | `express` | 5.3.0 | MIT |

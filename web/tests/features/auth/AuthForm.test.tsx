@@ -6,6 +6,7 @@
  * 而它包含两类纯逻辑——本地校验与登录后跳转目标。后者是安全问题：
  * `location.state.from` 来自 URL，若不校验，`//evil.com` 就是一个开放重定向。
  */
+import { forwardRef, useImperativeHandle } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -40,6 +41,16 @@ vi.mock('../../../src/features/auth/AuthProvider', () => ({
 }))
 
 const VALID_PASSWORD = 'correct-horse-battery'
+const TEST_ALTCHA = 'test-altcha-payload'
+
+// 人机验证字段在 jsdom 里 Web Component 不可靠，替换为能回传固定载荷的假组件。
+// 表单测试只关心「验证完成后把载荷带进请求」，真正的密码学闭环由服务端集成测试覆盖。
+vi.mock('../../../src/features/auth/AltchaField', () => ({
+  AltchaField: forwardRef(function FakeAltcha(_props: unknown, ref: React.Ref<unknown>) {
+    useImperativeHandle(ref, () => ({ getPayload: () => TEST_ALTCHA }), [])
+    return null
+  }),
+}))
 
 function renderForm(mode: 'login' | 'register') {
   return render(
@@ -85,7 +96,11 @@ describe('登录模式 · 本地校验', () => {
     await userEvent.click(screen.getByRole('button', { name: '登录' }))
 
     await waitFor(() => {
-      expect(mocks.login).toHaveBeenCalledWith({ username: 'alice', password: VALID_PASSWORD })
+      expect(mocks.login).toHaveBeenCalledWith({
+        username: 'alice',
+        password: VALID_PASSWORD,
+        altcha: TEST_ALTCHA,
+      })
     })
   })
 
@@ -199,6 +214,7 @@ describe('注册模式', () => {
         inviteCode: 'INV-123',
         acceptTerms: true,
         website: '',
+        altcha: TEST_ALTCHA,
       })
     })
   })

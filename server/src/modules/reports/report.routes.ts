@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Router } from 'express'
 import { requireAuth } from '../../middleware/require-auth.js'
+import { writeRateLimit } from '../auth/index.js'
 import { myReportsController, submitReportController } from './report.controller.js'
 
 /**
@@ -13,5 +14,5 @@ import { myReportsController, submitReportController } from './report.controller
 export const reportRouter = Router()
 
 reportRouter.use(requireAuth)
-reportRouter.post('/', submitReportController)
+reportRouter.post('/', writeRateLimit('report_submit'), submitReportController)
 reportRouter.get('/mine', myReportsController)

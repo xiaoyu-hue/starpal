@@ -1200,7 +1200,7 @@ flowchart LR
 | 反向代理与 TLS | 终止 TLS、转发至应用端口、静态资源策略 | `DEPLOYMENT.md` |
 | 备份计划与保留期 | 数据库逻辑备份 + 文件目录备份，同一时间点 | `DEPLOYMENT.md` |
 | 社区准则与隐私说明最终文案 | 由维护者在发布前审定 | `PRD.md §4.12 / §3.3` |
-| 可选人机验证 | 默认关闭，需要时按扩展点接入自托管实现 | `ARCHITECTURE.md §10.1` |
+| 人机验证密钥 | 无需单独配置：由必填的 `SESSION_SECRET` 经 HKDF 派生；轮换 `SESSION_SECRET` 会同时轮换验证密钥 | `ARCHITECTURE.md`、`VR-SEC-02` |
 | 监控接入 | 健康检查端点可对接外部监控，不作为运行依赖 | `DEPLOYMENT.md` |
 
 ---
@@ -1215,11 +1215,36 @@ flowchart LR
 | 评论结构 | 单层，不含嵌套回复 |
 | 检索能力 | 数据库条件检索，未接入独立检索引擎 |
 | 统计能力 | 基础数值指标，无时序分析 |
-| 防刷边界 | 无联系方式的注册体系无法彻底阻断自动化注册，目标为提高自动化成本 |
+| 防刷边界 | 无联系方式的注册体系无法彻底阻断自动化注册；已叠加自托管 ALTCHA 工作量证明提高批量自动化成本，但对定向人工攻击无效，目标始终是抬高成本而非绝对阻断 |
 | 文件存储 | 图片占数据库免费额度；总量超 500 MB 需迁移对象存储 |
 | 部署 | 公开部署与域名绑定不在本计划内，须单独决策 |
 
 ---
+
+### 安全加固增量验证记录（v1.6.0 之后，尚未发版）
+
+#### `VR-SEC-01` · 纵深防御第一批：响应头与写接口限流（通过）
+
+| 项 | 内容 |
+| --- | --- |
+| 改动范围 | `server/src/middleware/security-headers.ts`、`server/src/config/constants.ts`、`server/src/modules/auth/index.ts`、新增 `server/src/modules/auth/write-rate-limit.ts`、四个 `*.routes.ts`；文档 `docs/ARCHITECTURE.md` §7.3、`CHANGELOG.md` `[Unreleased]` |
+| 命令与真实输出 | `npm run verify` 全绿：`typecheck` → `build` → `check:size` → `lint`（硬规则 0 违规）→ `scan:secrets` → `test:coverage`；后端 `# tests 297` / `# pass 297` / `# fail 0`；前端覆盖率 `All files 96.96 / 95 / 98.03 / 98.88` |
+| 新增用例 | `server/tests/integration/security-hardening.test.ts`（4 项）：响应头 4 项断言 + HSTS 不重复注入；未达阈值发帖 201；预置 20 条同来源事件后 429；另一来源仍 201 |
+| 关键取舍 | HSTS 由平台注入（`curl -sSI https://starpal.cc.cd/api/health` 实测 `strict-transport-security: max-age=63072000`），应用层不重复；限流计数落库而非进程内存（Serverless 多实例）；`kind` 为 `VARCHAR(32)` 故新增 4 类无需迁移；限流挂在 `requireAuth` 之后、上传解析之前 |
+| 未完成边界 | 本批只解决同 IP 高频；无人机验证、无外部动态扫描、无运行时告警；未推送、未发版（第二批已补人机验证，见 `VR-SEC-02`） |
+
+#### `VR-SEC-02` · 纵深防御第二批：自托管人机验证 ALTCHA（通过）
+
+| 项 | 内容 |
+| --- | --- |
+| 决策变更 | 此前规格确认书 / README 记「预留但不默认启用 ALTCHA」；本批经作者授权正式启用，选自托管而非第三方验证码服务（零外部请求、零隐私采集、零费用，贴合邀请制小规模社区） |
+| 改动范围 | 迁移 `024_altcha_consumed`；`config/altcha-constants.ts`（从 constants 拆出以守行数预算）；`modules/auth/altcha.ts`（HKDF 派生密钥 + 生成 / 校验）、`altcha.repository.ts`（原子消费 + 清理）、`require-altcha.ts`（守卫）；`auth.routes.ts` / `auth.controller.ts`（challenge 端点 + 挂载）；`shared/errors.ts`（`CHALLENGE_INVALID`）；前端 `AltchaField.tsx` + `AuthForm.tsx` + `types/api.ts`；错误码 400 |
+| 依赖 | `altcha@3.6.0`（web）、`altcha-lib@2.8.0`（server），均 MIT；无新传递依赖；已登记 `THIRD-PARTY-NOTICES.md` |
+| 命令与真实输出 | `npm run verify` 全绿（EXIT=0）：typecheck / build（altcha 在 Vite 正常打包）/ `check:size`（356 文件，全部在预算内）/ lint / `scan:secrets` / `test:coverage`。后端 `# pass 302 / # fail 0`，覆盖率 `all files 94.00 / 76.87 / 93.07`；前端 90 项通过，覆盖率 `96.13 / 93.18 / 98.36 / 98.07` |
+| 闭环验证 | `altcha.test.ts`（5 项）：challenge 端点返回有效 PBKDF2 挑战、无载荷 / 畸形 / 篡改拒绝、有效载荷放行且同一载荷重放被拒、无用户被误建；`AltchaField.test.tsx`（3 项）：拉挑战下发、求解后经 ref 暴露载荷、失败提示 |
+| 测试诚实性 | 测试夹具 `mintAltcha()` 用同一 HKDF 密钥 + 同一算法真实求解，**无跳过验证的后门**；关键路径 E2E 改为注入真实载荷，守卫逻辑照常执行 |
+| 关键技术取舍 | 算法 `PBKDF2/SHA-256`、cost `10000`（实测求解 0.3—1.5 秒，后台 Worker 完成）；挑战有效期 20 分钟（官方建议区间）；密钥由 `SESSION_SECRET` 经 HKDF info `starpal-altcha-v1` 派生，不新增环境变量；一次性与过期清理落库而非进程内存（Serverless 多实例） |
+| 未完成边界 | 工作量证明提高批量自动化成本，不绝对阻断、对定向人工攻击无效；外部动态扫描（OWASP ZAP）与运行时告警仍未接入；未推送、未发版 |
 
 ## 10. 收尾检查表
 

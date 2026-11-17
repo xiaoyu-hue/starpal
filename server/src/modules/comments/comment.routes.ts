@@ -2,6 +2,7 @@
 import { Router } from 'express'
 import { optionalAuth } from '../../middleware/optional-auth.js'
 import { requireAuth } from '../../middleware/require-auth.js'
+import { writeRateLimit } from '../auth/index.js'
 import {
   createCommentController,
   deleteCommentController,
@@ -18,7 +19,7 @@ import {
 export const postCommentRouter = Router()
 
 postCommentRouter.get('/:postId/comments', optionalAuth, listCommentsController)
-postCommentRouter.post('/:postId/comments', requireAuth, createCommentController)
+postCommentRouter.post('/:postId/comments', requireAuth, writeRateLimit('comment_create'), createCommentController)
 
 export const commentRouter = Router()
 

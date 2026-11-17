@@ -6,3 +6,7 @@
  */
 export { clearSessionCookie, readSessionId } from './session.js'
 export { currentUser } from './auth.service.js'
+export { enforceRateLimit } from './rate-limit.js'
+export { recordEvent } from './auth.repository.js'
+export { subjectHashOf } from './subject.js'
+export { writeRateLimit } from './write-rate-limit.js'

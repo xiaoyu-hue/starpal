@@ -926,11 +926,23 @@ erDiagram
 | 字段 | 类型 | 约束 | 说明 |
 | --- | --- | --- | --- |
 | `id` | `BIGSERIAL` | PK | — |
-| `kind` | `VARCHAR(32)` | NOT NULL | `register` / `login_fail` / `login_ok` / `honeypot` / `password_change_ok` / `password_change_fail` |
+| `kind` | `VARCHAR(32)` | NOT NULL | 认证类：`register` / `login_fail` / `login_ok` / `honeypot` / `password_change_ok` / `password_change_fail`；写接口类：`post_create` / `comment_create` / `report_submit` / `image_upload` |
 | `subject_hash` | `VARCHAR(64)` | NOT NULL | 来源不可逆摘要，不存原始地址 |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | 时间 |
 
 索引：`(kind, subject_hash, created_at DESC)`。按保留期清理。
+
+#### `altcha_consumed`
+
+人机验证的一次性载荷消费记录（迁移 `024`）。只存载荷的不可逆摘要，不存原始载荷。
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| `payload_hash` | `VARCHAR(64)` | PK | 载荷 HMAC-SHA256 摘要 |
+| `expires_at` | `TIMESTAMPTZ` | NOT NULL | 摘要过期时间，随认证流量清理 |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, DEFAULT now() | 创建时间 |
+
+索引：`(expires_at)`。原子消费用 `INSERT ... ON CONFLICT DO NOTHING`，防 Serverless 多实例并发重放。
 
 #### `topics`
 
@@ -1349,7 +1361,7 @@ export interface StorageAdapter {
 | PostgreSQL 单库 | 对象存储 | 新增 `StorageAdapter` 实现并替换注入（见 §8.4） | 上传管线、业务模块、图片 API |
 | 嵌套评论 | 单层 | 新增迁移为 `comments` 加 `parent_id`，扩展查询与展示组件 | 帖子、点赞、通知模块 |
 | 排序策略升级 | 确定性加权 | 新增 `ranking` 模块实现排序策略接口，替换信息流调用点 | `posts` 表、信息流 API 契约 |
-| 自托管人机验证 | 接入点预留、默认关闭 | 新增验证模块，于注册链路插入校验步骤 | 用户表、会话模块 |
+| 自托管人机验证 | **已接入**：注册 / 登录前置 ALTCHA 工作量证明；密钥由 `SESSION_SECRET` 派生、一次性载荷落 `altcha_consumed` 防重放（迁移 `024`） | 调整 PoW 成本 / 算法只需改 `config/altcha-constants.ts`；扩展保护端点只需加守卫 | 用户表、会话模块、API 契约（仅请求体多一个 `altcha` 字段） |
 | 第三方身份 | 无 | 新增 `identity` 模块，映射至 `users` | 会话与权限模块 |
 | 多实例部署 | 单进程 | 会话与限流迁至共享存储，静态资源交反向代理或 CDN | 业务模块与 API 契约 |
 | 搜索增强 | 数据库条件检索 | 新增 `search` 提供者接口与外部实现 | 搜索 API 契约与前端调用 |

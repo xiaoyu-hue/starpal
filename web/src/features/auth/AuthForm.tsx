@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { PASSWORD_MAX, PASSWORD_MIN } from '../../config/auth-constants'
 import { ApiError } from '../../lib/api-client'
 import type { LoginPayload, RegisterPayload } from '../../types/api'
+import { AltchaField } from './AltchaField'
+import type { AltchaHandle } from './AltchaField'
 import { useAuth } from './AuthProvider'
 
 // 与 server/src/config/constants.ts 的准入规则保持一致。
@@ -43,6 +45,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { login, register } = useAuth()
+  const altchaRef = useRef<AltchaHandle>(null)
   const honeypotId = useId()
   const [values, setValues] = useState<FormValues>(EMPTY)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -99,6 +102,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
       return
     }
 
+    // 人机验证载荷一次性消费，必须在验证完成后才能提交；未完成时不发请求。
+    const altcha = altchaRef.current?.getPayload()
+    if (!altcha) {
+      setFormError('安全验证尚未完成，请稍候重试')
+      return
+    }
+
     setFieldErrors({})
     setFormError(null)
     setSubmitting(true)
@@ -110,6 +120,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           inviteCode: values.inviteCode.trim(),
           acceptTerms: agreed,
           website: values.website,
+          altcha,
         }
         if (values.displayName.trim()) payload.displayName = values.displayName.trim()
         const created = await register(payload)
@@ -121,6 +132,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         const payload: LoginPayload = {
           username: values.username.trim(),
           password: values.password,
+          altcha,
         }
         await login(payload)
         const gate = location.state as GateState | null
@@ -251,6 +263,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
           onChange={(event) => setField('website', event.target.value)}
         />
       </div>
+
+      {/* 人机验证：后台工作量证明，真人无感；服务端强制校验，前端隐藏不构成绕过。 */}
+      <AltchaField ref={altchaRef} />
 
       <Button type="submit" size="lg" loading={submitting} className="w-full">
         {isRegister ? '创建账号' : '登录'}

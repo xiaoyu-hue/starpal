@@ -2,6 +2,7 @@
 import { Router } from 'express'
 import { optionalAuth } from '../../middleware/optional-auth.js'
 import { requireAuth } from '../../middleware/require-auth.js'
+import { writeRateLimit } from '../auth/index.js'
 import {
   createPostController,
   deletePostController,
@@ -22,7 +23,7 @@ import {
 export const postRouter = Router()
 
 postRouter.get('/', optionalAuth, feedController)
-postRouter.post('/', requireAuth, createPostController)
+postRouter.post('/', requireAuth, writeRateLimit('post_create'), createPostController)
 postRouter.get('/:id/related', optionalAuth, relatedPostsController)
 postRouter.get('/:id', optionalAuth, postDetailController)
 postRouter.patch('/:id', requireAuth, updatePostController)

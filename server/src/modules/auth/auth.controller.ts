@@ -13,12 +13,31 @@ import {
 import { DomainError } from '../../shared/errors.js'
 import { sendData } from '../../shared/response.js'
 import { honeypotFilled, requireObject, requireString } from '../../shared/validation.js'
+import { newChallenge } from './altcha.js'
 import { changePassword, currentUser, login, logout, register, type PublicUser } from './auth.service.js'
-import { note } from './rate-limit.js'
+import { enforceRateLimit, note } from './rate-limit.js'
 import { clearSessionCookie, readSessionId, setSessionCookie } from './session.js'
 import { subjectHashOf } from './subject.js'
 
 /** 认证控制器：模式校验 → 服务层 → 统一包络。凭据不入日志（access-log 只记方法/路径）。 */
+
+/**
+ * 人机验证挑战：公开端点，返回供 widget 求解的一次性挑战。
+ * 生成有成本，按来源限流，避免被当作免费算力池刷。
+ */
+export async function challengeController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    await enforceRateLimit('altcha_challenge', subjectHashOf(req))
+    const challenge = await newChallenge()
+    sendData(res, { challenge })
+  } catch (error) {
+    next(error)
+  }
+}
 
 function parseRegisterBody(body: Record<string, unknown>) {
   return {
