@@ -7,6 +7,13 @@
 ![源代码许可](https://img.shields.io/badge/code-AGPL--3.0--or--later-blue)
 ![文档许可](https://img.shields.io/badge/docs-CC%20BY--NC--SA%204.0-orange)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D22.12%20%3C23-339933)
+[![verify](https://github.com/xiaoyu-hue/starpal/actions/workflows/verify.yml/badge.svg)](https://github.com/xiaoyu-hue/starpal/actions/workflows/verify.yml)
+[![codeql](https://github.com/xiaoyu-hue/starpal/actions/workflows/codeql.yml/badge.svg)](https://github.com/xiaoyu-hue/starpal/actions/workflows/codeql.yml)
+
+![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
 
 | 项目 | 内容 |
 | --- | --- |
