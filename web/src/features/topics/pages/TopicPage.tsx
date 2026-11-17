@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import type { FeedTab } from '../../../types/api'
 import { EmptyState, ErrorState } from '../../../components/feedback/States'
 import { mergeFeedPages } from '../../../lib/pagination'
+import { feedRole } from '../../../lib/feed-a11y'
 import {
   FeedSkeleton,
   FeedTabs,
@@ -68,7 +69,10 @@ export function TopicPage() {
         <FeedTabs value={tab} onChange={setTab} />
       </div>
 
-      <div role="feed" aria-busy={query.isPending || undefined}>
+      <div
+        role={feedRole(query.isPending, query.isError, items.length)}
+        aria-busy={query.isPending || undefined}
+      >
         <FeedView
           items={items}
           isPending={query.isPending}

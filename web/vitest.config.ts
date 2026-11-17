@@ -46,6 +46,7 @@ export default defineConfig({
         'src/features/auth/AuthForm.tsx',
         'src/components/feedback/States.tsx',
         'src/features/admin/AdminUsersPage.tsx',
+        'src/features/feed/components/FeedTabs.tsx',
       ],
       thresholds: {
         lines: 95,

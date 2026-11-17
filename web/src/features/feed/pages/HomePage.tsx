@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import type { FeedTab } from '../../../types/api'
 import { EmptyState } from '../../../components/feedback/States'
 import { mergeFeedPages } from '../../../lib/pagination'
+import { feedRole } from '../../../lib/feed-a11y'
 import { useScrollRestore } from '../../../hooks/useScrollRestore'
 import { FeedTabs } from '../components/FeedTabs'
 import { FeedSkeleton } from '../components/FeedSkeleton'
@@ -68,7 +69,11 @@ export function HomePage() {
         </p>
       ) : null}
 
-      <div role="feed" aria-busy={query.isPending || undefined} onKeyDown={handleKeyDown}>
+      <div
+        role={feedRole(query.isPending, query.isError, items.length)}
+        aria-busy={query.isPending || undefined}
+        onKeyDown={handleKeyDown}
+      >
         <FeedView
           items={items}
           isPending={query.isPending}

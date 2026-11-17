@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import * as TabsPrimitive from '@radix-ui/react-tabs'
 import type { FeedTab } from '../../../types/api'
 
 const TABS: { value: FeedTab; label: string }[] = [
@@ -13,24 +12,33 @@ type FeedTabsProps = {
   onChange: (tab: FeedTab) => void
 }
 
-/** 三个 Tab：方向键与 Home/End 由 Radix 提供，切换改变查询键。 */
+/**
+ * 信息流排序切换。
+ *
+ * 这里不是「切换内容面板」：三个选项改变的是同一个信息流的查询条件，
+ * 内容由页面统一渲染。原先借 Radix Tabs 的 Trigger 做样式，会生成指向
+ * 不存在的 Content 的 aria-controls（axe: aria-valid-attr-value, critical）。
+ * 改用按钮组 + aria-pressed，语义与行为一致：选中态对辅助技术可读，
+ * Tab / Shift+Tab / Enter / Space 都是按钮的原生键盘行为，不另造交互模型。
+ */
 export function FeedTabs({ value, onChange }: FeedTabsProps) {
   return (
-    <TabsPrimitive.Root value={value} onValueChange={(next) => onChange(next as FeedTab)}>
-      <TabsPrimitive.List
-        aria-label="信息流排序"
-        className="inline-flex gap-1 rounded-md border border-line bg-subtle p-1"
-      >
-        {TABS.map((tab) => (
-          <TabsPrimitive.Trigger
-            key={tab.value}
-            value={tab.value}
-            className="sp-transition rounded-sm px-4 py-1.5 text-sm text-muted data-[state=active]:bg-surface data-[state=active]:text-ink data-[state=active]:shadow-sm"
-          >
-            {tab.label}
-          </TabsPrimitive.Trigger>
-        ))}
-      </TabsPrimitive.List>
-    </TabsPrimitive.Root>
+    <div
+      role="group"
+      aria-label="信息流排序"
+      className="inline-flex gap-1 rounded-md border border-line bg-subtle p-1"
+    >
+      {TABS.map((tab) => (
+        <button
+          key={tab.value}
+          type="button"
+          aria-pressed={value === tab.value}
+          onClick={() => onChange(tab.value)}
+          className="sp-transition rounded-sm px-4 py-1.5 text-sm text-muted aria-pressed:bg-surface aria-pressed:text-ink aria-pressed:shadow-sm"
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
   )
 }

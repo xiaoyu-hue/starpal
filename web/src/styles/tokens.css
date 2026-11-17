@@ -13,7 +13,9 @@
   /* 文本：高对比近黑 */
   --sp-text: #191a20;
   --sp-text-muted: #5b5d68;
-  --sp-text-subtle: #8a8c97;
+  /* M7-S2-T5：原 #8a8c97 在最差浅背景（--sp-bg-subtle）上仅 2.96:1，
+     连 AA 的 3:1 大字门槛都不到。取 #6b6d78 是最暗背景上仍达 4.55:1 的最小值。 */
+  --sp-text-subtle: #6b6d78;
 
   /* 品牌：克制的星蓝紫 */
   --sp-accent: #5b57d6;
@@ -115,7 +117,9 @@
 
   --sp-text: #f1f2f7;
   --sp-text-muted: #a9afc1;
-  --sp-text-subtle: #7b8298;
+  /* M7-S2-T5：原 #7b8298 在最亮深色表面（--sp-surface-raised）上仅 3.84:1。
+     取 #949bb0 可达 5.3:1；比 muted 略暗，保留文字层级。 */
+  --sp-text-subtle: #949bb0;
 
   --sp-accent: #918df2;
   --sp-accent-hover: #aaa6f7;

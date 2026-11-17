@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/feedback/States'
 import { useScrollRestore } from '../../hooks/useScrollRestore'
 import { mergeFeedPages } from '../../lib/pagination'
+import { feedRole } from '../../lib/feed-a11y'
 import { FeedSkeleton, FeedView, useFeedSentinel } from '../feed'
 import { useLikesQuery } from './likes.queries'
 
@@ -26,7 +27,10 @@ export function LikesPage() {
         <p className="mt-1 text-sm text-muted">点过赞的帖子，只有你自己能看到。</p>
       </div>
 
-      <div role="feed" aria-busy={query.isPending || undefined}>
+      <div
+        role={feedRole(query.isPending, query.isError, items.length)}
+        aria-busy={query.isPending || undefined}
+      >
         <FeedView
           items={items}
           isPending={query.isPending}

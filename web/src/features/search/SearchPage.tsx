@@ -6,6 +6,7 @@ import { Search } from 'lucide-react'
 import { buttonClass } from '../../components/ui/Button'
 import { cn } from '../../lib/cn'
 import { mergeFeedPages } from '../../lib/pagination'
+import { feedRole } from '../../lib/feed-a11y'
 import { FeedSkeleton, FeedView, useFeedSentinel } from '../feed'
 import type { SearchType } from './search.api'
 import { useSearchQuery } from './search.queries'
@@ -106,7 +107,10 @@ export function SearchPage() {
           <p className="text-sm text-muted">输入关键词，搜索帖子标题、正文或话题名称。</p>
         </div>
       ) : (
-        <div role="feed" aria-busy={query.isPending || undefined}>
+        <div
+          role={feedRole(query.isPending, query.isError, items.length)}
+          aria-busy={query.isPending || undefined}
+        >
           <FeedView
             items={items}
             isPending={query.isPending}
