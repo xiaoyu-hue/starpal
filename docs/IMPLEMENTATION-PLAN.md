@@ -1260,6 +1260,18 @@ flowchart LR
 | 合规 | 31 种图案许可分 CC0 / CC BY 4.0 / 免费商用三档，`/avatar-credits` 逐条列作者 + 许可 + 来源（CC BY 强制署名）；`THIRD-PARTY-NOTICES.md` 同步登记并实测更新传递依赖分布（此前分布表少记 MIT-0 / LGPL / BlueOak 等旧依赖许可，一并按 lock 实测值更正） |
 | 未完成边界 | 这是确定性图案生成，不是真实照片上传；真浏览器（Chromium）点选并渲染头像的巡检本轮未做，证据为构建 + 真 HTTP 生成测试 + 组件逻辑测试；已随 `v1.7.0` 发版 |
 
+#### `VR-NAV-01` · 移动抽屉重复「私信」修复（通过）
+
+| 项 | 内容 |
+| --- | --- |
+| 需求来源 | 作者真机截图发现移动抽屉里「私信」出现两次，圈出后要求按最优标准修复 |
+| 根因 | `MobileMenu.tsx` 已用 `DESKTOP_KEYS.map` 全量渲染 10 个目的地（含 `messages`），末尾又手写死一个指向 `/messages` 的 `Link`——早年单独补的入口忘了在改成数据驱动时删掉。桌面端无此问题（只走 `DESKTOP_KEYS`） |
+| 改动范围 | 删除该硬编码 `Link`，抽屉导航重新只由 `nav-items.ts` 的 `DESTINATIONS` / `DESKTOP_KEYS` 单一数据源驱动；无生产逻辑/契约变化，纯界面去重 |
+| 命令与真实输出 | 新增 `web/tests/app/shell/MobileMenu.test.tsx`（4 项）：10 个目的地与 7 个说明页入口各恰好一次、私信唯一且指向 `/messages`、点击两类链接均回调 `onOpenChange(false)`。**变异验证**：临时把重复链接注入回去，前两条断言如期失败（私信长度 2），还原后全绿——证明测试非摆设 |
+| 覆盖率处理 | 把 `src/app/shell/MobileMenu.tsx` 纳入 `vitest.config.ts` 覆盖率白名单（单个已测文件，非整目录）；第一版仅 71.42%（未覆盖点击回调与说明页内层 Link），补第 4 项交互测试后升到 100%。前端整体覆盖率 95.75% → 96.52%，阈值仍 95，未调低门槛凑数；前端测试 98 → 102 |
+| 验证 | `npm run verify` 全绿（EXIT=0）：typecheck（含 `tsconfig.test.json`）/ build / check:size / lint（硬规则 0 违规）/ scan:secrets / test:coverage；后端 317 项、前端 102 项 fail 0 |
+| 未完成边界 | 纯去重修复，未改导航结构或任何目的地路径；真机视觉巡检本轮未重做，证据为组件测试 + 变异验证 + 构建通过 |
+
 ## 10. 收尾检查表
 
 | 检查项 | 判定 | 记录编号 |

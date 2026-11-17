@@ -49,6 +49,7 @@ export default defineConfig({
         'src/components/feedback/States.tsx',
         'src/features/admin/AdminUsersPage.tsx',
         'src/features/feed/components/FeedTabs.tsx',
+        'src/app/shell/MobileMenu.tsx',
       ],
       thresholds: {
         lines: 95,

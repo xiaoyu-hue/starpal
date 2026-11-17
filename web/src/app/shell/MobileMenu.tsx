@@ -47,13 +47,6 @@ export function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
                 </Link>
               )
             })}
-            <Link
-              to="/messages"
-              onClick={() => onOpenChange(false)}
-              className={buttonClass('ghost', 'md', '!justify-start')}
-            >
-              <DESTINATIONS.messages.icon size={17} /> 私信
-            </Link>
           </nav>
 
           {/* 说明页入口：移动端此前完全没有入口，公告更是只存在于桌面右栏。 */}
