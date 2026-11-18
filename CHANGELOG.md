@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### 待决 / 基线更正
+
+- **`npm audit` 基线数据更正：14 个 high（非本次引入，待拍板）**。审查当天记录的"0 漏洞"有误——本轮五次修复未改动任何依赖（git 确认 package.json / lock 最近改动停在发版提交），复测为 14 个 high，以复测为准，原管道命令为何返回 0 未能确定。全部位于前端构建/测试工具链（vite、vitest、@vitest/coverage-v8、@vitejs/plugin-react、tailwindcss 及传递依赖 picomatch/micromatch/fdir/tinyglobby 等），生产运行时依赖零命中、不进入已部署产物。修复需主版本破坏性升级（tailwind 3→4 / vitest 5→3 / vite 8→6），属技术选型 + 先问类决策，**未擅自处理**；详见 `docs/SELF-AUDIT-2026-11-17.md` 的"基线更正"段。
+
 ### 文档
 
 - **补全致谢与依赖说明**：README「致谢与依赖」与站点「关于」页此前漏列三批关键依赖，本轮补齐——头像与人机验证（DiceBear 31 种风格、ALTCHA 自托管工作量证明）、前端测试栈（Vitest / Testing Library / jsdom）。两处均按既有边界**不写精确版本**，完整逐包清单仍以 `THIRD-PARTY-NOTICES.md` 为准，并在其中补登 6 个前端测试依赖（均 MIT）。README 特别致谢 DiceBear 与 ALTCHA：前者让头像站内生成、不把访客 IP 暴露给第三方，后者不采集个人信息、不依赖第三方；关于页致谢补上与《产品声明》一致的 AI 辅助开发披露（代码主要由 AI 编程助手生成、运营者逐项审阅验证决定采用）。纯文档改动，无代码与依赖变更。
