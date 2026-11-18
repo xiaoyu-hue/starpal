@@ -370,7 +370,7 @@ npm run verify
 - 只采集用户名与口令，**不采集手机号、邮箱等联系方式**；因此无法提供「忘记密码邮件找回」——改密仅支持登录后自助修改。
 - 五份协议与隐私说明如实披露：「公开内容意味着什么」「我们明确不做的几件事」、未实现能力不写成已实现。
 
-完整安全设计见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) §9，面向用户的说明见 [`server/src/config/docs/privacy.doc.ts`](./server/src/config/docs/privacy.doc.ts)。
+完整安全设计见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) §9；威胁模型见内部详版 [`docs/THREAT-MODEL.md`](./docs/THREAT-MODEL.md)（STRIDE 结构化分析 + 源码级证据）与面向社区的脱敏版 [`docs/THREAT-MODEL-PUBLIC.md`](./docs/THREAT-MODEL-PUBLIC.md)；面向用户的说明见 [`server/src/config/docs/privacy.doc.ts`](./server/src/config/docs/privacy.doc.ts)。
 
 > 本项目未经第三方安全审计，不建议用于处理敏感信息。发现安全隐患请通过[反馈与联系](#反馈与联系)告知，勿公开利用细节。
 
@@ -385,6 +385,8 @@ npm run verify
 | [`docs/IMPLEMENTATION-PLAN.md`](./docs/IMPLEMENTATION-PLAN.md) | 里程碑拆解、验证记录（`VR-Mx-xx`）、完成判据 |
 | [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) | 环境变量、迁移、启动、备份与故障排查 |
 | [`docs/DOC_SYNC.md`](./docs/DOC_SYNC.md) | 文档与版本同步规范（唯一真源 + 发布前检查清单） |
+| [`docs/THREAT-MODEL.md`](./docs/THREAT-MODEL.md) | 威胁模型内部详版（STRIDE 六分类、信任边界、数据流、残余风险，含源码证据） |
+| [`docs/THREAT-MODEL-PUBLIC.md`](./docs/THREAT-MODEL-PUBLIC.md) | 威胁模型脱敏对外版（通俗说明防护设计与已知边界，可对外展示） |
 | [`AGENTS.md`](./AGENTS.md) | 给 AI Agent 的项目级协作规则 |
 | [`CHANGELOG.md`](./CHANGELOG.md) | 版本与变更登记 |
 | [`TRADEMARK.md`](./TRADEMARK.md) | 名称 / Logo / 图标的商标保留政策 |
