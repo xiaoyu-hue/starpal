@@ -53,6 +53,8 @@ export function NotificationsPage() {
   const [cursor, setCursor] = useState<Cursor>(null)
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [marking, setMarking] = useState(false)
+  const [markError, setMarkError] = useState('')
 
   useEffect(() => {
     if (data) {
@@ -79,18 +81,37 @@ export function NotificationsPage() {
   }
 
   async function markAll() {
-    await markAllRead()
-    setItems((prev) => prev.map((item) => ({ ...item, isRead: true })))
-    qc.invalidateQueries({ queryKey: notificationKeys.unread })
+    if (marking) return
+    setMarking(true)
+    setMarkError('')
+    try {
+      await markAllRead()
+      setItems((prev) => prev.map((item) => ({ ...item, isRead: true })))
+      qc.invalidateQueries({ queryKey: notificationKeys.unread })
+    } catch {
+      setMarkError('操作失败，请重试')
+    } finally {
+      setMarking(false)
+    }
   }
 
   return (
     <StaticPage title="通知">
       {hasUnread && (
-        <div className="flex justify-end">
-          <button type="button" onClick={() => void markAll()} className={buttonClass('ghost', 'sm')}>
-            全部标为已读
+        <div className="flex flex-col items-end gap-2">
+          <button
+            type="button"
+            onClick={() => void markAll()}
+            disabled={marking}
+            className={buttonClass('ghost', 'sm')}
+          >
+            {marking ? '处理中…' : '全部标为已读'}
           </button>
+          {markError && (
+            <p className="text-xs text-[var(--sp-danger)]" role="alert">
+              {markError}
+            </p>
+          )}
         </div>
       )}
       {isLoading && <StatusLine text="加载中…" />}

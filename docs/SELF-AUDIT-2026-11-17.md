@@ -18,11 +18,15 @@
 | 后端覆盖率 | 94.17% lines |
 | `npm audit` | 0 漏洞（high / critical 均 0） |
 | 源码规模 | server/src 199 文件、web/src 190 文件；测试后端 36 / 前端 15 文件 |
-| 迁移 | 001–024 连续，无改写历史迁移 |
+| 迁移 | 审查时 001–024 连续；修复批次3 新增 `025_status_announcement_acceptance`（无结构变化），现到 025，未改写历史迁移 |
 
 **一句话结论**：工程质量整体高于平均水平，认证、授权、注入防护、上传、ALTCHA 等核心安全面做得扎实；
-但发现 **1 个高危真漏洞（限流可绕过）**、**2 个高危文档与事实相反**、以及若干中低问题。
-建议按下面「修复优先级」分批处理。**本次未修改任何代码**。
+审查发现 **1 个高危真漏洞（限流可绕过）**、**2 个高危文档与事实相反**、以及若干中低问题。
+
+> **修复状态（2026-11-18）：全部 16 项发现已分 5 批修复完毕，逐批 `npm run verify` 全绿、逐批本地提交。**
+> H1/M1/M2（批次1）、H2/H3（批次2）、M3/M4/M5（批次3）、M6/M7/M8（批次4）、L1–L5（批次5）。
+> 关键回归均做了变异验证；后端测试 317→328、前端 102→105；新增迁移 025 已在真库验证执行效果。
+> 各发现标题后的 ✅ 标记指向对应批次。下文保留原始发现描述与修复建议作为记录。
 
 ---
 
@@ -145,16 +149,16 @@
 
 ### 🟡 低危 / 配置一致性
 
-- **L1【低·规则缺陷】** `scripts/lint.mjs:122`：颜色硬编码检测有绕过——只要一行里出现任意 `var(--`，
+- **L1【低·规则缺陷】✅ 已修复（批次5）** `scripts/lint.mjs:122`：颜色硬编码检测有绕过——只要一行里出现任意 `var(--`，
   整行就跳过检测，`color: var(--x); border:#fff` 同行会漏检；`colorRe` 带 `/g` 却只 `exec` 一次，
   一行多个颜色只报第一个。当前**无实际命中**，但规则本身有洞。（建议：剔除 `var(...)` 区间后再匹配，用 while 收全部。）
-- **L2【低】** `InviteCodesPage.tsx:124`：生成邀请码的错误提示缺 `role="alert"`。
-- **L3【低】** `NotificationsPage.tsx:81-85,91`："全部标为已读"无 try/catch（失败成未处理 Promise rejection、界面无反应），
+- **L2【低】✅ 已修复（批次4）** `InviteCodesPage.tsx:124`：生成邀请码的错误提示缺 `role="alert"`。
+- **L3【低】✅ 已修复（批次5）** `NotificationsPage.tsx:81-85,91`："全部标为已读"无 try/catch（失败成未处理 Promise rejection、界面无反应），
   按钮无 pending/disabled（网络慢可连点）。建议加 busy 状态 + disabled + try/catch 提示。
-- **L4【低·配置口径冲突】** `web/vitest.config.ts:40` 注释写"门槛取实测值向下留 5 个点"，
+- **L4【低·配置口径冲突】✅ 已修复（批次5）** `web/vitest.config.ts:40` 注释写"门槛取实测值向下留 5 个点"，
   而 `AGENTS.md` 第七节规定"实测值 −1～2 点"。注释口径偏松，可能掩盖门槛虚低。
   建议按 AGENTS.md 改为 −1～2 点并用 `npm run test:coverage` 实测校准。
-- **L5【低·测试盲区】** `security-hardening.test.ts:89-109` 只测了 `post_create` 一种 kind 到 429，
+- **L5【低·测试盲区】✅ 已修复（批次5）** `security-hardening.test.ts:89-109` 只测了 `post_create` 一种 kind 到 429，
   而 `constants.ts:211-218` 还有 comment_create / report_submit / image_upload / altcha_challenge 同样挂了限流。
   建议借鉴 `admin-permissions.test.ts:29-43`"从路由 stack 现取清单"的防漏思路。
 

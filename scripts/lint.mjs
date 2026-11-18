@@ -115,13 +115,15 @@ for (const base of SCAN) {
     // ---- R2 设计令牌字面量（仅 web）----
     if (rel.startsWith('web/src') && !TOKEN_ALLOW.some((re) => re.test(rel))) {
       const lines = text.split('\n')
-      const colorRe = /#([0-9a-fA-F]{3,8})\b|rgba?\(|hsla?\(/g
+      // 每行重新构造匹配：不能复用带 /g 的正则跨行 exec（lastIndex 会串到下一行，漏检）。
+      const colorRe = () => /#([0-9a-fA-F]{3,8})\b|rgba?\(|hsla?\(/g
       lines.forEach((ln, i) => {
         const trimmed = ln.trim()
         if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return
-        if (ln.includes('var(--')) return
-        let mm
-        if ((mm = colorRe.exec(ln))) {
+        // var(--token) 及其 fallback 是令牌用法，不算硬编码；但不能因一行含 var(...) 就整行跳过，
+        // 否则 `color: var(--x); border:#fff` 这种同行混写会漏检。把 var(...) 调用段剔除后再查。
+        const withoutVars = ln.replace(/var\([^)]*\)/g, '')
+        for (const mm of withoutVars.matchAll(colorRe())) {
           errors.push(`${rel}:${i + 1} [R2] 硬编码颜色字面量「${mm[0]}」，应复用令牌（CSS 变量）单一来源`)
         }
       })

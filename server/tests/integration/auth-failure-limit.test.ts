@@ -123,3 +123,57 @@ describe('认证防刷：限流摘要不可被 UA 绕过（H1 回归）', () => 
     assert.equal(blocked, true, '换 UA 后同一 IP 仍应被限流')
   })
 })
+
+/**
+ * 防漏回归（审查 L5）：所有写接口 kind 都必须能被限流中间件拦住。
+ * 此前只有 post_create 一类被真 HTTP 测试覆盖，某个 kind 写错或漏挂不会有任何用例变红。
+ * 这里遍历全部写类 kind，逐一预置满配额并断言中间件 next(error)。
+ */
+describe('写接口限流：所有 kind 均生效', () => {
+  const WRITE_KINDS = [
+    'post_create',
+    'comment_create',
+    'report_submit',
+    'image_upload',
+    'altcha_challenge',
+    'altcha_fail',
+  ] as const
+
+  it('每个写类 kind 达到阈值都被拦（next 收到错误）', async () => {
+    const { writeRateLimit } = await import('../../src/modules/auth/write-rate-limit.js')
+    const mkReq = () =>
+      ({
+        header: (name: string) =>
+          name.toLowerCase() === 'x-forwarded-for' ? IP : undefined,
+        socket: { remoteAddress: undefined },
+      }) as unknown as import('express').Request
+    for (const kind of WRITE_KINDS) {
+      await db.query('DELETE FROM security_events')
+      await seedEvents(kind, HASH, appEnv.rateLimitMax)
+      let blocked = false
+      await writeRateLimit(kind)(mkReq(), {} as never, ((e?: unknown) => {
+        if (e) blocked = true
+      }) as never)
+      assert.equal(blocked, true, `kind=${kind} 达到阈值应被限流`)
+    }
+  })
+
+  it('未达阈值时所有写类 kind 都放行', async () => {
+    const { writeRateLimit } = await import('../../src/modules/auth/write-rate-limit.js')
+    const mkReq = () =>
+      ({
+        header: (name: string) =>
+          name.toLowerCase() === 'x-forwarded-for' ? IP : undefined,
+        socket: { remoteAddress: undefined },
+      }) as unknown as import('express').Request
+    for (const kind of WRITE_KINDS) {
+      await db.query('DELETE FROM security_events')
+      await seedEvents(kind, HASH, appEnv.rateLimitMax - 1)
+      let passed = false
+      await writeRateLimit(kind)(mkReq(), {} as never, ((e?: unknown) => {
+        if (!e) passed = true
+      }) as never)
+      assert.equal(passed, true, `kind=${kind} 未达阈值应放行`)
+    }
+  })
+})
