@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { ABOUT } from '../../src/config/constants.js'
 import { ANNOUNCEMENT_ITEMS } from '../../src/config/docs/announcements.doc.js'
+import { PRODUCT_SECTIONS } from '../../src/config/docs/product.doc.js'
+import { PRODUCT_SCOPE_SECTIONS } from '../../src/config/docs/product-scope.doc.js'
 
 /**
  * 关于页正文的合规与一致性不变量。
@@ -159,5 +161,30 @@ describe('关于页自述与公告种子口径一致', () => {
       'utf8',
     )
     assert.ok(prd.includes('已知范围偏差'), 'PRD 缺少 FR-AUX-01 的范围偏差记录')
+  })
+})
+
+/**
+ * 协议文档能力清单与事实对齐（审查 H2 / H3 回归）。
+ * 产品声明此前把「一人一码」写成「统一邀请码」，把已交付的治理后台与数据导出写成「不能」，
+ * 属面向用户的协议文档说谎。这里把当前事实钉在测试里，任何一次回退都会变红。
+ */
+describe('产品声明与已交付事实对齐', () => {
+  const product = JSON.stringify(PRODUCT_SECTIONS)
+  const scope = JSON.stringify(PRODUCT_SCOPE_SECTIONS)
+
+  it('邀请码口径是一人一码，不残留「统一邀请码」', () => {
+    assert.ok(product.includes('一人一码'), '产品声明缺少一人一码口径')
+    assert.ok(!product.includes('统一的邀请码'), '产品声明仍残留「统一的邀请码」的过时说法')
+    assert.ok(!product.includes('不是一人一码'), '产品声明仍有「不是一人一码」的反向表述')
+  })
+
+  it('不把已交付的治理后台与数据导出写成「不能」', () => {
+    assert.ok(scope.includes('治理后台'), '产品声明未写明治理后台已可用')
+    assert.ok(scope.includes('导出'), '产品声明未写明数据导出已可用')
+    const stale = ['只有两项', '没有完整的管理后台', '在数据库里直接操作', '没有一键导出']
+    for (const phrase of stale) {
+      assert.ok(!scope.includes(phrase), `产品声明仍残留过时表述：${phrase}`)
+    }
   })
 })
