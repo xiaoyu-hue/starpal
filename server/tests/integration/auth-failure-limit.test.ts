@@ -125,6 +125,64 @@ describe('认证防刷：限流摘要不可被 UA 绕过（H1 回归）', () => 
 })
 
 /**
+ * 威胁模型 A1：限流来源不得依赖「Vercel 覆盖而非追加 x-forwarded-for」这一平台假设。
+ *
+ * 真实链路上 x-forwarded-for 可能是 `伪造值, …, 真实IP`（追加模式 / 前置代理）。
+ * 只要取最左一段，攻击者每次换一个伪造首值就能拿到全新摘要、绕过全部限流。
+ * 这里把「取最右一跳」钉死：单值、追加、空值、缺失五种形态逐一对齐。
+ */
+function hashForXff(xff: string | undefined, socket?: string): string {
+  return subjectHashOf({
+    header: (name: string) => {
+      const key = name.toLowerCase()
+      if (key === 'x-forwarded-for') return xff
+      return undefined
+    },
+    socket: { remoteAddress: socket },
+  } as unknown as Request)
+}
+
+describe('限流来源：转发链只信最右一跳（威胁模型 A1）', () => {
+  it('单值形态（Vercel 覆盖模式）与既有行为一致', () => {
+    assert.equal(hashForXff(IP), HASH)
+  })
+
+  it('追加模式下伪造首值不改变摘要', () => {
+    assert.equal(hashForXff(`1.2.3.4, ${IP}`), HASH)
+  })
+
+  it('任意长度的伪造前缀都得到同一摘要', () => {
+    assert.equal(hashForXff(`9.9.9.9, 8.8.8.8, 7.7.7.7, ${IP}`), HASH)
+    assert.equal(hashForXff(`  1.2.3.4 ,  ${IP}  `), HASH)
+  })
+
+  it('不同真实来源在追加模式下仍互相隔离', () => {
+    assert.notEqual(hashForXff(`1.2.3.4, ${IP}`), hashForXff(`1.2.3.4, ${IP_OTHER}`))
+  })
+
+  it('空值/纯逗号回退到套接字地址，且与无头时一致', () => {
+    const socketIp = '203.0.113.9'
+    assert.equal(hashForXff('   ', socketIp), hashForXff(undefined, socketIp))
+    assert.equal(hashForXff(',,,', socketIp), hashForXff(undefined, socketIp))
+  })
+
+  it('追加模式下写接口仍命中同一满桶（真实中间件链路）', async () => {
+    await db.query('DELETE FROM security_events')
+    await seedEvents('post_create', HASH, appEnv.rateLimitMax)
+    const { writeRateLimit } = await import('../../src/modules/auth/write-rate-limit.js')
+    const req = {
+      header: (name: string) => (name.toLowerCase() === 'x-forwarded-for' ? `1.2.3.4, ${IP}` : undefined),
+      socket: { remoteAddress: undefined },
+    } as unknown as Request
+    let blocked = false
+    await writeRateLimit('post_create')(req, {} as never, ((e?: unknown) => {
+      if (e) blocked = true
+    }) as never)
+    assert.equal(blocked, true, '伪造 XFF 首值不应解锁已被限流的来源')
+  })
+})
+
+/**
  * 防漏回归（审查 L5）：所有写接口 kind 都必须能被限流中间件拦住。
  * 此前只有 post_create 一类被真 HTTP 测试覆盖，某个 kind 写错或漏挂不会有任何用例变红。
  * 这里遍历全部写类 kind，逐一预置满配额并断言中间件 next(error)。
