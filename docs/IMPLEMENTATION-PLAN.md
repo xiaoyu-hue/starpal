@@ -1272,6 +1272,22 @@ flowchart LR
 | 验证 | `npm run verify` 全绿（EXIT=0）：typecheck（含 `tsconfig.test.json`）/ build / check:size / lint（硬规则 0 违规）/ scan:secrets / test:coverage；后端 317 项、前端 102 项 fail 0 |
 | 未完成边界 | 纯去重修复，未改导航结构或任何目的地路径；真机视觉巡检本轮未重做，证据为组件测试 + 变异验证 + 构建通过 |
 
+### 全维度自我审查修复验证记录（2026-11-18，v1.7.0 之后）
+
+> 起点：报告 `docs/SELF-AUDIT-2026-11-17.md`，六维度只读审查 + 本地质量门实测。分 5 批修复，逐批 `npm run verify` 全绿、逐批本地提交。全部为 bug 修复与文档一致性更正，无破坏性变更、不 bump 版本。
+
+| 批次 | 关键发现 | 改动与验证 |
+| --- | --- | --- |
+| 批次1 | H1 限流可换 UA 绕过（真漏洞）、M1 入口回显堆栈、M2 登录/改密限次零测试 | `subject.ts` 摘要去掉 UA 只用可信 IP（核实 Vercel 覆盖 XFF）；`api/index.ts` 堆栈只写日志；新增 `auth-failure-limit.test.ts`（7 项）+ 变异验证。后端 317→324 |
+| 批次2 | H2/H3 产品声明与事实相反（统一邀请码、已交付能力写成"不能"） | 改 `product.doc.ts` / `product-scope.doc.ts`；`about-doc.test.ts` +2 项钉住事实 + 变异验证。324→326 |
+| 批次3 | M3 迁移数字过期、M4 信息流表述矛盾、M5 状态公告未完成项过期 | README/DOC_SYNC 迁移数改 `025`（以目录为准）；信息流改"无个性化推荐+确定性排序"；新增迁移 `025_status_announcement_acceptance.sql`（条件化子串替换，无结构变化），真库验证替换生效；同步 `about-doc.test.ts` 与 `announcements.test.ts`。326 项 |
+| 批次4 | M6–M8 UI 反馈与无障碍（删除失败提示被遮罩、主题 radio 方向键、撤销邀请码静默吞错） | 见下方 `VR-AUDIT-UI` |
+| 批次5 | L1–L5 低危与规则配置（lint 颜色检测绕过、错误 role=alert、标为已读反馈、覆盖率注释、写接口限流测试） | 见下方 `VR-AUDIT-LOW` |
+
+**迁移 025 说明**：`025_status_announcement_acceptance.sql` 把状态公告正文"尚未开始：验收与性能加固"替换为"验收与性能加固已完成"（M7 已随 v1.6.0 交付），至此公告未完成清单为空。沿用 020/023 的条件化子串替换范式——只替换仍是原文的那段，运营者后台编辑不被覆盖；无表结构变化、不改历史迁移。真库验证：跑完后 body 不含旧文案、含新文案。`about-doc.test.ts` 种子拼接纳入 025、清空 PENDING；`announcements.test.ts` 的真库断言改为验证新口径。
+
+> 边界：新增迁移是本地文件新增、可逆；线上由 Serverless 冷启动惰性执行。运营库若已被人工编辑过该状态公告，种子改动不影响已运行库实例，需运营者另行核对正文。本轮未做动态渗透测试与真浏览器 axe 实测，"未发现问题"不等于绝对无漏洞。
+
 ## 10. 收尾检查表
 
 | 检查项 | 判定 | 记录编号 |

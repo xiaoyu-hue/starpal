@@ -56,6 +56,7 @@ const STATUS_SEED_SQL = [
   '018_status_summary_no_enumeration.sql',
   '020_status_announcement_level.sql',
   '023_status_announcement_moderation.sql',
+  '025_status_announcement_acceptance.sql',
 ]
   .map((file) =>
     readFileSync(fileURLToPath(new URL(`../../src/db/migrations/${file}`, import.meta.url)), 'utf8'),
@@ -79,11 +80,12 @@ const DELIVERED = [
  *
  * 「经验 / 签到 / 等级」已从这份清单移除：经验与等级于 2026-11-15 交付，
  * 签到经评审取消（与 `FR-ACH-04`「不得实现连续签到」冲突）。
- * 「治理后台与审核日志」于 2026-11-16 随 `v1.5.0` 交付，同样移出清单（迁移 `023`）。
- * 现在只剩 `M7` 的「验收与性能加固」——若它也做完，这份清单应当为空，
- * 而不是再找一个新缺口来填。
+ * 「治理后台与审核日志」于 2026-11-16 随 `v1.5.0` 交付，移出清单（迁移 `023`）。
+ * 「验收与性能加固」于 v1.6.0 随 `M7` 全部交付，移出清单（迁移 `025`）。
+ * 现在清单为空——这是应有的状态：全部能力已交付时不应再找一个新缺口来填，
+ * 也不该把已交付项留在未完成里。日后若真有新缺口，按实际补入并重跑本测试。
  */
-const PENDING = ['验收与性能加固'] as const
+const PENDING: readonly string[] = []
 
 describe('关于页自述与公告种子口径一致', () => {
   const intro = ABOUT.intro.join('')
@@ -100,6 +102,16 @@ describe('关于页自述与公告种子口径一致', () => {
       assert.ok(intro.includes(gap), `关于页自述缺少未完成项：${gap}`)
       assert.ok(STATUS_SEED_SQL.includes(gap), `公告种子缺少未完成项：${gap}`)
     }
+    // M7 收尾后未完成清单应为空：迁移 025 必须把「验收与性能加固」替换成已完成口径。
+    // 不能对 STATUS_SEED_SQL 整体做「不含尚未开始」判断——迁移文件里本就保存着被替换的旧文案。
+    const fix025 = readFileSync(
+      fileURLToPath(new URL('../../src/db/migrations/025_status_announcement_acceptance.sql', import.meta.url)),
+      'utf8',
+    )
+    assert.ok(
+      fix025.includes('验收与性能加固已完成'),
+      '迁移 025 未把验收与性能加固改成已完成口径',
+    )
     // 关于页会「引用」这句「不用即将上线搪塞」来说明态度，所以不能直接禁词；
     // 换成同义的承诺式表述做判据：出现「敬请期待」就是拿话术顶替实际情况。
     assert.ok(!intro.includes('敬请期待'), '关于页用「敬请期待」搪塞缺口')
