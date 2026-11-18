@@ -47,6 +47,7 @@ export function InviteCodesPage() {
   const [newCodes, setNewCodes] = useState<string[]>([])
   const [genState, setGenState] = useState<'idle' | 'saving' | 'error'>('idle')
   const [genMsg, setGenMsg] = useState('')
+  const [revokeError, setRevokeError] = useState('')
 
   async function generate() {
     setGenState('saving')
@@ -63,11 +64,13 @@ export function InviteCodesPage() {
   }
 
   async function revoke(id: number) {
+    setRevokeError('')
     try {
       await revokeInviteCode(id)
       qc.invalidateQueries({ queryKey: INVITE_LIST_KEY })
-    } catch {
-      // 列表会在 invalidate 后刷新；撤销失败（如已被用）由下次的列表状态体现。
+    } catch (error) {
+      // 不能静默吞错：撤销失败时管理员必须看到原因，否则会误以为已撤销成功。
+      setRevokeError(error instanceof ApiError ? error.message : '撤销失败，请稍后重试')
     }
   }
 
@@ -121,11 +124,20 @@ export function InviteCodesPage() {
             </ul>
           </div>
         )}
-        {genState === 'error' && <p className="text-xs text-[var(--sp-danger)]">{genMsg}</p>}
+        {genState === 'error' && (
+          <p className="text-xs text-[var(--sp-danger)]" role="alert">
+            {genMsg}
+          </p>
+        )}
       </Card>
 
       <Card className="space-y-3 p-5">
         <h2 className="text-base font-semibold text-ink">全部邀请码</h2>
+        {revokeError && (
+          <p className="text-xs text-[var(--sp-danger)]" role="alert">
+            {revokeError}
+          </p>
+        )}
         {isLoading && <StatusLine text="加载中…" />}
         {isError && <StatusLine text="加载失败，请刷新重试。" tone="danger" />}
         {data && data.items.length === 0 && (

@@ -34,6 +34,9 @@ export function CommentSection({ postId, commentCount }: Props) {
   const { create, remove } = useCommentMutation(postId)
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
+  // 删除错误单独存，渲染进对应评论的确认弹窗内（Dialog.Content 里），
+  // 否则和发送错误共用一个状态、提示落在表单旁且被删除弹窗的遮罩盖住。
+  const [removeError, setRemoveError] = useState<{ id: number; message: string } | null>(null)
 
   const items = query.data?.pages.flatMap((page) => page.items) ?? []
   const length = countChars(text)
@@ -125,10 +128,12 @@ export function CommentSection({ postId, commentCount }: Props) {
                 key={comment.id}
                 comment={comment}
                 removing={remove.isPending && remove.variables === comment.id}
+                removeError={removeError?.id === comment.id ? removeError.message : null}
                 onRemove={(id) =>
                   remove.mutate(id, {
+                    onSuccess: () => setRemoveError(null),
                     onError: (cause) =>
-                      setError(messageOf(cause, '删除失败，请稍后重试。')),
+                      setRemoveError({ id, message: messageOf(cause, '删除失败，请稍后重试。') }),
                   })
                 }
               />

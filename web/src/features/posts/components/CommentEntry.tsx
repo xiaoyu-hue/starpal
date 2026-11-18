@@ -15,6 +15,8 @@ function formatTime(iso: string): string {
 type Props = {
   comment: CommentItem
   removing: boolean
+  /** 该评论删除失败的错误，渲染进确认弹窗内（在遮罩之上），失败后用户能看到原因。 */
+  removeError: string | null
   onRemove: (id: number) => void
 }
 
@@ -25,7 +27,7 @@ type Props = {
  * 富文本会引入 XSS 面，而评论只需要换行。
  * `removed` 只有管理员能拿到，用灰底与标签区分，避免误以为没人处理。
  */
-export function CommentEntry({ comment, removing, onRemove }: Props) {
+export function CommentEntry({ comment, removing, removeError, onRemove }: Props) {
   const removed = comment.status === 'removed'
 
   return (
@@ -85,13 +87,21 @@ export function CommentEntry({ comment, removing, onRemove }: Props) {
               </Button>
             }
           >
-            <Button
-              variant="danger"
-              loading={removing}
-              onClick={() => onRemove(comment.id)}
-            >
-              确认删除
-            </Button>
+            <div className="space-y-3">
+              <Button
+                variant="danger"
+                loading={removing}
+                onClick={() => onRemove(comment.id)}
+              >
+                确认删除
+              </Button>
+              {/* 错误提示放在 Dialog.Content 内，避免被全屏遮罩盖住导致用户看不到删除为何失败。 */}
+              {removeError ? (
+                <p className="text-xs text-[var(--sp-danger)]" role="alert">
+                  {removeError}
+                </p>
+              ) : null}
+            </div>
           </Modal>
         )}
       </div>

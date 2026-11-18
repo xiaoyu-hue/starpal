@@ -116,20 +116,26 @@
   测试注释自己都承认"若做完清单应为空"。
 - **修复建议**：清空该项并同步种子与测试；运营库里已编辑过的公告需另行核对（本地种子改了不影响已运行库）。
 
-#### M6【中·UI 反馈缺失】删除确认失败后错误提示被遮罩盖住
+#### M6【中·UI 反馈缺失】删除确认失败后错误提示被遮罩盖住 ✅ 已修复（批次4）
+
+> 修复（2026-11-18）：PostActions / CommentEntry 的错误提示移进 `Dialog.Content`；评论删除错误单独按 id 存状态。
 - **位置**：`web/src/features/posts/components/PostActions.tsx:40-58`、`CommentEntry.tsx:73-95`
 - **大白话**：点"删除→确认删除"如果失败，错误提示渲染在弹窗**外面**，被全屏遮罩挡住、弹窗也不关。
   用户只看到按钮从"删除中"恢复，不知道为什么没删掉，会反复点。
 - **修复建议**：把错误状态渲染进 Modal 的 children（Dialog.Content 内），或 onError 时先关闭弹窗再在主界面提示。
 
-#### M7【中·无障碍声明不符】主题单选组方向键失效
+#### M7【中·无障碍声明不符】主题单选组方向键失效 ✅ 已修复（批次4）
+
+> 修复（2026-11-18）：改用真 `<input type="radio">` + label，方向键原生可用；新增 ThemeSection.test.tsx（3 项）+ 变异验证。
 - **位置**：`web/src/features/profile/SettingsSections.tsx:59-71`
 - **大白话**：三个主题按钮声明了 `role="radiogroup"/"radio"` + `aria-checked`，但用原生 `<button>` 实现。
   读屏用户按左右方向键**不会切换**（这是 radio 模式的标准约定）。项目明确宣称 M7 无障碍达标，
   属于声明与行为不符。
 - **修复建议**：改用真 `<input type="radio">`（参考 `DecisionDialog.tsx:91`），或去掉 radio 语义改用 `aria-pressed` toggle（参考 `FeedTabs.tsx:35`）。
 
-#### M8【中·静默吞错】撤销邀请码失败界面零反馈
+#### M8【中·静默吞错】撤销邀请码失败界面零反馈 ✅ 已修复（批次4）
+
+> 修复（2026-11-18）：revoke 空 catch 改为设错误 + role=alert，生成错误也补 role=alert。
 - **位置**：`web/src/features/invite/InviteCodesPage.tsx:65-72`
 - **大白话**：`revoke()` 的 `catch { // 注释 }` 是空实现，撤销失败（如已被使用）时界面毫无反应，
   管理员误以为撤销成功。这是"不静默吞错"红线的用户可见版本。

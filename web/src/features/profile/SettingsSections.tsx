@@ -56,20 +56,27 @@ export function ThemeSection() {
   return (
     <Card className="space-y-3 p-6">
       <h2 className="text-base font-semibold text-ink">主题</h2>
-      <div className="flex gap-2" role="radiogroup" aria-label="主题选择">
+      {/* 用真 radio + label：原生支持左右方向键切换，读屏软件也能正确识别单选组；
+          此前用 button 模拟 role=radio 却没有方向键行为，与「无障碍达标」声明不符。 */}
+      <fieldset className="flex gap-2 border-0 p-0">
+        <legend className="sr-only">主题选择</legend>
         {options.map((opt) => (
-          <button
+          <label
             key={opt.value}
-            type="button"
-            role="radio"
-            aria-checked={theme === opt.value}
-            onClick={() => setTheme(opt.value)}
             className={buttonClass('secondary', 'sm', theme === opt.value ? 'bg-accent-soft text-accent' : '')}
           >
+            <input
+              type="radio"
+              name="theme"
+              value={opt.value}
+              checked={theme === opt.value}
+              onChange={() => setTheme(opt.value)}
+              className="sr-only"
+            />
             {opt.label}
-          </button>
+          </label>
         ))}
-      </div>
+      </fieldset>
       <p className="text-xs text-faint">选择会保存在本机，刷新后保留。</p>
     </Card>
   )

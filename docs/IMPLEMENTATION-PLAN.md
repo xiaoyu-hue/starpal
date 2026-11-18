@@ -1281,7 +1281,7 @@ flowchart LR
 | 批次1 | H1 限流可换 UA 绕过（真漏洞）、M1 入口回显堆栈、M2 登录/改密限次零测试 | `subject.ts` 摘要去掉 UA 只用可信 IP（核实 Vercel 覆盖 XFF）；`api/index.ts` 堆栈只写日志；新增 `auth-failure-limit.test.ts`（7 项）+ 变异验证。后端 317→324 |
 | 批次2 | H2/H3 产品声明与事实相反（统一邀请码、已交付能力写成"不能"） | 改 `product.doc.ts` / `product-scope.doc.ts`；`about-doc.test.ts` +2 项钉住事实 + 变异验证。324→326 |
 | 批次3 | M3 迁移数字过期、M4 信息流表述矛盾、M5 状态公告未完成项过期 | README/DOC_SYNC 迁移数改 `025`（以目录为准）；信息流改"无个性化推荐+确定性排序"；新增迁移 `025_status_announcement_acceptance.sql`（条件化子串替换，无结构变化），真库验证替换生效；同步 `about-doc.test.ts` 与 `announcements.test.ts`。326 项 |
-| 批次4 | M6–M8 UI 反馈与无障碍（删除失败提示被遮罩、主题 radio 方向键、撤销邀请码静默吞错） | 见下方 `VR-AUDIT-UI` |
+| 批次4 | M6–M8 UI 反馈与无障碍（删除失败提示被遮罩、主题 radio 方向键、撤销邀请码静默吞错） | `VR-AUDIT-UI`：提示移进 `Dialog.Content`、评论删除错误按 id 归位；主题改真 radio + label；撤销空 catch 改错误提示。新增 `ThemeSection.test.tsx`（3 项）+ 变异验证。前端 102→105，326 项全绿 |
 | 批次5 | L1–L5 低危与规则配置（lint 颜色检测绕过、错误 role=alert、标为已读反馈、覆盖率注释、写接口限流测试） | 见下方 `VR-AUDIT-LOW` |
 
 **迁移 025 说明**：`025_status_announcement_acceptance.sql` 把状态公告正文"尚未开始：验收与性能加固"替换为"验收与性能加固已完成"（M7 已随 v1.6.0 交付），至此公告未完成清单为空。沿用 020/023 的条件化子串替换范式——只替换仍是原文的那段，运营者后台编辑不被覆盖；无表结构变化、不改历史迁移。真库验证：跑完后 body 不含旧文案、含新文案。`about-doc.test.ts` 种子拼接纳入 025、清空 PENDING；`announcements.test.ts` 的真库断言改为验证新口径。

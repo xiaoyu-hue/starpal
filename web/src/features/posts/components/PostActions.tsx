@@ -46,16 +46,18 @@ export function PostActions({ post }: { post: PostDetail }) {
           </Button>
         }
       >
-        <Button variant="danger" loading={mutation.isPending} onClick={handleDelete}>
-          确认删除
-        </Button>
+        <div className="space-y-3">
+          <Button variant="danger" loading={mutation.isPending} onClick={handleDelete}>
+            确认删除
+          </Button>
+          {/* 错误提示必须渲染在 Dialog.Content 内，否则被 Radix 全屏遮罩盖住，用户看不到删除为何失败。 */}
+          {error ? (
+            <p className="text-xs text-[var(--sp-danger)]" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </div>
       </Modal>
-
-      {error ? (
-        <p className="text-xs text-[var(--sp-danger)]" role="alert">
-          {error}
-        </p>
-      ) : null}
     </div>
   )
 }
