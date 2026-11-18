@@ -47,13 +47,20 @@ export default async function handler(
     const { app } = await load()
     app(req, res)
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.stack || err.message : String(err)
+    // 堆栈/路径/连接串细节只写服务端日志，绝不回传公网（与 errorHandler 口径一致）。
+    // 这是 load() 失败（冷启动迁移、模块加载、DB 不可达）时的最后一道兜底。
+    console.error(
+      JSON.stringify({
+        at: 'serverless-entry',
+        message: err instanceof Error ? err.stack || err.message : String(err),
+      }),
+    )
     if (!res.headersSent) {
       res.statusCode = 500
       res.setHeader('content-type', 'application/json; charset=utf-8')
     }
     if (!res.writableEnded) {
-      res.end(JSON.stringify({ error: 'internal_error', message }))
+      res.end(JSON.stringify({ error: 'internal_error' }))
     }
   }
 }

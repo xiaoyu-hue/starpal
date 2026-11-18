@@ -12,12 +12,19 @@ import { appEnv } from '../../config/env.js'
  * 无密钥则无法从摘要反推 IP；轮换 SESSION_SECRET 会使历史摘要自然失效。
  */
 
-/** 提取来源材料：优先平台注入的转发链首值，其次套接字地址，附加 UA 降碰撞。 */
+/**
+ * 提取客户端 IP 作为限流来源材料。
+ *
+ * Vercel 官方会覆盖 x-forwarded-for 为真实客户端公网 IP，且不转发外部传入的同名头
+ * （明确说明此限制是为防 IP 伪造），因此转发链首值可信；本地开发回退到套接字地址。
+ *
+ * 关键：绝不把 User-Agent 计入摘要。UA 完全由客户端控制，攻击者每发一个请求就换一个
+ * UA 即可得到全新摘要，使所有基于摘要的限流（登录失败限次、注册、ALTCHA 挑战、
+ * 发帖/评论/举报/上传四类写接口）形同虚设。IP 摘要才是不可伪造的来源标识。
+ */
 function sourceMaterial(req: Request): string {
   const forwarded = req.header('x-forwarded-for')
-  const ip = forwarded?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown'
-  const ua = req.header('user-agent') ?? 'unknown'
-  return `${ip}|${ua}`
+  return forwarded?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown'
 }
 
 export function subjectHashOf(req: Request): string {
