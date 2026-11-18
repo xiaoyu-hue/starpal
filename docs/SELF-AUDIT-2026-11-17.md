@@ -16,7 +16,7 @@
 | 后端测试 | 317 / 317 通过，fail 0，耗时约 42s |
 | 前端覆盖率 | 96.52%（阈值地板） |
 | 后端覆盖率 | 94.17% lines |
-| `npm audit` | ⚠️ **更正**：审查时记录为 0；修复后复测为 **14 个 high**（详见下方"基线更正"）。以复测为准 |
+| `npm audit` | ⚠️ **更正**：审查时记录为 0；修复后复测为 **14 个 high**，以复测为准。已完成溯源评估，作者拍板方案 A（维持现状 + 登记），详见下方"根因核实与处置结论" |
 | 源码规模 | server/src 199 文件、web/src 190 文件；测试后端 36 / 前端 15 文件 |
 | 迁移 | 审查时 001–024 连续；修复批次3 新增 `025_status_announcement_acceptance`（无结构变化），现到 025，未改写历史迁移 |
 
@@ -32,8 +32,22 @@
 
 - **事实**：审查当天记录的基线是"`npm audit` 0 漏洞"。修复全部完成后复测为 **14 个 high**。五次修复批次**未改动任何依赖**（`git log -- package.json package-lock.json web/package.json server/package.json` 确认最近改动停在发版提交），故这是**审查基线数据本身的错误**——当时那条 `npm audit --json | node` 管道命令可能拿到了异常返回值被当成 0。以本次复测为准，具体成因未能确定。
 - **影响面（如实缩小）**：14 项**全部在前端构建 / 测试工具链**——直接项为 `@vitejs/plugin-react`、`vitest`、`@vitest/coverage-v8`、`vite`、`tailwindcss`，其余为传递依赖 `picomatch` / `micromatch` / `fdir` / `tinyglobby` / `chokidar` / `readdirp` / `anymatch` / `fast-glob` / `sucrase`。**生产运行时依赖零命中**（`express` / `pg` / `hash-wasm` / `sharp` / `altcha-lib` / `@dicebear/*` 均未涉及）；这些工具不进入已部署产物，且漏洞多为 ReDoS / 路径匹配类，在受信任的本地构建环境里可利用性有限。**不等于可以不管**，只是不构成本次已上线服务的紧急风险。
-- **为何不在本次修复**：修复需主版本破坏性升级（tailwind 3→4、vitest 5→3、vite 8→6），属技术选型 + 不可逆 / 对外决策（🟡先问），超出"按修复清单执行"的授权范围。
-- **建议**：作为独立任务单独评估——先确认各漏洞的 CVE 与可利用条件，再决定是否升级或接受风险并登记例外；升级须过决策三问、逐项跑 `npm run verify` 并核对构建产物。**本项状态：待用户拍板，未处理。**
+- **为何不在本次修复**：修复需主版本破坏性变更（tailwind 3→4 为升级；vitest 5→3、vite 8→6、plugin-react 6→5 实为**降级**），属技术选型 + 不可逆 / 对外决策（🟡先问），超出"按修复清单执行"的授权范围。
+- **早期建议（已被下方结论取代）**：曾计划单独评估各 CVE 与可利用条件后决定是否升级；现已完成该评估，结论见下。
+
+### 根因核实与处置结论（2026-11-18，作者拍板方案 A：维持现状 + 如实登记）
+
+对上述 14 项做了逐条溯源，结论是**不该升级也不该降级，依赖一个都不动**。证据链：
+
+- **唯一根因**：14 项同源，都指向 `picomatch` 的 ReDoS 漏洞 **CVE-2026-112366 / GHSA-fc5q-39xc-vjpf**（2026-10-19 公布、11-17 刚审核更新）。其余 13 项都是"依赖了依赖它的包"的**元漏洞（meta-vulnerability，npm 官方术语）**连锁标记，并非 14 个独立问题。
+- **无补丁可升**：官方公告的 Patched versions 明确为 **None**；上游修复 PR #194 至今未合并，且作者自述"并不修复 #175 的 ReDoS generally"，核心的 `+(*a)` 模式仍有约 53 秒的指数爆炸。全行业最新版 `picomatch@4.0.7` 仍在影响范围（`<=4.0.7`）内——**无处可升**。
+- **audit 的 fix 是陷阱**：`npm audit` 给出的 fixAvailable 几乎全是 major **降级**（vite 8.3.8→6.2.7、vitest 5.1.0→3.1.4、plugin-react 6.3.0→5.2.0；唯一升级项是 tailwind 3.4.19→4.3.5）。这不是真修复，而是"退回到不带该漏洞的旧依赖树"让报告数字归零。项目所装的 vite / vitest / plugin-react 经 `npm view` 核对**均为 registry 最新版本**，照此降级等于把整个构建栈倒退数个大版本。
+- **本项目不可达**：漏洞要求攻击者能向 picomatch 喂食恶意 glob 模式（如 `+(*)`）。本项目 `web/src`、`server/src`、`scripts`、`api` 全目录 grep `picomatch|micromatch|minimatch|glob(` **零命中**——glob 模式全在工具链内部写死，无外部输入入口。所有 picomatch 均由 devDependencies（tailwindcss / vite / vitest）带入，**生产运行时零命中**、不进入已部署产物。
+- **危害面有限**：CVSS 8.7 但 EPSS 仅 **0.335%**（30 天内被利用概率，第 27 百分位）；只影响 Availability（让进程卡住），不影响保密性与完整性。
+
+**处置（方案 A）**：不改任何代码、依赖、版本号；不在 `npm audit` 的 14 high 上做 major 变更；`npm audit` 本就不在 `npm run verify` 质量门内（verify = typecheck / build / check:size / lint / scan:secrets / test:coverage），故不影响构建与发布。本项以"已知风险 + 补偿性登记"结案，登记于此供后续复核。
+
+**复核触发条件（何时需重新评估）**：① 上游发布 picomatch 修复版（>4.0.7）后，评估升入；② 若本项目开始用 picomatch / micromatch 处理任何外部可控的字符串作为 glob 模式，则风险由"不可达"变为"可达"，须立即重新评估。在两者发生前维持现状。**本项状态：已拍板方案 A，结案（非"漏洞已修复"，而是"经评估接受并记录"）。**
 
 ---
 
