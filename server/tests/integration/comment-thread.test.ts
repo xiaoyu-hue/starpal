@@ -190,3 +190,47 @@ describe('评论列表的可见性与分页', () => {
     assert.equal(admin.rows.find((r) => r.body === '居中')!.status, 'removed')
   })
 })
+
+describe('评论可见性与作者停用（SEC-4）', () => {
+  let db: PGlite
+  let executor: Executor
+
+  before(async () => {
+    db = await createMigratedDb()
+    executor = { query: (sql, params) => db.query<Row>(sql, params) }
+    await seedUser(db, 1, 'author')
+    await seedUser(db, 2, 'good')
+    await seedUser(db, 3, 'bad')
+    await seedPost(db, 40, 1)
+    await db.query(
+      "INSERT INTO comments (post_id, author_id, body) VALUES (40, 2, '正常评论'), (40, 3, '停用者评论')",
+    )
+  })
+
+  after(async () => {
+    await db.close()
+  })
+
+  it('作者被停用后其评论对普通读者隐藏，对管理员保留可见', async () => {
+    await db.query("UPDATE users SET status = 'suspended' WHERE username = 'bad'")
+    const normal = await listComments(executor, 40, false, null, 10)
+    assert.deepEqual(
+      normal.rows.map((r) => r.body),
+      ['正常评论'],
+      '停用作者的评论不应出现在普通读者列表',
+    )
+
+    const admin = await listComments(executor, 40, true, null, 10)
+    assert.deepEqual(
+      admin.rows.map((r) => r.body),
+      ['停用者评论', '正常评论'],
+      '管理员应保留可见以复核',
+    )
+  })
+
+  it('停用与恢复是可逆的：恢复后评论重新出现', async () => {
+    await db.query("UPDATE users SET status = 'active' WHERE username = 'bad'")
+    const normal = await listComments(executor, 40, false, null, 10)
+    assert.equal(normal.rows.length, 2, '恢复后两条评论都应可见')
+  })
+})

@@ -25,7 +25,7 @@ export function TopicPicker({ topics, value, onChange, error }: TopicPickerProps
               key={topic.id}
               className={cn(
                 'sp-transition inline-flex cursor-pointer items-center rounded-md px-3.5 py-2 text-sm',
-                'border',
+                'border focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2',
                 checked
                   ? 'border-accent bg-accent-soft font-medium text-accent'
                   : 'border-line bg-surface text-muted hover:border-line-strong hover:text-ink',

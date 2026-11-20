@@ -18,24 +18,34 @@ export function AdminUsersPage() {
   const query = useAdminUsersQuery()
   const statusMutation = useSetUserStatusMutation()
   const [pending, setPending] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const users = query.data?.pages.flatMap((p) => p.items) ?? []
 
-  function toggle(user: AdminUser) {
+  async function toggle(user: AdminUser) {
     if (user.status === 'deleted') return
     const next = user.status === 'suspended' ? 'active' : 'suspended'
     if (next === 'suspended' && !window.confirm(`停用 @${user.username}？其帖子与评论将从前台隐藏，可随时恢复。`)) {
       return
     }
+    setError(null)
     setPending(user.id)
-    statusMutation.mutate(
-      { id: user.id, status: next },
-      { onSettled: () => setPending(null) },
-    )
+    try {
+      await statusMutation.mutateAsync({ id: user.id, status: next })
+    } catch {
+      setError('操作失败，请重试')
+    } finally {
+      setPending(null)
+    }
   }
 
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted">按注册时间倒序。停用会隐藏该成员的内容，不会删除任何数据。</p>
+      {error && (
+        <p className="text-sm text-[var(--sp-danger)]" role="alert">
+          {error}
+        </p>
+      )}
       {query.isPending ? (
         <FeedSkeleton count={3} />
       ) : query.isError ? (

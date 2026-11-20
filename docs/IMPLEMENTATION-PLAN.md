@@ -1097,8 +1097,21 @@ flowchart LR
 - **② P4 通知畸形游标**：`notification.controller.ts` 的 `parseCursor` 入库前校验 `t` 可解析为 ISO 时间、`id` 为正整数字符串，非法即回落第一页；保留裸 `?t=&id=` 前端契约。真实命令 `npx tsx --test tests/integration/notification-cursor.test.ts` → 4/4 通过；变异验证（去掉正则校验）后畸形游标用例变红。
 - **③ D-1 私信刷屏限流**：`messages.routes.ts` 的发送端点挂 `writeRateLimit('message_send', {max, windowSeconds})`；`rate-limit.ts` / `write-rate-limit.ts` 的限额参数改为可选（不传走原默认，向后兼容）；新增 `message_send` kind 与 `MESSAGE_SEND_MAX` / `MESSAGE_SEND_WINDOW_SECONDS`（默认 30 / 60，正整数校验），已同步 `.env.example` 与 `DEPLOYMENT.md` §4。真实命令 `npx tsx --test tests/integration/message-send-limit.test.ts` → 3/3 通过；变异验证（摘掉中间件）后连发用例变红。
 - **④ HMAC 密钥域隔离**：新建 `server/src/shared/derive-key.ts`，`deriveSubkey(info)` 用 HKDF-SHA256 从 `SESSION_SECRET` 派生子密钥；限流来源摘要（`subject.ts`）、ALTCHA 一次性消费键（`altcha.ts`）迁到各自子密钥。两处兼容性取舍：ALTCHA 挑战签名密钥值不变（沿用 `ALTCHA_HKDF_INFO`，已签发挑战仍有效）；邀请码哈希保留裸密钥（长期存储值，改派生会使存量邀请码失效），均就地注明。真实命令 `npx tsx --test tests/unit/derive-key.test.ts` → 5/5 通过。
-- **全量质量门**：`npm run verify` → 退出码 0；后端测试 334 → 354（+20），`# tests 354 / pass 354 / fail 0`；覆盖率 `94.48 / 75.63 / 94.02`（门槛 91/72/87）。
+- **全量质量门**：`npm run verify` → 退出码 0；后端测试 334 → 354（+20），`# tests 354 / pass 354 / fail 0`；覆盖率 `94.48 / 75.63 / 94.02`（门槛 91/72/87）。后经二次自审修复测试结构，当前全量数字见 `VR-SELF-AUDIT-01`（355 项）。
 - **边界与诚实说明**：这是纵深加固的一层，挡不住换 IP 的分布式低速灌水，也不替代邀请码 / 蜜罐 / 人机验证；P1 的管理员例外是治理复核所需，非遗漏。四项均为 HTTP + 真库（PGlite）集成断言，非真浏览器点击；线上（Vercel）回归未单独安排。攻防报告本体不纳入本仓库版本库（作者决定保留本地），结论以 CHANGELOG 条目为准。
+
+##### `VR-SELF-AUDIT-01` · 二次自审 7 项修复验证记录（通过）
+
+- **目标与来源**：对本轮二次全维度只读自审（报告保留本地、不入本仓库）列出的确认问题逐项修复，作者授权"按最优最适配最符合业内专业标准的来"。对报告标注"需产品拍板"的 suspended 用户口径，采用"与帖子口径一致"方案（详见 CHANGELOG 本轮条目）。
+- **① UX-1 管理后台写操作失败反馈**：`AdminUsersPage` / `AdminContentPage` / `AdminTopicsPage` 的写操作统一改 `mutateAsync + try/catch`，失败显示 `role="alert"`。真实命令 `npx vitest run tests/features/admin/AdminUsersPage.test.tsx` → 9/9 通过（含新增失败提示用例）；变异验证（去掉 catch 里的 setError）后该用例变红。
+- **② UX-2 通知翻页失败反馈**：`NotificationsPage.loadMore` 加 `moreError` 与 catch。
+- **③ CQ-1 消息长度口径**：`messages.service.ts` 改 `countChars`、前端 `MessageThread.tsx` 改 `[...text].length`，与 schema/数据库码点口径一致。
+- **④ CQ-2 停用用户作收件人**：`messages.repository.ts:164` 补 `status <> 'suspended'`。真实命令 `npx tsx --test tests/integration/messages.test.ts` → 7/7 通过；变异验证（去掉该条件）后新增用例变红。
+- **⑤ SEC-4 评论作者停用口径**：`comment.repository.ts` 的 `listComments` 增 `($2::boolean OR u.status <> 'suspended')`。真实命令 `npx tsx --test tests/integration/comment-thread.test.ts` → 11/11 通过（含新增 2 项）；变异验证（去掉过滤）后隐藏用例变红。
+- **⑥ UX-3/UX-4 无障碍**：TopicPicker 焦点环、StatusLine/ErrorState/CommentSection 的错误 `role="alert"`、未读圆点 `role="img"`。
+- **⑦ TQ-1 测试顺序依赖**：`message-send-limit.test.ts` 三个 it 合并为一个自包含 it，三段断言全保留，`npx tsx --test tests/integration/message-send-limit.test.ts` → 1/1 通过。
+- **全量质量门**：`npm run verify` → 退出码 0，`# tests 355 / pass 355 / fail 0`，覆盖率行 94.48 / 函数 94.02（稳定）、分支 75.63–78.14（随并行测试时序波动，恒高于门槛 72），门槛 91/72/87。测试数从 354 变 355：新增 3 项（comment 2 + message 1）、前端新增 1 项、限流合并减少 2 项，净 +1。
+- **边界与诚实说明**：自审报告与攻防报告均保留本地、不入本仓库（作者决定），结论以 CHANGELOG 与本记录为准；SEC-4 的 `comment_count` 沿用 removed 口径（隐藏不回减），是知情取舍；"无确认漏洞"结论仅在 Vercel 现行配置成立。
 
 **M7 交付物**：自动化测试、加固成果、部署与配置文档、README / CHANGELOG、全量验证记录、交付物清单。
 

@@ -70,10 +70,15 @@ export function AdminTopicsPage() {
     }
   }
 
-  function toggleArchive(topic: AdminTopic) {
+  async function toggleArchive(topic: AdminTopic) {
     const next = !topic.archived
     if (next && !window.confirm(`归档话题「${topic.nameZh}」？其帖子将从前台隐藏，可随时恢复。`)) return
-    archiveMutation.mutate({ id: topic.id, archived: next })
+    setError(null)
+    try {
+      await archiveMutation.mutateAsync({ id: topic.id, archived: next })
+    } catch {
+      setError('归档操作失败，请重试')
+    }
   }
 
   const saving = createMutation.isPending || updateMutation.isPending
@@ -182,7 +187,7 @@ export function AdminTopicsPage() {
                 size="sm"
                 variant={t.archived ? 'primary' : 'secondary'}
                 loading={archiveMutation.isPending}
-                onClick={() => toggleArchive(t)}
+                onClick={() => void toggleArchive(t)}
               >
                 {t.archived ? '恢复' : '归档'}
               </Button>

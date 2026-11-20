@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { encodeCursor } from '../../shared/pagination.js'
 import { DomainError } from '../../shared/errors.js'
+import { countChars } from '../../shared/validation.js'
 import {
   findOrCreateConversation,
   findUserByUsername,
@@ -181,7 +182,9 @@ export async function sendMessageIn(
       { field: 'body', constraint: '非空' },
     ])
   }
-  if (text.length > MESSAGE_BODY_MAX) {
+  // 与 schema（requireString → countChars）及数据库 char_length 同口径：按 Unicode 码点计，
+  // 不用 String.length（emoji 会算 2 码元，导致此处与 schema 判定不一致）。
+  if (countChars(text) > MESSAGE_BODY_MAX) {
     throw new DomainError('VALIDATION_FAILED', '消息内容过长', [
       { field: 'body', constraint: `不超过 ${MESSAGE_BODY_MAX} 字` },
     ])

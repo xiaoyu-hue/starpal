@@ -43,7 +43,7 @@ export function ErrorState({
   onRetry,
 }: ErrorStateProps) {
   return (
-    <div className="sp-card flex flex-col items-center px-6 py-10 text-center">
+    <div className="sp-card flex flex-col items-center px-6 py-10 text-center" role="alert">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--sp-danger-soft)] text-[var(--sp-danger)]">
         <AlertCircle size={22} />
       </div>

@@ -53,6 +53,7 @@ export function NotificationsPage() {
   const [cursor, setCursor] = useState<Cursor>(null)
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [moreError, setMoreError] = useState('')
   const [marking, setMarking] = useState(false)
   const [markError, setMarkError] = useState('')
 
@@ -69,12 +70,15 @@ export function NotificationsPage() {
 
   async function loadMore() {
     if (!cursor || loadingMore) return
+    setMoreError('')
     setLoadingMore(true)
     try {
       const next = await fetchNotifications(cursor)
       setItems((prev) => [...prev, ...next.items])
       setCursor(next.cursor)
       setHasMore(next.hasMore)
+    } catch {
+      setMoreError('加载更多失败，请重试')
     } finally {
       setLoadingMore(false)
     }
@@ -135,7 +139,11 @@ export function NotificationsPage() {
               <time className="text-xs text-faint">{timeAgo(item.createdAt)}</time>
             </div>
             {!item.isRead && (
-              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" aria-label="未读" />
+              <span
+                className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent"
+                role="img"
+                aria-label="未读"
+              />
             )}
           </Card>
         )
@@ -148,14 +156,21 @@ export function NotificationsPage() {
         )
       })}
       {hasMore && (
-        <button
-          type="button"
-          onClick={() => void loadMore()}
-          disabled={loadingMore}
-          className={buttonClass('secondary', 'sm')}
-        >
-          {loadingMore ? '加载中…' : '加载更多'}
-        </button>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            disabled={loadingMore}
+            className={buttonClass('secondary', 'sm')}
+          >
+            {loadingMore ? '加载中…' : '加载更多'}
+          </button>
+          {moreError && (
+            <p className="text-xs text-[var(--sp-danger)]" role="alert">
+              {moreError}
+            </p>
+          )}
+        </div>
       )}
     </StaticPage>
   )

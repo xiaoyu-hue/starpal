@@ -108,7 +108,7 @@ export function CommentSection({ postId, commentCount }: Props) {
           <div className="sp-skeleton h-14 w-full rounded-sm" />
         </div>
       ) : query.isError ? (
-        <p className="mt-4 text-sm text-muted">
+        <p className="mt-4 text-sm text-muted" role="alert">
           评论加载失败，
           <button
             type="button"

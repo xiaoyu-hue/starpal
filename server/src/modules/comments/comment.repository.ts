@@ -78,7 +78,10 @@ export async function findCommentRef(id: number): Promise<CommentRef | null> {
  * 列表：时间倒序（最新在上），键集游标 `(created_at, id)`。
  *
  * `includeRemoved` 仅对管理员为真：被移除的评论对普通读者按不存在处理，
- * 与帖子可见性同一口径，避免借评论状态探测管理动作。
+ * 与帖子可见性同一口径，避免借评论状态探测管理动作。作者被停用（suspended）
+ * 的评论同样对普通读者隐藏、管理员可见——与帖子 VISIBLE 的 `u.status <> 'suspended'`
+ * 对齐，贯彻「停用账号 = 内容下线」。沿用既有口径：`comment_count` 只统计
+ * published、不因隐藏而回减，与 removed 评论一致（隐藏≠删除）。
  */
 export async function listComments(
   executor: Executor,
@@ -91,6 +94,7 @@ export async function listComments(
     `${COMMENT_SELECT}
       WHERE c.post_id = $1
         AND (c.status = 'published' OR ($2::boolean AND c.status = 'removed'))
+        AND ($2::boolean OR u.status <> 'suspended')
         AND ($3::timestamptz IS NULL OR (c.created_at, c.id) < ($3::timestamptz, $4::bigint))
       ORDER BY c.created_at DESC, c.id DESC
       LIMIT $5`,

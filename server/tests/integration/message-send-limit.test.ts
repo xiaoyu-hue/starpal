@@ -55,7 +55,11 @@ after(async () => {
 })
 
 describe('D-1 私信写限流', () => {
-  it(`连发 ${appEnv.messageSendMax + 5} 条：前 ${appEnv.messageSendMax} 条成功，之后 429`, async () => {
+  // 三段断言合并为一个自包含用例：打满限流 → 用同一次运行的状态验证「被拦消息未落库」
+  // 与「换来源不受影响」。这些断言依赖前面制造的满桶状态，拆成独立 it 会形成
+  // 跨用例的隐式顺序依赖（一旦并发或拆分文件即失效），故放在同一 it 内、按语句顺序执行。
+  it(`满桶后拦截、被拦消息不落库、换来源不受影响（${appEnv.messageSendMax} 条 / 窗口）`, async () => {
+    // ① 连发打满：前 max 条成功，之后全部 429。
     const total = appEnv.messageSendMax + 5
     let ok = 0
     let limited = 0
@@ -71,16 +75,14 @@ describe('D-1 私信写限流', () => {
     assert.equal(ok, appEnv.messageSendMax, `前 ${appEnv.messageSendMax} 条应成功，实际 ${ok}`)
     assert.equal(limited, 5, `超出阈值后应全部 429，实际 ${limited}`)
     assert.equal(firstLimitedAt, appEnv.messageSendMax + 1, '第 31 条起应被拦')
-  })
 
-  it('被限流的消息未落库', async () => {
+    // ② 被 429 拦下的消息不应落库。
     const rows = await db.query<{ n: number }>(
       "SELECT count(*)::int AS n FROM messages WHERE body LIKE '刷屏消息%'",
     )
     assert.equal(rows.rows[0]!.n, appEnv.messageSendMax, '落库数应等于成功数')
-  })
 
-  it('不同来源摘要不受影响（新 IP 仍可发送）', async () => {
+    // ③ 换一个来源摘要（新 IP）仍是空桶，可正常发送。
     const res = await app.request(`/api/messages/${conversationId}/messages`, {
       method: 'POST',
       headers: {

@@ -13,7 +13,7 @@ import { AdminUsersPage } from '../../../src/features/admin/AdminUsersPage'
 import type { AdminUser } from '../../../src/types/admin'
 
 const mocks = vi.hoisted(() => ({
-  mutate: vi.fn(),
+  mutateAsync: vi.fn(),
   query: {
     data: undefined as { pages: { items: AdminUser[] }[] } | undefined,
     isPending: false,
@@ -27,7 +27,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../../../src/features/admin/admin.queries', () => ({
   useAdminUsersQuery: () => mocks.query,
-  useSetUserStatusMutation: () => ({ mutate: mocks.mutate }),
+  useSetUserStatusMutation: () => ({ mutateAsync: mocks.mutateAsync }),
 }))
 
 function user(overrides: Partial<AdminUser> = {}): AdminUser {
@@ -47,7 +47,8 @@ function withUsers(items: AdminUser[]) {
 }
 
 beforeEach(() => {
-  mocks.mutate.mockReset()
+  mocks.mutateAsync.mockReset()
+  mocks.mutateAsync.mockResolvedValue(undefined)
   mocks.query = {
     ...mocks.query,
     data: undefined,
@@ -77,7 +78,7 @@ describe('AdminUsersPage', () => {
 
     expect(confirm).toHaveBeenCalledTimes(1)
     expect(confirm.mock.calls[0]?.[0]).toContain('@alice')
-    expect(mocks.mutate).not.toHaveBeenCalled()
+    expect(mocks.mutateAsync).not.toHaveBeenCalled()
   })
 
   it('确认后提交停用，参数只带 id 与目标状态', async () => {
@@ -87,10 +88,7 @@ describe('AdminUsersPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '停用' }))
 
-    expect(mocks.mutate).toHaveBeenCalledWith(
-      { id: 1, status: 'suspended' },
-      expect.objectContaining({ onSettled: expect.any(Function) }),
-    )
+    expect(mocks.mutateAsync).toHaveBeenCalledWith({ id: 1, status: 'suspended' })
   })
 
   it('已停用的成员显示「恢复」，且恢复不需要弹确认', async () => {
@@ -102,10 +100,19 @@ describe('AdminUsersPage', () => {
     await userEvent.click(screen.getByRole('button', { name: '恢复' }))
 
     expect(confirm).not.toHaveBeenCalled()
-    expect(mocks.mutate).toHaveBeenCalledWith(
-      { id: 1, status: 'active' },
-      expect.objectContaining({ onSettled: expect.any(Function) }),
-    )
+    expect(mocks.mutateAsync).toHaveBeenCalledWith({ id: 1, status: 'active' })
+  })
+
+  it('写操作失败时显示可见错误提示（UX-1）', async () => {
+    withUsers([user()])
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    mocks.mutateAsync.mockRejectedValueOnce(new Error('network'))
+    render(<AdminUsersPage />)
+
+    await userEvent.click(screen.getByRole('button', { name: '停用' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('操作失败')
   })
 
   it('已注销成员不提供任何操作按钮（不用「恢复」暗示可复活）', () => {

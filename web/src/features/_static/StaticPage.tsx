@@ -76,8 +76,12 @@ export function Section({ heading, blocks }: DocSection) {
   )
 }
 
-/** 加载 / 错误占位：避免骨架闪烁，用一行说明即可。 */
+/** 加载 / 错误占位：避免骨架闪烁，用一行说明即可。danger 态用 alert 让读屏播报错误。 */
 export function StatusLine({ text, tone = 'muted' }: { text: string; tone?: 'muted' | 'danger' }) {
   const color = tone === 'danger' ? 'text-[var(--sp-danger)]' : 'text-muted'
-  return <p className={`text-sm ${color}`}>{text}</p>
+  return (
+    <p className={`text-sm ${color}`} role={tone === 'danger' ? 'alert' : undefined}>
+      {text}
+    </p>
+  )
 }

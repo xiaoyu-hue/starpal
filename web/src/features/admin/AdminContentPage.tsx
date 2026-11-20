@@ -13,15 +13,23 @@ export function AdminContentPage({ kind }: { kind: 'posts' | 'comments' }) {
   const query = useAdminContentQuery(kind)
   const statusMutation = useSetContentStatusMutation()
   const [pending, setPending] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const items = query.data?.pages.flatMap((p) => p.items) ?? []
 
-  function toggle(item: AdminContent) {
+  async function toggle(item: AdminContent) {
     const next = item.status === 'removed' ? 'published' : 'removed'
     if (next === 'removed' && !window.confirm(`移除这条${isPost ? '帖子' : '评论'}？前台将不再显示，可随时恢复。`)) {
       return
     }
+    setError(null)
     setPending(item.id)
-    statusMutation.mutate({ kind, id: item.id, status: next }, { onSettled: () => setPending(null) })
+    try {
+      await statusMutation.mutateAsync({ kind, id: item.id, status: next })
+    } catch {
+      setError('操作失败，请重试')
+    } finally {
+      setPending(null)
+    }
   }
 
   return (
@@ -29,6 +37,11 @@ export function AdminContentPage({ kind }: { kind: 'posts' | 'comments' }) {
       <p className="text-sm text-muted">
         含已移除内容。移除只是隐藏，不会删除数据{isPost ? '' : '；评论数会同步增减'}。
       </p>
+      {error && (
+        <p className="text-sm text-[var(--sp-danger)]" role="alert">
+          {error}
+        </p>
+      )}
       {query.isPending ? (
         <FeedSkeleton count={3} />
       ) : query.isError ? (

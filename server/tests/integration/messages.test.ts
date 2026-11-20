@@ -58,6 +58,20 @@ test('M5-S1 私信：收件人不存在被拒', async () => {
   await assert.rejects(() => createConversation('1', 'ghost', ex), codeIs('VALIDATION_FAILED'))
 })
 
+test('私信：被停用的用户不能作为收件人（CQ-2）', async () => {
+  const db = await createMigratedDb()
+  await seedUser(db, 1, 'alice')
+  await seedUser(db, 2, 'suspendedBob')
+  await db.query("UPDATE users SET status = 'suspended' WHERE username = 'suspendedBob'")
+  const ex = executorOf(db)
+  await assert.rejects(
+    () => createConversation('1', 'suspendedBob', ex),
+    codeIs('VALIDATION_FAILED'),
+    '停用用户应被视为不存在，不能发起私信',
+  )
+  await db.close()
+})
+
 test('M5-S1 私信：发送、对方列会话可见最近消息、游标分页', async () => {
   const db = await createMigratedDb()
   await seedUser(db, 1, 'alice')

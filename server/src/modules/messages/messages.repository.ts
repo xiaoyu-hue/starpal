@@ -153,7 +153,7 @@ export async function sendMessage(
   return rows[0]!
 }
 
-/** 按用户名查收件人（仅未停用账号）。 */
+/** 按用户名查收件人（仅未删除、未停用账号，与用户公开投影口径一致）。 */
 export async function findUserByUsername(
   username: string,
   executor: Executor = pool,
@@ -161,7 +161,7 @@ export async function findUserByUsername(
   const { rows } = (await executor.query(
     `SELECT id, username, display_name, titles
        FROM users
-      WHERE username = $1 AND deleted_at IS NULL`,
+      WHERE username = $1 AND deleted_at IS NULL AND status <> 'suspended'`,
     [username],
   )) as { rows: UserLookupRow[] }
   return rows[0] ?? null

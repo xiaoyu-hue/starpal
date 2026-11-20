@@ -11,6 +11,9 @@ import { messageOf } from './messages.errors'
 
 const BODY_MAX = 2000
 
+/** 按 Unicode 码点计数，与后端 countChars / 数据库 char_length 同口径；emoji 只算 1。 */
+const countChars = (text: string): number => [...text].length
+
 function formatTime(iso: string): string {
   const date = new Date(iso)
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('zh-CN')
@@ -33,7 +36,7 @@ export function MessageThread({ conversation }: { conversation: ConversationItem
 
   const items = (query.data?.pages ?? []).flatMap((page) => page.items)
   const trimmed = text.trim()
-  const tooLong = text.length > BODY_MAX
+  const tooLong = countChars(text) > BODY_MAX
 
   useEffect(() => {
     // flex-col-reverse 下 scrollTop=0 即最新一条所在位置。
@@ -143,7 +146,7 @@ export function MessageThread({ conversation }: { conversation: ConversationItem
         />
         <div className="mt-2 flex items-center justify-between gap-3">
           <p className={`text-xs ${tooLong ? 'text-[var(--sp-danger)]' : 'text-faint'}`}>
-            {text.length} / {BODY_MAX}
+            {countChars(text)} / {BODY_MAX}
           </p>
           <Button type="submit" size="sm" loading={send.isPending} disabled={trimmed === '' || tooLong}>
             <Send size={14} /> 发送
