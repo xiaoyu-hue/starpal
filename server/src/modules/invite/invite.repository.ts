@@ -32,7 +32,14 @@ function toBase32(bytes: Buffer): string {
   return out
 }
 
-/** 邀请码 → 哈希，注册校验与入库都走这一道，保证比对的是同一派生值。 */
+/**
+ * 邀请码 → 哈希，注册校验与入库都走这一道，保证比对的是同一派生值。
+ *
+ * 这里刻意保留裸 SESSION_SECRET（不做 HKDF 子密钥派生）：邀请码哈希是长期存储值，
+ * 库里已有存量邀请码按此派生入库，改动会使所有未使用的存量邀请码失效——
+ * 影响真实运营数据，不为"派生整齐"而破坏兼容（攻防模拟建议 4 的兼容性取舍）。
+ * 其余无长期存储的 HMAC 用途已迁到 deriveSubkey 域隔离子密钥（见 derive-key.ts）。
+ */
 export function hashInviteCode(plain: string): string {
   return createHmac('sha256', appEnv.sessionSecret).update(plain).digest('hex')
 }

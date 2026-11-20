@@ -213,6 +213,8 @@ export const SECURITY_EVENT_KINDS = [
   'comment_create',
   'report_submit',
   'image_upload',
+  // 私信写限流（D-1）：按来源摘要限制短时间连发，防登录用户刷屏骚扰。
+  'message_send',
   // 人机验证：挑战生成与校验失败各自计数，避免被当免费算力池或无限试探。
   'altcha_challenge',
   'altcha_fail',

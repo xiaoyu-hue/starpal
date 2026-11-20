@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { createHmac, hkdfSync } from 'node:crypto'
+import { createHmac } from 'node:crypto'
 import { createChallenge, verifySolution } from 'altcha-lib'
 import { deriveKey } from 'altcha-lib/algorithms/pbkdf2'
 import {
@@ -8,8 +8,8 @@ import {
   ALTCHA_EXPIRY_SECONDS,
   ALTCHA_HKDF_INFO,
 } from '../../config/altcha-constants.js'
-import { appEnv } from '../../config/env.js'
 import { DomainError } from '../../shared/errors.js'
+import { deriveSubkey, SUBKEY_INFO } from '../../shared/derive-key.js'
 
 /**
  * ALTCHA 人机验证核心（自托管，零外部服务）。
@@ -21,10 +21,9 @@ import { DomainError } from '../../shared/errors.js'
  * 与人会话签名做密钥隔离（轮换 SESSION_SECRET 会同时轮换本密钥，属预期行为）。
  */
 
-/** 从会话密钥派生 ALTCHA 专用 HMAC 密钥；HKDF info 提供域隔离。 */
+/** 从会话密钥派生 ALTCHA 专用 HMAC 密钥；统一走 deriveSubkey，值不变（兼容已签发挑战）。 */
 function hmacSecret(): string {
-  const derived = hkdfSync('sha256', appEnv.sessionSecret, '', ALTCHA_HKDF_INFO, 32)
-  return Buffer.from(derived).toString('hex')
+  return deriveSubkey(ALTCHA_HKDF_INFO)
 }
 
 /**
@@ -77,5 +76,11 @@ export async function verify(payload: string): Promise<{ ok: boolean; hash: stri
   }
 
   // 用载荷原文的不可逆摘要作一次性键，不落原文本身。
-  return { ok: true, hash: createHmac('sha256', appEnv.sessionSecret).update(payload).digest('hex') }
+  // 用独立子密钥（与 ALTCHA 挑战签名、其它用途都不同），域隔离。
+  return {
+    ok: true,
+    hash: createHmac('sha256', deriveSubkey(SUBKEY_INFO.altchaConsumed))
+      .update(payload)
+      .digest('hex'),
+  }
 }

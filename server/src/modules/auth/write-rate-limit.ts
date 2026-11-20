@@ -19,11 +19,14 @@ import { subjectHashOf } from './subject.js'
  * 用法：requireAuth 之后、业务控制器之前挂载；写接口一律 requireAuth，
  * 因此不会把匿名探测计入已登录用户的配额。
  */
-export function writeRateLimit(kind: SecurityEventKind) {
+export function writeRateLimit(
+  kind: SecurityEventKind,
+  limit?: { max: number; windowSeconds: number },
+) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       const subject = subjectHashOf(req)
-      await enforceRateLimit(kind, subject)
+      await enforceRateLimit(kind, subject, limit)
       await recordEvent(kind, subject)
       next()
     } catch (error) {

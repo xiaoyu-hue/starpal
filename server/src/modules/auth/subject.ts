@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createHmac } from 'node:crypto'
+import { deriveSubkey, SUBKEY_INFO } from '../../shared/derive-key.js'
 import type { Request } from 'express'
-import { appEnv } from '../../config/env.js'
 
 /**
  * 来源标识与安全请求判定。
@@ -46,7 +46,8 @@ function sourceMaterial(req: Request): string {
 }
 
 export function subjectHashOf(req: Request): string {
-  return createHmac('sha256', appEnv.sessionSecret)
+  // 用来源专用子密钥，而非裸 SESSION_SECRET：与其它 HMAC 用途做域隔离。
+  return createHmac('sha256', deriveSubkey(SUBKEY_INFO.subject))
     .update(sourceMaterial(req))
     .digest('hex')
 }

@@ -11,10 +11,19 @@ import {
 
 /** 通知控制器：列表 / 未读数 / 全部已读，三者均要求登录（路由已统一挂载 requireAuth）。 */
 
+/**
+ * 解析键集游标。裸 `?t=&id=` 是本项目通知模块的既定契约（前端原样回传上一页 cursor），
+ * 故不能改用 base64 decodeCursor——那会破坏前端。改为在入库前校验：
+ * t 必须是可解析的 ISO 时间、id 必须是正整数字符串；任一非法即视为无游标（回到第一页），
+ * 避免畸形时间串进入 `$2::timestamptz` 触发 500 与错误日志噪声（攻防模拟 P4）。
+ */
 function parseCursor(query: Record<string, unknown>): Cursor {
   const t = typeof query.t === 'string' ? query.t : null
   const id = typeof query.id === 'string' ? query.id : null
-  return t !== null && id !== null ? { t, id } : null
+  if (t === null || id === null) return null
+  if (!Number.isFinite(Date.parse(t))) return null
+  if (!/^\d+$/.test(id) || Number(id) <= 0) return null
+  return { t, id }
 }
 
 function parseLimit(query: Record<string, unknown>): number {

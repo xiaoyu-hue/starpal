@@ -1090,6 +1090,16 @@ flowchart LR
 - **诚实的边界**：这一层是 **HTTP + 真库** 的端到端，不是真实浏览器点击——浏览器交互的覆盖来自第五 / 六批真浏览器巡检与 `VR-M3-10` 等历史记录，本轮不重复。线上（Vercel）真实账号的完整交互回归仍未做，`S1-T3` 采用此方案后不再单独安排浏览器 E2E。
 - **结论**：`S1-T3` 通过。至此 M7 的 **S1（9 项）/ S2（7 项）/ S3（8 项）/ S4（5 项）共 29 项全部有产出与验证记录**。
 
+##### `VR-HARDEN-01` · M7 之后四项纵深安全加固验证记录（通过）
+
+- **目标与来源**：依据本轮授权模拟攻击复现的 4 项残余（详见 CHANGELOG `[Unreleased]` 对应条目），逐项做小范围加固，不引入新依赖、不改版本、不改对外契约。作者拍板依次加固，本记录钉住每项的真实命令、断言与变异结果。
+- **① P1 帖子可见性一致性**：`post.projection.ts` 从 SQL 投影补出 `authorStatus` / `topicDeletedAt` 两个内部字段（`mapRow` 写入记录，但**不进** `toListItem` 对外投影）；`post.service.ts` 的 `authorize` 对"作者被停用或话题已归档"的已发布帖子按 `NOT_FOUND` 处理，管理员例外可见。真实命令 `npx tsx --test tests/integration/post-visibility.test.ts` → 8/8 通过；变异验证（移除 `hidden` 判定）后对应用例变红，确认有牙齿。
+- **② P4 通知畸形游标**：`notification.controller.ts` 的 `parseCursor` 入库前校验 `t` 可解析为 ISO 时间、`id` 为正整数字符串，非法即回落第一页；保留裸 `?t=&id=` 前端契约。真实命令 `npx tsx --test tests/integration/notification-cursor.test.ts` → 4/4 通过；变异验证（去掉正则校验）后畸形游标用例变红。
+- **③ D-1 私信刷屏限流**：`messages.routes.ts` 的发送端点挂 `writeRateLimit('message_send', {max, windowSeconds})`；`rate-limit.ts` / `write-rate-limit.ts` 的限额参数改为可选（不传走原默认，向后兼容）；新增 `message_send` kind 与 `MESSAGE_SEND_MAX` / `MESSAGE_SEND_WINDOW_SECONDS`（默认 30 / 60，正整数校验），已同步 `.env.example` 与 `DEPLOYMENT.md` §4。真实命令 `npx tsx --test tests/integration/message-send-limit.test.ts` → 3/3 通过；变异验证（摘掉中间件）后连发用例变红。
+- **④ HMAC 密钥域隔离**：新建 `server/src/shared/derive-key.ts`，`deriveSubkey(info)` 用 HKDF-SHA256 从 `SESSION_SECRET` 派生子密钥；限流来源摘要（`subject.ts`）、ALTCHA 一次性消费键（`altcha.ts`）迁到各自子密钥。两处兼容性取舍：ALTCHA 挑战签名密钥值不变（沿用 `ALTCHA_HKDF_INFO`，已签发挑战仍有效）；邀请码哈希保留裸密钥（长期存储值，改派生会使存量邀请码失效），均就地注明。真实命令 `npx tsx --test tests/unit/derive-key.test.ts` → 5/5 通过。
+- **全量质量门**：`npm run verify` → 退出码 0；后端测试 334 → 354（+20），`# tests 354 / pass 354 / fail 0`；覆盖率 `94.48 / 75.63 / 94.02`（门槛 91/72/87）。
+- **边界与诚实说明**：这是纵深加固的一层，挡不住换 IP 的分布式低速灌水，也不替代邀请码 / 蜜罐 / 人机验证；P1 的管理员例外是治理复核所需，非遗漏。四项均为 HTTP + 真库（PGlite）集成断言，非真浏览器点击；线上（Vercel）回归未单独安排。攻防报告本体不纳入本仓库版本库（作者决定保留本地），结论以 CHANGELOG 条目为准。
+
 **M7 交付物**：自动化测试、加固成果、部署与配置文档、README / CHANGELOG、全量验证记录、交付物清单。
 
 **M7 完成判据**：`AC-01`—`AC-18` 全部有验证记录且结论为「通过」（未执行项须显式标注并保持里程碑为未完成）；`DoD-01`—`DoD-10` 全部满足；干净环境可按文档完整启动。

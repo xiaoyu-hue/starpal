@@ -78,7 +78,14 @@ function toDetail(record: PostRecord, isAuthor: boolean): PostDetail {
 function authorize(record: PostRecord, viewer: Viewer): { isAuthor: boolean; isAdmin: boolean } {
   const isAuthor = viewer !== null && String(record.authorId) === viewer.id
   const isAdmin = viewer !== null && viewer.role === 'admin'
-  if (record.status === 'published') return { isAuthor, isAdmin }
+  if (record.status === 'published') {
+    // 与信息流 VISIBLE 口径一致：作者被停用或话题被归档的帖子，列表里已不展示，
+    // 详情/评论入口也必须按不存在处理，否则「停用账号 = 内容下线」可被按 ID 直读绕过。
+    // 管理员保留可见（治理需要复核被处理内容）；作者本人不可见（登录已被拦，属纵深）。
+    const hidden = record.authorStatus === 'suspended' || record.topicDeletedAt != null
+    if (hidden && !isAdmin) throw new DomainError('NOT_FOUND', '帖子不存在')
+    return { isAuthor, isAdmin }
+  }
   if (record.status === 'deleted') throw new DomainError('NOT_FOUND', '帖子不存在')
   if (record.status === 'removed') {
     if (!isAdmin) throw new DomainError('NOT_FOUND', '帖子不存在')

@@ -22,9 +22,12 @@ export async function note(kind: SecurityEventKind, subjectHash: string): Promis
 export async function enforceRateLimit(
   kind: SecurityEventKind,
   subjectHash: string,
+  limit?: { max: number; windowSeconds: number },
 ): Promise<void> {
-  const used = await countEvents(kind, subjectHash, appEnv.rateLimitWindowSeconds)
-  if (used >= appEnv.rateLimitMax) {
+  const windowSeconds = limit?.windowSeconds ?? appEnv.rateLimitWindowSeconds
+  const max = limit?.max ?? appEnv.rateLimitMax
+  const used = await countEvents(kind, subjectHash, windowSeconds)
+  if (used >= max) {
     throw new DomainError('RATE_LIMITED', '操作过于频繁，请稍后再试')
   }
 }

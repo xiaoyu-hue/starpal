@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Router } from 'express'
 import { requireAuth } from '../../middleware/require-auth.js'
+import { appEnv } from '../../config/env.js'
+import { writeRateLimit } from '../auth/index.js'
 import {
   createConversationController,
   getConversationController,
@@ -24,4 +26,13 @@ messageRouter.post('/', createConversationController)
 messageRouter.get('/', listConversationsController)
 messageRouter.get('/:id', getConversationController)
 messageRouter.get('/:id/messages', listMessagesController)
-messageRouter.post('/:id/messages', sendMessageController)
+// D-1：私信发送挂独立写限流（30 条 / 60 秒，见 env 默认值）。
+// 只拦短时间刷屏，正常密集聊天配额充足；沿用来源摘要计数，Serverless 多实例一致。
+messageRouter.post(
+  '/:id/messages',
+  writeRateLimit('message_send', {
+    max: appEnv.messageSendMax,
+    windowSeconds: appEnv.messageSendWindowSeconds,
+  }),
+  sendMessageController,
+)

@@ -60,6 +60,8 @@ SESSION_TTL_HOURS=168
 # 注册与防刷（邀请码已改为「一人一码」，由管理员在管理界面逐码生成，不再用环境变量统一码）
 RATE_LIMIT_WINDOW_SECONDS=3600
 RATE_LIMIT_MAX=20
+MESSAGE_SEND_WINDOW_SECONDS=60
+MESSAGE_SEND_MAX=30
 LOGIN_FAIL_MAX=5
 SECURITY_EVENT_RETENTION_DAYS=30
 
@@ -89,6 +91,8 @@ ADMIN_DISPLAY_NAME=<可选，留空则使用用户名>
 | `SESSION_TTL_HOURS` | 否 | `168` | 会话有效期（小时） | 公开 |
 | `RATE_LIMIT_WINDOW_SECONDS` | 否 | `3600` | 速率限制统计窗口（秒） | 公开 |
 | `RATE_LIMIT_MAX` | 否 | `20` | 窗口内同一来源摘要允许的请求数 | 公开 |
+| `MESSAGE_SEND_WINDOW_SECONDS` | 否 | `60` | 私信发送限流窗口（秒） | 公开 |
+| `MESSAGE_SEND_MAX` | 否 | `30` | 私信窗口内同一来源摘要允许发送条数，只拦短时间刷屏 | 公开 |
 | `LOGIN_FAIL_MAX` | 否 | `5` | 登录失败次数上限，超过后临时限制 | 公开 |
 | `SECURITY_EVENT_RETENTION_DAYS` | 否 | `30` | 安全事件与过期会话的保留期（天） | 公开 |
 | `MAX_UPLOAD_BYTES` | 否 | `3145728` | 单文件大小上限（字节，3 MB）。**须低于平台函数请求体上限 4.5 MB**，超出时请求在平台层即被拒绝，应用校验不会执行 | 公开 |

@@ -26,6 +26,9 @@ const DEFAULTS = {
   SESSION_TTL_HOURS: '168',
   RATE_LIMIT_WINDOW_SECONDS: '3600',
   RATE_LIMIT_MAX: '20',
+  // 私信写限流（D-1）：短窗口 + 较宽松阈值，允许正常密集聊天，只拦短时间刷屏。
+  MESSAGE_SEND_WINDOW_SECONDS: '60',
+  MESSAGE_SEND_MAX: '30',
   LOGIN_FAIL_MAX: '5',
   SECURITY_EVENT_RETENTION_DAYS: '30',
   // 图片与请求体上限：与 ARCHITECTURE.md ADR-014 / DEPLOYMENT.md 一致。
@@ -67,6 +70,8 @@ export function validateEnv(): void {
   positiveInt('SESSION_TTL_HOURS')
   positiveInt('RATE_LIMIT_WINDOW_SECONDS')
   positiveInt('RATE_LIMIT_MAX')
+  positiveInt('MESSAGE_SEND_WINDOW_SECONDS')
+  positiveInt('MESSAGE_SEND_MAX')
   positiveInt('LOGIN_FAIL_MAX')
   positiveInt('SECURITY_EVENT_RETENTION_DAYS')
   const upload = positiveInt('MAX_UPLOAD_BYTES')
@@ -90,6 +95,8 @@ function env() {
     sessionTtlHours: positiveInt('SESSION_TTL_HOURS'),
     rateLimitWindowSeconds: positiveInt('RATE_LIMIT_WINDOW_SECONDS'),
     rateLimitMax: positiveInt('RATE_LIMIT_MAX'),
+    messageSendWindowSeconds: positiveInt('MESSAGE_SEND_WINDOW_SECONDS'),
+    messageSendMax: positiveInt('MESSAGE_SEND_MAX'),
     loginFailMax: positiveInt('LOGIN_FAIL_MAX'),
     securityEventRetentionDays: positiveInt('SECURITY_EVENT_RETENTION_DAYS'),
     maxUploadBytes: positiveInt('MAX_UPLOAD_BYTES'),

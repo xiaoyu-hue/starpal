@@ -26,6 +26,7 @@ export const PROJECTION = `
   u.display_name,
   u.status   AS author_status,
   u.titles  AS author_titles,
+  t.deleted_at AS topic_deleted_at,
   up.avatar_url,
   COALESCE((
     SELECT json_agg(
@@ -74,6 +75,8 @@ export type PostRow = QueryResultRow & {
   display_name: string
   author_status: string
   author_titles: string[]
+  /** 话题归档时间：可见性判定用（归档话题下的帖子按 VISIBLE 口径不可见）。 */
+  topic_deleted_at: Date | null
   avatar_url: string | null
   /** 图片引用（键 + 尺寸 + 主键），聚合子查询一次取齐，避免列表逐条查图。 */
   images: { id: string; key: string; width: number; height: number }[]
@@ -100,6 +103,9 @@ export function mapRow(row: PostRow) {
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     authorId: Number(row.author_id),
+    /** 内部可见性字段：仅供服务层 authorize 判定，不进入 toListItem 对外投影。 */
+    authorStatus: row.author_status,
+    topicDeletedAt: row.topic_deleted_at,
     topicId: Number(row.topic_id),
     author: {
       username: row.username,
