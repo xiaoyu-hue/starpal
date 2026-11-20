@@ -1113,6 +1113,17 @@ flowchart LR
 - **全量质量门**：`npm run verify` → 退出码 0，`# tests 355 / pass 355 / fail 0`，覆盖率行 94.48 / 函数 94.02（稳定）、分支 75.63–78.14（随并行测试时序波动，恒高于门槛 72），门槛 91/72/87。测试数从 354 变 355：新增 3 项（comment 2 + message 1）、前端新增 1 项、限流合并减少 2 项，净 +1。
 - **边界与诚实说明**：自审报告与攻防报告均保留本地、不入本仓库（作者决定），结论以 CHANGELOG 与本记录为准；SEC-4 的 `comment_count` 沿用 removed 口径（隐藏不回减），是知情取舍；"无确认漏洞"结论仅在 Vercel 现行配置成立。
 
+##### `VR-PENTEST2-01` · 第二次模拟攻击 8 项修复验证记录（通过）
+
+- **目标与来源**：对第二次授权模拟攻击（报告保留本地、不入本仓库）复现的 8 个命中逐项修复，作者指令"按修复清单依次执行"。8 项分三类：输入健壮性 6 项（畸形游标/id 触发 500）、可见性口径遗漏 2 项（停用帖仍可点赞收藏）。均小范围、无破坏性变更。
+- **① `decodeCursor` 内容校验（B1/B2/B3/B5）**：`server/src/shared/pagination.ts` 此前只校验字段类型，畸形内容进 SQL `$2::timestamptz` 触发 500。现校验 `t` 为可解析 ISO 时间或有限数字串（兼容 popular 的 rank_score 浮点游标）、`id` 为正整数且不超 bigint（BigInt 比较）。全部 7 个调用方统一受益，前端游标契约不变。真实命令 `npx tsx --test tests/unit/pagination.test.ts` → 4/4；变异验证（去掉内容校验）后 2 项变红。
+- **② 互动可见性口径（C1/C2）**：`interaction.service.ts` 的 `assertInteractable` JOIN topics/users 复刻 VISIBLE 条件，停用作者/归档话题帖点赞收藏改 404。真实命令 `npx tsx --test tests/integration/interaction-visibility.test.ts` → 3/3；变异验证（去掉 JOIN 条件）后 2 项变红，正常帖断言保持绿（防误伤有效）。过程中修正一处测试自身 bug：cookie 误置请求顶层而非 headers，导致 401 误判，修正后通过——代码改动本身始终正确（独立复现确认）。
+- **③ 通知 bigint 越界（B6）**：`notification.controller.ts` 的 `parseCursor` 补 BigInt 上限校验。`notification-cursor.test.ts` 加 1 项超长 id 用例；变异验证（退回 `Number(id)<=0`）后该项变红。
+- **④ 私信会话 id（G5）**：`messages.schema.ts` 新增 `parseConversationId`（正整数 + bigint 上限，非法 404），三个控制器统一调用。新增 `message-id-validation.test.ts`（4 项：三端点非法 id + 越界 id 均 404）；变异验证（退回 `String(req.params.id)`）后 4 项全红。
+- **全量质量门**：`npm run verify` → 退出码 0，`# tests 367 / pass 367 / fail 0`，覆盖率 94.58 / 94.35 / 分支 78.64（门槛 91/87/72）。测试数 355 → 367（+12：pagination 4 + 互动 3 + 通知 1 + 消息 id 4）。
+- **攻防复测**：攻击脚本 V2 复测确认 8 命中全部转拦截——B1/B2/B3/B5 → 400 VALIDATION_FAILED、B6 → 200 回落首页、C1/C2 → 404 NOT_FOUND、G5 → 404。脚本 E1/E2 仍显示命中系脚本自身构造问题（displayName 过短 + 邀请码被前置消费），已用独立复测证明注册限流（第 21 次 429）与一人一码（并发恰好 1 次成功）生效，非真实漏洞，不列入修复。
+- **边界与诚实说明**：本次修复未碰线上（全部在本地靶场验证）；线上与靶场同代码 `ba7f110`，修复后需推送才上线。攻击脚本与报告保留临时区/本地，不入仓库。
+
 **M7 交付物**：自动化测试、加固成果、部署与配置文档、README / CHANGELOG、全量验证记录、交付物清单。
 
 **M7 完成判据**：`AC-01`—`AC-18` 全部有验证记录且结论为「通过」（未执行项须显式标注并保持里程碑为未完成）；`DoD-01`—`DoD-10` 全部满足；干净环境可按文档完整启动。

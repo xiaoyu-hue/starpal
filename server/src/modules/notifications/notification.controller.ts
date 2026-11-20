@@ -22,7 +22,10 @@ function parseCursor(query: Record<string, unknown>): Cursor {
   const id = typeof query.id === 'string' ? query.id : null
   if (t === null || id === null) return null
   if (!Number.isFinite(Date.parse(t))) return null
-  if (!/^\d+$/.test(id) || Number(id) <= 0) return null
+  if (!/^\d+$/.test(id)) return null
+  // 用 BigInt 限位：Number('999...30位') 溢出成超大有限值仍会 >0，进 $3::bigint 触发越界 500（攻防 B6）。
+  const big = BigInt(id)
+  if (big <= 0n || big > 9223372036854775807n) return null
   return { t, id }
 }
 

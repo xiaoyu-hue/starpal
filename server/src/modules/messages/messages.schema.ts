@@ -17,6 +17,19 @@ export function parseUsername(raw: unknown): string {
   return requireString(raw, { field: 'username', min: 1, max: 40, trim: true })
 }
 
+/**
+ * 会话路径参数 `:id`：必须是不超过 bigint 上限的正整数字符串。
+ * 非法值按资源不存在处理（与帖子 parsePostId 口径一致），避免 `abc` 进入 SQL
+ * 的 `$1::bigint` 触发 500（攻防 G5）。保留字符串形态传 service，不丢 bigint 精度。
+ */
+export function parseConversationId(raw: unknown): string {
+  const value = typeof raw === 'string' ? raw : String(raw ?? '')
+  if (!/^\d+$/.test(value)) throw new DomainError('NOT_FOUND', '会话不存在')
+  const big = BigInt(value)
+  if (big <= 0n || big > 9223372036854775807n) throw new DomainError('NOT_FOUND', '会话不存在')
+  return value
+}
+
 /** 消息正文：非空、长度受限、首尾空白归一。 */
 export function parseMessageBody(raw: unknown): string {
   return requireString(raw, { field: 'body', min: 1, max: MESSAGE_BODY_MAX, trim: true })

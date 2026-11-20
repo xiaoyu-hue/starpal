@@ -69,6 +69,13 @@ describe('P4 通知游标健壮性', () => {
     assert.equal(r.status, 200, `空时间串不应 500：${r.text.slice(0, 200)}`)
   })
 
+  it('超长 id（bigint 越界）返回 200 且退化为第一页（攻防 B6）', async () => {
+    const r = await get(`/api/notifications?t=${encodeURIComponent(iso)}&id=${'9'.repeat(30)}`)
+    assert.equal(r.status, 200, `bigint 越界 id 不应 500：${r.text.slice(0, 200)}`)
+    const items = (r.body?.data as { items?: unknown[] })?.items ?? []
+    assert.equal(items.length, 2)
+  })
+
   it('合法游标仍正常工作 200', async () => {
     const r = await get(`/api/notifications?t=${encodeURIComponent(iso)}&id=1`)
     assert.equal(r.status, 200, `合法游标应正常：${r.text.slice(0, 200)}`)

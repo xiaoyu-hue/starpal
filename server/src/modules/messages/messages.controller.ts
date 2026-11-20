@@ -9,7 +9,7 @@ import {
   listMessagesFor,
   sendMessageIn,
 } from './messages.service.js'
-import { parseListQuery, parseMessageBody, parseUsername } from './messages.schema.js'
+import { parseConversationId, parseListQuery, parseMessageBody, parseUsername } from './messages.schema.js'
 
 /** 私信控制器：解析 → 服务 → 统一分页包络。所有端点已统一挂 requireAuth（见 messages.routes.ts）。 */
 
@@ -48,7 +48,7 @@ export async function getConversationController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const view = await getConversationFor(req.principal!.id, String(req.params.id))
+    const view = await getConversationFor(req.principal!.id, parseConversationId(req.params.id))
     sendData(res, view)
   } catch (error) {
     next(error)
@@ -62,7 +62,7 @@ export async function listMessagesController(
 ): Promise<void> {
   try {
     const { limit, cursor } = parseListQuery(req.query as Record<string, unknown>)
-    const page = await listMessagesFor(req.principal!.id, String(req.params.id), cursor, limit)
+    const page = await listMessagesFor(req.principal!.id, parseConversationId(req.params.id), cursor, limit)
     sendData(res, page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore })
   } catch (error) {
     next(error)
@@ -77,7 +77,7 @@ export async function sendMessageController(
   try {
     const body = requireObject(req.body)
     const text = parseMessageBody(body.body)
-    const item = await sendMessageIn(req.principal!.id, String(req.params.id), text)
+    const item = await sendMessageIn(req.principal!.id, parseConversationId(req.params.id), text)
     sendData(res, item)
   } catch (error) {
     next(error)
