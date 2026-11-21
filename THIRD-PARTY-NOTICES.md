@@ -34,6 +34,7 @@
 | `hash-wasm` | ^4.13.0 | MIT |
 | `jsdom` | ^29.1.1 | MIT |
 | `lucide-react` | 1.72.0 | ISC |
+| `motion` | 14.14.0 | MIT |
 | `pg` | 8.23.1 | MIT |
 | `postcss` | 8.5.32 | MIT |
 | `react` | 19.3.1 | MIT |
@@ -49,7 +50,7 @@
 
 | 许可证 | 数量 |
 | --- | --- |
-| MIT | 347 |
+| MIT | 351 |
 | Apache-2.0 | 21 |
 | ISC | 15 |
 | (MIT AND CC-BY-4.0) | 13 |

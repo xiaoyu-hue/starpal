@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { m } from 'motion/react'
 import type { ReactNode } from 'react'
 import type { FeedPost } from '../../../types/api'
 import { ApiError } from '../../../lib/api-client'
+import { riseVariants, staggerDelay } from '../../../lib/motion'
 import { Card } from '../../../components/ui/Primitives'
 import { ErrorState } from '../../../components/feedback/States'
 import { FeedSkeleton } from './FeedSkeleton'
@@ -47,7 +49,15 @@ export function FeedView({ items, isPending, error, onRetry, empty }: FeedViewPr
   return (
     <div className="space-y-3">
       {items.map((post, index) => (
-        <PostCard key={post.id} post={post} position={index + 1} total={items.length} />
+        <m.div
+          key={post.id}
+          variants={riseVariants}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: staggerDelay(index) }}
+        >
+          <PostCard post={post} position={index + 1} total={items.length} />
+        </m.div>
       ))}
     </div>
   )

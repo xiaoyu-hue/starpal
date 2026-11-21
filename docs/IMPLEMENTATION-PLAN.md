@@ -270,7 +270,7 @@ flowchart LR
 | `VR-M1-14` | 三态组件 | 通过 | 骨架屏、可重试错误态、引导式空态均可复现 |
 | `VR-M1-15` | 文件体积预算 | 通过 | 扫描 74 个源文件，全部在 `.ts/.tsx` ≤ 300、`.css` ≤ 400 内 |
 | `VR-M1-16` | 仓库无真实凭据 | 通过 | `.env` 未被跟踪；无 token 明文；密钥值仅存在于被排除的 `.env` |
-| `VR-M1-17` | 非目标清单未引入 | 通过 | 未引入 Redis、消息队列、插件系统、全局状态库、图表库、动效库 |
+| `VR-M1-17` | 非目标清单未引入 | 通过 | 未引入 Redis、消息队列、插件系统、全局状态库、图表库、动效库（**后续变更**：动效库于 M7 后按需引入 `motion`，见 `VR-MOTION-01`；其余非目标仍未引入） |
 
 **未验证 / 未满足项（如实登记，M1 阶段）**
 
@@ -1134,6 +1134,17 @@ flowchart LR
 - **全量质量门**：`npm run verify` → 退出码 0，`# tests 380 / pass 380 / fail 0`（355→367→380 累积），覆盖率 94.64 / 77.25 / 94.51（门槛 91/72/87，分支值随并行时序在 75–79 间波动、恒高于门槛）。新增测试文件 `security-regression-v3.test.ts` 不进覆盖率分母（`--test-coverage-include=src/**`）。
 - **攻防复测**：攻击脚本 V3 复测命中 5 → 0（41 拦截 + 1 信息项）：B-ENUM 无差分均 INVITE_INVALID、C-AVATAR-URI/topicId/id 全部 400/404、D-ADMIN-SELF 403 且之后 `/me` 仍 200。脚本与报告保留本地临时区，不入仓库。
 - **边界与诚实说明**：本次修复未碰线上（全部本地靶场验证）；线上与靶场同代码 `c221653`，修复后需推送才上线。本结论不替代第三方安全审计。
+
+##### `VR-MOTION-01` · 动效库引入与编排动画验证记录（通过）
+
+- **目标与来源**：作者要求"增加一些动态交互效果"，经三视角对比（全力反驳 / 切换支持 / 中立对比）与决策三问后，作者明确选择「引入专业动画库」方案（备选为纯 CSS 强化）。属作者授权的既有非目标变更——M1 `VR-M1-17` 曾把"不引入动效库"列为非目标，本条按需引入并已在那里加注。
+- **选型查证（不凭记忆）**：官方文档确认当前包为 `motion`（Framer Motion 更名），`npm install motion` 实装 `motion@14.14.0`、MIT、要求 React ≥18.2（本项目 React 19.3 兼容）；运行时确认 `motion/react` 导出 `motion/m/AnimatePresence/LazyMotion/domAnimation/MotionConfig`，`audit` 0 漏洞。SDK 版本以实测为准，未写死在文档别处。
+- **① 全局基线**：`app/providers.tsx` 挂 `MotionConfig reducedMotion="user"` + `LazyMotion features={domAnimation} strict`。前者跟随系统减少动效偏好，与 `globals.css` 的 `prefers-reduced-motion` 同一口径；后者用精简引擎（较完整 `motion.*` 省约一半体积），strict 强制全站 `m.*` 防误带回完整包。
+- **② 列表入场**：`FeedView` 信息流卡片按索引错峰上浮淡入；**③ 收藏微交互**：`PostCard` 收藏按钮 `whileTap` 回弹 + 图标缩放脉冲（图标保持 `aria-hidden`，语义由按钮承担）；**④ 页面转场**：`AppShell` 内容区按 `location.pathname` 做 `AnimatePresence mode="wait"` 淡入。参数集中在新增的 `web/src/lib/motion.ts`（与 CSS `--sp-motion 220ms` / `--sp-ease` 对齐）。
+- **主动收窄**：未做 Radix 弹窗退场动画——需 `forceMount` + `AnimatePresence` 改造对话框结构，焦点陷阱 / Esc 关闭是已验证行为，收益不足以承担破坏风险；其余列表页复用同一模式，不逐处铺开。
+- **全量质量门**：`npm run verify` → 退出码 0；前端 112 测试（motion.test.ts 8 项、`motion.ts` 覆盖率 100%）、后端 380 测试；覆盖率前端 97 / 93.78 / 100、后端 94.64 / 77.25 / 94.51 均达标；改动文件全部在行数预算内（≤300）；lint 硬规则 0 违规；scan:secrets 通过。
+- **实机验证**：`vite preview` + 浏览器打开首页，导航 / 三栏布局 / 信息流骨架渲染正常、无 LazyMotion strict 运行时错误；点击导航切换路由 URL 正常跳转（`→/discover`）、无动效异常。离线预览无后端，信息流显示骨架属预期（非动效缺陷）。
+- **依赖登记**：`THIRD-PARTY-NOTICES.md` 直接依赖表新增 `motion@14.14.0`（MIT）；按 `package-lock.json` 实测，MIT 包数 347 → 351（新增 motion / framer-motion / motion-dom / motion-utils 四个 MIT 包）。`CHANGELOG.md` 已登记。
 
 **M7 交付物**：自动化测试、加固成果、部署与配置文档、README / CHANGELOG、全量验证记录、交付物清单。
 

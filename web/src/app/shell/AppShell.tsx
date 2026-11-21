@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { AnimatePresence, m } from 'motion/react'
 import { useState, type ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
+import { SP_DURATION, SP_EASE } from '../../lib/motion'
 import { BottomTabBar } from './BottomTabBar'
 import { MobileMenu } from './MobileMenu'
 import { RightRail } from './RightRail'
@@ -13,6 +16,7 @@ import { TopBar } from './TopBar'
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const location = useLocation()
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -25,7 +29,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <main id="main-content" className="min-w-0">
-          {children}
+          <AnimatePresence mode="wait" initial={false}>
+            <m.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: SP_DURATION, ease: SP_EASE }}
+            >
+              {children}
+            </m.div>
+          </AnimatePresence>
         </main>
 
         <div className="hidden xl:block">

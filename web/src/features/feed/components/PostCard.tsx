@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { m } from 'motion/react'
 import { useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Bookmark, Heart, MessageCircle, Share2 } from 'lucide-react'
@@ -110,26 +111,30 @@ export function PostCard({ post, position, total }: PostCardProps) {
         <span className="inline-flex items-center gap-1.5">
           <MessageCircle size={15} aria-hidden="true" /> {post.commentCount} 评论
         </span>
-        <button
+        <m.button
           type="button"
           onClick={toggleBookmark}
           disabled={bookmark.isPending}
           aria-pressed={post.isBookmarked}
           aria-label={post.isBookmarked ? '取消收藏' : '收藏'}
           title={post.isBookmarked ? '取消收藏' : '收藏'}
+          whileTap={{ scale: 0.9 }}
           className={cn(
             'sp-transition inline-flex items-center gap-1.5 rounded-sm px-1 py-0.5',
             'hover:text-ink disabled:cursor-wait disabled:opacity-70',
             post.isBookmarked ? 'text-accent' : 'text-muted',
           )}
         >
-          <Bookmark
-            size={15}
+          <m.span
             aria-hidden="true"
-            className={post.isBookmarked ? 'fill-current' : undefined}
-          />
+            animate={post.isBookmarked ? { scale: [1, 1.35, 1] } : { scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="inline-flex"
+          >
+            <Bookmark size={15} className={post.isBookmarked ? 'fill-current' : undefined} />
+          </m.span>
           {post.bookmarkCount} 收藏
-        </button>
+        </m.button>
         <span className="inline-flex items-center gap-1.5" aria-disabled="true" title="分享功能尚未开放">
           <Share2 size={15} aria-hidden="true" /> 分享
         </span>

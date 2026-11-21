@@ -161,7 +161,7 @@
 | 层 | 技术 |
 | --- | --- |
 | 运行时 | Node.js `>=22.12 <23`（由 `.nvmrc` 与 `engines.node` 锁定）、npm workspaces |
-| 前端 | React 19 + TypeScript、Vite、React Router、TanStack Query、Tailwind CSS、**Radix UI 原语 + 自研组件**、lucide-react |
+| 前端 | React 19 + TypeScript、Vite、React Router、TanStack Query、Tailwind CSS、**Radix UI 原语 + 自研组件**、lucide-react、Motion（编排动画，精简引擎 + 尊重系统减少动效偏好） |
 | 后端 | Express 5、PostgreSQL（`pg`，全部参数化查询）、`hash-wasm`（Argon2id）、`sharp`（图片重编码）、`multer`（上传）、`dotenv`、`@dicebear/core` + 31 个风格包（自托管头像） |
 | 存储 | PostgreSQL：结构化数据与图片二进制同库（`ADR-014`），无对象存储、无本地文件目录 |
 | 测试 | 后端：Node 内置 `node:test` + `tsx` + `@electric-sql/pglite`（WASM 内存库，不连真实库）；前端：`vitest` + jsdom + Testing Library，覆盖率由 `v8` 采集 |
