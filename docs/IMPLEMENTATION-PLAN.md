@@ -1124,6 +1124,17 @@ flowchart LR
 - **攻防复测**：攻击脚本 V2 复测确认 8 命中全部转拦截——B1/B2/B3/B5 → 400 VALIDATION_FAILED、B6 → 200 回落首页、C1/C2 → 404 NOT_FOUND、G5 → 404。脚本 E1/E2 仍显示命中系脚本自身构造问题（displayName 过短 + 邀请码被前置消费），已用独立复测证明注册限流（第 21 次 429）与一人一码（并发恰好 1 次成功）生效，非真实漏洞，不列入修复。
 - **边界与诚实说明**：本次修复未碰线上（全部在本地靶场验证）；线上与靶场同代码 `ba7f110`，修复后需推送才上线。攻击脚本与报告保留临时区/本地，不入仓库。
 
+##### `VR-PENTEST3-01` · 第三次模拟攻击 5 项修复验证记录（通过）
+
+- **目标与来源**：对第三次授权模拟攻击（42 向量 + 三路白盒深挖，报告保留本地、不入本仓库）经独立复测确认的 5 项真实发现逐项修复，作者指令"按修复清单依次执行"。复测同时排除了 3 项脚本假阳性（导出"越权"实为本人草稿、`XSS` 实为 JSON 文本渲染、邀请码并发"0 次成功"系测试密码短于 12 位）。全部小范围、无破坏性变更。
+- **① F1 注册用户名枚举**：`auth.repository.ts` 的 `createUser` 把邀请码 `available` 预检查前置于 `INSERT users`。真实命令 `npx tsx --test tests/integration/security-regression-v3.test.ts` → F1 三项通过：无效码探测已存在/不存在用户名均 `400 INVITE_INVALID`（枚举失效，独立库诊断 409-vs-400 差分消失）；有效码+已存在用户名仍 `409 CONFLICT` 且失败不消耗邀请码（体验与数据不变）；有效码 6 路并发恰好 1 次成功（一人一码不变）。
+- **② F2 畸形头像转义**：`validation.ts` 的 `requireAvatarUrl` 把 `decodeURIComponent` 包进 try/catch，异常转 `VALIDATION_FAILED`。`validation.test.ts` +2 项（畸形/残缺百分号转义）；HTTP 层 `PATCH /me` 实测 400。
+- **③ F3–F5 超大数值 id**：`validation.ts` 新增 `parseDbId`（安全整数+正整数），post/admin/topic/upload/interaction/comment/report 各 schema 的 id 入口统一改用。`validation.test.ts` +3 项（正常值/非法值/科学计数法）；HTTP 层实测发帖 `topicId=1e21`→400、详情与点赞 `id=1e21`→404、上传→400，均无 500。
+- **④ F6 管理员自锁**：`admin.moderation.service.ts` 的 `changeUserStatus` 仅对 `target='suspended'` 增加 `Number(actor.id)===id` 守卫；经推理确认这一条已覆盖"最后一名管理员"（目标是别人时操作者本人仍是 active admin），故不额外计数以免误伤幂等。`admin-moderation.test.ts` +2 项：停用自己被 `FORBIDDEN` 且状态/日志不变、停用他人正常放行。
+- **全量质量门**：`npm run verify` → 退出码 0，`# tests 380 / pass 380 / fail 0`（355→367→380 累积），覆盖率 94.64 / 77.25 / 94.51（门槛 91/72/87，分支值随并行时序在 75–79 间波动、恒高于门槛）。新增测试文件 `security-regression-v3.test.ts` 不进覆盖率分母（`--test-coverage-include=src/**`）。
+- **攻防复测**：攻击脚本 V3 复测命中 5 → 0（41 拦截 + 1 信息项）：B-ENUM 无差分均 INVITE_INVALID、C-AVATAR-URI/topicId/id 全部 400/404、D-ADMIN-SELF 403 且之后 `/me` 仍 200。脚本与报告保留本地临时区，不入仓库。
+- **边界与诚实说明**：本次修复未碰线上（全部本地靶场验证）；线上与靶场同代码 `c221653`，修复后需推送才上线。本结论不替代第三方安全审计。
+
 **M7 交付物**：自动化测试、加固成果、部署与配置文档、README / CHANGELOG、全量验证记录、交付物清单。
 
 **M7 完成判据**：`AC-01`—`AC-18` 全部有验证记录且结论为「通过」（未执行项须显式标注并保持里程碑为未完成）；`DoD-01`—`DoD-10` 全部满足；干净环境可按文档完整启动。

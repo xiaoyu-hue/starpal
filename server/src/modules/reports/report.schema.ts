@@ -18,7 +18,7 @@ import {
 } from '../../config/report-constants.js'
 import { DomainError } from '../../shared/errors.js'
 import { decodeCursor } from '../../shared/pagination.js'
-import { requireEnum, requireObject, requireString } from '../../shared/validation.js'
+import { parseDbId, requireEnum, requireObject, requireString } from '../../shared/validation.js'
 import type {
   DecisionInput,
   ReportListQuery,
@@ -31,10 +31,10 @@ import type {
  */
 
 function parsePositiveInt(value: unknown, field: string): number {
-  const num = typeof value === 'number' ? value : Number(value)
-  if (!Number.isInteger(num) || num < 1) {
+  const num = parseDbId(value)
+  if (num === null) {
     throw new DomainError('VALIDATION_FAILED', `${field} 必须为正整数`, [
-      { field, constraint: '正整数' },
+      { field, constraint: '正整数且不超过安全整数上限' },
     ])
   }
   return num
@@ -119,7 +119,7 @@ export function parseDecisionInput(raw: unknown): DecisionInput {
 
 /** 路径参数 `:id`：非法格式按资源不存在处理，不暴露路由细节。 */
 export function parseReportId(raw: unknown): number {
-  const num = typeof raw === 'number' ? raw : Number(raw)
-  if (!Number.isInteger(num) || num < 1) throw new DomainError('NOT_FOUND', '提交不存在')
+  const num = parseDbId(raw)
+  if (num === null) throw new DomainError('NOT_FOUND', '提交不存在')
   return num
 }

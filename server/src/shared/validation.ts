@@ -93,6 +93,22 @@ export function requireEnum<T extends string>(
   return value as T
 }
 
+/**
+ * 数据库主键校验（正整数）：只接受安全整数（`Number.isSafeInteger`）。
+ *
+ * 为什么不用 `Number.isInteger` 就够：`Number('1e21')` 是整数，但传进 PostgreSQL
+ * 的 `::int` / `::bigint` 会因溢出抛 `invalid input syntax` → 500（第三次攻防 F3–F5）。
+ * 第二轮的 `decodeCursor` 已用 BigInt 上限兜住游标；这里把所有「数值 id 入口」
+ * 统一到同一口径——安全整数上限 2^53-1 远小于 bigint 上限，业务 id 也远达不到，
+ * 用它做统一闸门既挡住科学计数法溢出，又不误伤任何真实 id。
+ * 返回 null 表示非法，由调用方决定抛 VALIDATION_FAILED 还是 NOT_FOUND。
+ */
+export function parseDbId(raw: unknown): number | null {
+  const num = typeof raw === 'number' ? raw : Number(raw)
+  if (!Number.isSafeInteger(num) || num < 1) return null
+  return num
+}
+
 /** 布尔校验：仅接受 JSON 布尔，不接受 'true' 字符串等弱类型。 */
 export function requireBoolean(value: unknown, field: string): boolean {
   if (typeof value !== 'boolean') {
@@ -155,7 +171,14 @@ export function requireAvatarUrl(value: unknown, field: string, max: number): st
   } catch {
     invalid([{ field, constraint: '头像地址格式不正确' }])
   }
-  const slug = decodeURIComponent(parsed.pathname.slice('/api/avatars/'.length))
+  // decodeURIComponent 对畸形百分号转义（如 %ZZ）抛 URIError，若不捕获会穿透到
+  // 错误中间件变成 500（第三次攻防 F2）。用户名可控的字段必须把这类异常归一为 400。
+  let slug: string
+  try {
+    slug = decodeURIComponent(parsed.pathname.slice('/api/avatars/'.length))
+  } catch {
+    invalid([{ field, constraint: '头像地址含非法转义字符' }])
+  }
   if (slug.includes('/') || findAvatarStyle(slug) === undefined) {
     invalid([{ field, constraint: '不支持的头像风格' }])
   }

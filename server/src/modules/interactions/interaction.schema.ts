@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { DomainError } from '../../shared/errors.js'
+import { parseDbId } from '../../shared/validation.js'
 
 /**
  * 路径参数 `:id` 解析。
@@ -8,7 +9,7 @@ import { DomainError } from '../../shared/errors.js'
  * 但不跨模块引用其内部文件——互动模块只依赖公共出口，避免模块边界被穿透。
  */
 export function parsePostId(raw: unknown): number {
-  const num = typeof raw === 'number' ? raw : Number(raw)
-  if (!Number.isInteger(num) || num < 1) throw new DomainError('NOT_FOUND', '帖子不存在')
+  const num = parseDbId(raw)
+  if (num === null) throw new DomainError('NOT_FOUND', '帖子不存在')
   return num
 }

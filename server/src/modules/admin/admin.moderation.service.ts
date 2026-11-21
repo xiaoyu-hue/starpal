@@ -69,6 +69,14 @@ export async function changeUserStatus(
 ): Promise<AdminUserItem> {
   assertAdmin(actor)
   const work = async (ex: Executor): Promise<AdminUserItem> => {
+    // 自锁保护（第三次攻防 F6）：管理员不能停用自己。
+    // 为什么这一条同时守住了「最后一名管理员」：能让 active 管理员数归零的唯一操作，
+    // 就是某个管理员停用自己——只要目标是别人，操作者本人仍是 active 管理员，
+    // 至少剩 1 个。因此不必额外数在岗管理员（那反而会误伤「重复停用管理员」的幂等请求）。
+    // 仅在停用时校验——恢复账号（active）不构成锁定，保持幂等语义不变。
+    if (target === 'suspended' && Number(actor.id) === id) {
+      throw new DomainError('FORBIDDEN', '不能停用当前账号')
+    }
     const item = await setUserStatus(id, target, ex)
     if (!item) {
       // 幂等：已是目标态则回现状，不重复写日志；真不存在（或 deleted 态）才报错。

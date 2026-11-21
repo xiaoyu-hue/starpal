@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { DomainError } from '../../shared/errors.js'
-import { requireObject, requireString } from '../../shared/validation.js'
+import { parseDbId, requireObject, requireString } from '../../shared/validation.js'
 import type { AdminTopicInput, TopicUpdateInput } from './topic.admin.types.js'
 
 /**
@@ -84,7 +84,7 @@ export function parseArchiveInput(raw: unknown): boolean {
 }
 
 export function parseTopicId(raw: unknown): number {
-  const num = typeof raw === 'number' ? raw : Number(raw)
-  if (!Number.isInteger(num) || num < 1) throw new DomainError('NOT_FOUND', '话题不存在')
+  const num = parseDbId(raw)
+  if (num === null) throw new DomainError('NOT_FOUND', '话题不存在')
   return num
 }

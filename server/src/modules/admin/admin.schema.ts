@@ -2,7 +2,7 @@
 import { REPORT_MAX_PAGE_SIZE, REPORT_PAGE_SIZE } from '../../config/report-constants.js'
 import { DomainError } from '../../shared/errors.js'
 import { decodeCursor, type CursorPayload } from '../../shared/pagination.js'
-import { requireEnum, requireObject } from '../../shared/validation.js'
+import { parseDbId, requireEnum, requireObject } from '../../shared/validation.js'
 import type { ContentStatusTarget, UserStatusTarget } from './admin.types.js'
 
 /**
@@ -40,8 +40,8 @@ export function parseAdminListQuery(query: Record<string, unknown>): AdminListQu
 
 /** 路径参数 :id：非法格式按资源不存在处理，不暴露路由细节。 */
 export function parseAdminId(raw: unknown): number {
-  const num = typeof raw === 'number' ? raw : Number(raw)
-  if (!Number.isInteger(num) || num < 1) throw new DomainError('NOT_FOUND', '资源不存在')
+  const num = parseDbId(raw)
+  if (num === null) throw new DomainError('NOT_FOUND', '资源不存在')
   return num
 }
 

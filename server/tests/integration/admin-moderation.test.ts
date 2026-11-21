@@ -172,4 +172,23 @@ describe('M6-S3 用户与内容管理', () => {
     assert.equal(again.status, 'suspended')
     assert.equal(await logsOf('user.suspend'), logsAfterFirst, '重复停用不应重复写日志')
   })
+
+  // 第三次攻防 F6：管理员自锁。
+  it('管理员不能停用自己——同时守住「最后一名管理员」不被锁死', async () => {
+    const beforeLog = await logsOf('user.suspend')
+    await assert.rejects(
+      () => changeUserStatus(admin, 99, 'suspended', ex),
+      (e: unknown) => e instanceof DomainError && e.code === 'FORBIDDEN',
+    )
+    const row = await db.query<{ status: string }>(`SELECT status FROM users WHERE id = 99`)
+    assert.equal(row.rows[0]!.status, 'active', '被拒后自身状态不得改变')
+    assert.equal(await logsOf('user.suspend'), beforeLog, '被拒不得写审核日志')
+  })
+
+  it('管理员停用他人不受自锁守卫影响', async () => {
+    // id=2 已在上面被停用过，这里用恢复再停用来确认守卫只对「自己」生效。
+    await changeUserStatus(admin, 2, 'active', ex)
+    const item = await changeUserStatus(admin, 2, 'suspended', ex)
+    assert.equal(item.status, 'suspended', '停用他人应正常放行')
+  })
 })

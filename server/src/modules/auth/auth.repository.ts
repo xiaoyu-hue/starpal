@@ -58,6 +58,22 @@ export async function createUser(input: {
   inviteCodeHash: string
 }): Promise<{ id: string; username: string; displayName: string }> {
   return withTransaction(async (client: PoolClient) => {
+    // 邀请码预检查必须前置于 INSERT users：
+    // 若把校验放在插入之后，用户名已存在会先撞 UNIQUE 抛 CONFLICT(409)，
+    // 用户名不存在才走到邀请码校验抛 INVITE_INVALID(400)——两者可差分，
+    // 攻击者拿一个无效邀请码即可批量枚举真实用户名（第三次攻防 F1）。
+    // 前置后，无效邀请码无论用户名是否存在都只返回 INVITE_INVALID，枚举失效；
+    // 真实用户用有效邀请码仍能在 INSERT 阶段得到准确的「用户名已被占用」提示。
+    // 注意：此处 SELECT 只是提前失败，真正的原子消费点仍是事务末尾的
+    // `UPDATE ... WHERE status='available'`，并发一人一码的安全性不变。
+    const available = await client.query<{ id: string }>(
+      `SELECT id FROM invite_codes WHERE code_hash = $1 AND status = 'available'`,
+      [input.inviteCodeHash],
+    )
+    if (available.rows.length === 0) {
+      throw new DomainError('INVITE_INVALID', '邀请码无效或已被使用')
+    }
+
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO users (username, display_name, password_hash, terms_accepted_at, terms_version)
        VALUES ($1, $2, $3,

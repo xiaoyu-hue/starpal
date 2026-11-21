@@ -7,7 +7,7 @@ import {
 } from '../../config/constants.js'
 import { DomainError } from '../../shared/errors.js'
 import { decodeCursor, type CursorPayload } from '../../shared/pagination.js'
-import { requireObject, requireString } from '../../shared/validation.js'
+import { parseDbId, requireObject, requireString } from '../../shared/validation.js'
 
 /**
  * 评论请求模式层。
@@ -27,14 +27,14 @@ export type CommentQuery = {
 
 /** 路径参数：非法格式按资源不存在处理，不暴露路由格式细节。 */
 export function parsePostId(raw: unknown): number {
-  const num = typeof raw === 'number' ? raw : Number(raw)
-  if (!Number.isInteger(num) || num < 1) throw new DomainError('NOT_FOUND', '帖子不存在')
+  const num = parseDbId(raw)
+  if (num === null) throw new DomainError('NOT_FOUND', '帖子不存在')
   return num
 }
 
 export function parseCommentId(raw: unknown): number {
-  const num = typeof raw === 'number' ? raw : Number(raw)
-  if (!Number.isInteger(num) || num < 1) throw new DomainError('NOT_FOUND', '评论不存在')
+  const num = parseDbId(raw)
+  if (num === null) throw new DomainError('NOT_FOUND', '评论不存在')
   return num
 }
 

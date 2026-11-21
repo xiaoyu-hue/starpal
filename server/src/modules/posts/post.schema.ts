@@ -10,7 +10,7 @@ import {
 } from '../../config/constants.js'
 import { DomainError } from '../../shared/errors.js'
 import { decodeCursor, type CursorPayload } from '../../shared/pagination.js'
-import { requireObject, requireString } from '../../shared/validation.js'
+import { parseDbId, requireObject, requireString } from '../../shared/validation.js'
 
 /**
  * 帖子请求模式层（架构 §5.7）：
@@ -39,10 +39,10 @@ export type FeedQuery = {
 }
 
 function parsePositiveInt(value: unknown, field: string): number {
-  const num = typeof value === 'number' ? value : Number(value)
-  if (!Number.isInteger(num) || num < 1) {
+  const num = parseDbId(value)
+  if (num === null) {
     throw new DomainError('VALIDATION_FAILED', `${field} 必须为正整数`, [
-      { field, constraint: '正整数' },
+      { field, constraint: '正整数且不超过安全整数上限' },
     ])
   }
   return num
@@ -50,8 +50,8 @@ function parsePositiveInt(value: unknown, field: string): number {
 
 /** 路径参数 `:id`：非法格式按资源不存在处理，不暴露路由格式细节。 */
 export function parsePostId(raw: unknown): number {
-  const num = typeof raw === 'number' ? raw : Number(raw)
-  if (!Number.isInteger(num) || num < 1) throw new DomainError('NOT_FOUND', '帖子不存在')
+  const num = parseDbId(raw)
+  if (num === null) throw new DomainError('NOT_FOUND', '帖子不存在')
   return num
 }
 

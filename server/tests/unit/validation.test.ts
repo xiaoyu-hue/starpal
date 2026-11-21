@@ -2,7 +2,7 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { DomainError } from '../../src/shared/errors.js'
-import { requireAvatarUrl, requireString } from '../../src/shared/validation.js'
+import { parseDbId, requireAvatarUrl, requireString } from '../../src/shared/validation.js'
 
 /**
  * 字符串校验原语。
@@ -109,5 +109,33 @@ describe('requireAvatarUrl 头像地址校验', () => {
     assertRejected(() => requireAvatarUrl('/api/avatars/bottts?seed=%3Cscript%3E', 'avatarUrl', max), '注入种子')
     assertRejected(() => requireAvatarUrl('/api/avatars/bottts', 'avatarUrl', max), '缺种子')
     assertRejected(() => requireAvatarUrl(`/api/avatars/bottts?seed=${'a'.repeat(65)}`, 'avatarUrl', max), '超长种子')
+  })
+
+  it('畸形百分号转义归一为 VALIDATION_FAILED 而非 URIError（攻防 F2）', () => {
+    // decodeURIComponent('%ZZ') 抛 URIError，曾穿透到错误中间件变成 500。
+    assertRejected(() => requireAvatarUrl('/api/avatars/%ZZ?seed=a', 'avatarUrl', max), '非法转义')
+    assertRejected(() => requireAvatarUrl('/api/avatars/bottts?seed=%E0%A4%A', 'avatarUrl', max), '残缺转义')
+  })
+})
+
+describe('parseDbId 数据库主键闸门（攻防 F3–F5）', () => {
+  it('接受正常正整数（含字符串形态）', () => {
+    assert.equal(parseDbId(1), 1)
+    assert.equal(parseDbId('42'), 42)
+    assert.equal(parseDbId(9007199254740991), 9007199254740991) // 2^53-1 边界
+  })
+
+  it('拒绝 0、负数、非整数', () => {
+    assert.equal(parseDbId(0), null)
+    assert.equal(parseDbId(-1), null)
+    assert.equal(parseDbId('abc'), null)
+    assert.equal(parseDbId(1.5), null)
+  })
+
+  it('拒绝科学计数法超大整数——进 SQL ::int/::bigint 会 500（攻防核心）', () => {
+    assert.equal(parseDbId(1e21), null)
+    assert.equal(parseDbId('1e21'), null)
+    assert.equal(parseDbId('99999999999999999999'), null)
+    assert.equal(parseDbId(Infinity), null)
   })
 })
