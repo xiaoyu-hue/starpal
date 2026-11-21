@@ -56,13 +56,47 @@
 }
 
 @layer components {
-  /* 单一玻璃容器：导航、浮层、下拉、弹窗复用，内容文字始终使用实色高对比文本 */
+  /* 单一玻璃容器：导航、浮层、下拉、弹窗复用，内容文字始终使用实色高对比文本。
+     液态玻璃质感：顶缘内高光 + 底缘内暗边模拟玻璃厚度与折射；均为背景层效果，
+     不改文字颜色。box-shadow 外阴影（层次）与内阴影（厚度）分层叠加。 */
   .sp-glass {
     background: var(--sp-glass-bg);
     -webkit-backdrop-filter: blur(var(--sp-glass-blur)) saturate(1.2);
     backdrop-filter: blur(var(--sp-glass-blur)) saturate(1.2);
     border: 1px solid var(--sp-glass-border);
-    box-shadow: var(--sp-shadow-md);
+    box-shadow:
+      var(--sp-shadow-md),
+      inset 0 1px 0 var(--sp-glass-highlight),
+      inset 0 -1px 0 var(--sp-glass-edge-dark),
+      inset 0 0 0 1px var(--sp-glass-border);
+  }
+
+  /* 液态玻璃·镜面跟随层：绝对定位铺满容器，径向高光位置由 --sp-glass-x/y 驱动。
+     pointer-events:none 保证不拦截点击；默认透明，指针进入才显现。
+     仅加在 .sp-liquid 容器上，不影响所有普通 .sp-glass。 */
+  .sp-liquid {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .sp-liquid::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0;
+    background: radial-gradient(
+      140px circle at var(--sp-glass-x, 50%) var(--sp-glass-y, 50%),
+      var(--sp-glass-sheen),
+      transparent 70%
+    );
+    transition: opacity var(--sp-motion) var(--sp-ease);
+  }
+
+  .sp-liquid[data-sheen='on']::before {
+    opacity: 1;
   }
 
   /* 内容卡片保持实色 */

@@ -6,6 +6,7 @@ import { Bookmark, Heart, MessageCircle, Share2 } from 'lucide-react'
 import { PostCover } from '../../../components/content/PostImages'
 import { Avatar, Badge, Card } from '../../../components/ui/Primitives'
 import { cn } from '../../../lib/cn'
+import { waterDropPulse, waterDropSpring } from '../../../lib/motion'
 import type { FeedPost } from '../../../types/api'
 import { useAuth } from '../../auth'
 import { TitleBadges } from '../../users'
@@ -118,7 +119,7 @@ export function PostCard({ post, position, total }: PostCardProps) {
           aria-pressed={post.isBookmarked}
           aria-label={post.isBookmarked ? '取消收藏' : '收藏'}
           title={post.isBookmarked ? '取消收藏' : '收藏'}
-          whileTap={{ scale: 0.9 }}
+          whileTap={{ scale: 0.88, transition: waterDropSpring }}
           className={cn(
             'sp-transition inline-flex items-center gap-1.5 rounded-sm px-1 py-0.5',
             'hover:text-ink disabled:cursor-wait disabled:opacity-70',
@@ -127,8 +128,8 @@ export function PostCard({ post, position, total }: PostCardProps) {
         >
           <m.span
             aria-hidden="true"
-            animate={post.isBookmarked ? { scale: [1, 1.35, 1] } : { scale: 1 }}
-            transition={{ duration: 0.3 }}
+            animate={post.isBookmarked ? { scale: [...waterDropPulse] } : { scale: 1 }}
+            transition={waterDropSpring}
             className="inline-flex"
           >
             <Bookmark size={15} className={post.isBookmarked ? 'fill-current' : undefined} />

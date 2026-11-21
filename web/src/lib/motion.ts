@@ -12,6 +12,21 @@ export const SP_EASE = [0.2, 0.7, 0.3, 1] as const
 /** 与 --sp-motion（220ms）等价的秒数。 */
 export const SP_DURATION = 0.22
 
+/**
+ * 水滴软弹：点赞/收藏等互动的按压回弹。用 spring 而非 duration，
+ * 松手时带一点过冲再回稳，模拟水滴的表面张力；stiffness/damping 调到
+ * 「有弹性但不晃」——过度弹跳会显得廉价且干扰连点。
+ */
+export const waterDropSpring = {
+  type: 'spring',
+  stiffness: 500,
+  damping: 24,
+  mass: 0.6,
+} as const
+
+/** 收藏图标点亮时的水滴脉冲：轻微放大再回原位。 */
+export const waterDropPulse = [1, 1.3, 1] as const
+
 /** 列表逐项入场的通用变体：轻微上浮 + 淡入，克制不喧宾夺主。 */
 export const riseVariants = {
   hidden: { opacity: 0, y: 8 },

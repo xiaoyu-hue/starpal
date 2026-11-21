@@ -31,6 +31,11 @@
   --sp-glass-bg: rgba(255, 255, 255, 0.85);
   --sp-glass-border: rgba(25, 26, 32, 0.07);
   --sp-glass-blur: 12px;
+  /* 液态玻璃材质：边缘折射高光 + 底缘暗边营造厚度，镜面光泽供指针跟随。
+     都作用于背景层，不碰文字实色，故不影响既有文字对比度。 */
+  --sp-glass-highlight: rgba(255, 255, 255, 0.9);
+  --sp-glass-edge-dark: rgba(25, 26, 32, 0.05);
+  --sp-glass-sheen: rgba(255, 255, 255, 0.55);
 
   /* 阴影：克制 */
   --sp-shadow-sm: 0 1px 2px rgba(25, 26, 32, 0.05);
@@ -131,6 +136,10 @@
 
   --sp-glass-bg: rgba(27, 32, 48, 0.85);
   --sp-glass-border: rgba(255, 255, 255, 0.09);
+  /* 深色玻璃：高光更柔、暗边更沉，避免深色底上泛白糊成一片 */
+  --sp-glass-highlight: rgba(255, 255, 255, 0.16);
+  --sp-glass-edge-dark: rgba(0, 0, 0, 0.28);
+  --sp-glass-sheen: rgba(255, 255, 255, 0.12);
 
   --sp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --sp-shadow-md: 0 8px 28px rgba(0, 0, 0, 0.32);

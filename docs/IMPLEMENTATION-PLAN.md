@@ -1146,6 +1146,17 @@ flowchart LR
 - **实机验证**：`vite preview` + 浏览器打开首页，导航 / 三栏布局 / 信息流骨架渲染正常、无 LazyMotion strict 运行时错误；点击导航切换路由 URL 正常跳转（`→/discover`）、无动效异常。离线预览无后端，信息流显示骨架属预期（非动效缺陷）。
 - **依赖登记**：`THIRD-PARTY-NOTICES.md` 直接依赖表新增 `motion@14.14.0`（MIT）；按 `package-lock.json` 实测，MIT 包数 347 → 351（新增 motion / framer-motion / motion-dom / motion-utils 四个 MIT 包）。`CHANGELOG.md` 已登记。
 
+##### `VR-GLASS-01` · 液态玻璃质感验证记录（通过）
+
+- **目标与来源**：作者要求 UI 滑动有"真实液态玻璃水滴效果"，并明确"按最优 / 最适配 / 最符合项目标准"执行。先用三个可上手的小样（跟随高光 / 水滴融合 / 软弹回弹）帮作者对齐模糊描述，再由作者授权按专业判断取方案——**不新增依赖**（复用上一轮已装的 Motion 与既有 CSS 令牌体系）。
+- **诚实边界（三视角取舍）**：真正"真实折射"是系统级渲染，网页要用 WebGL 实时算折射会让手机发烫掉帧；对以手机用户为主的邀请制社区，流畅优先于炫技。取"观感七八成像、性能几乎无损"的点。**明确不做**水滴融合 gooey filter——SVG 滤镜在移动端性能与兼容差、会糊掉内容（小样②仅作效果说明，不落地）。
+- **① 材质层（全站、零 JS）**：`tokens.css` 明暗两套各新增 3 个玻璃材质令牌（边缘折射高光 / 底缘暗边 / 镜面光泽）；`globals.css` 的 `.sp-glass` 在原有外阴影之外叠加三层 `inset` 阴影模拟玻璃厚度与折射。因为 `.sp-glass` 是集中式样式（导航 / 底栏 / 弹窗 / 下拉 / GlassPanel 全复用），改一处全站生效。颜色全走令牌，符合 lint R2（R2 只查 .ts/.tsx，CSS 内取自令牌文件）。
+- **② 跟随高光（样板落在顶栏）**：新增 `web/src/components/layout/LiquidGlass.tsx`——在 `.sp-glass` 上加 `.sp-liquid` 层，指针 / 触摸滑动时径向高光跟随。**关键实现**：坐标直接写 CSS 变量（`--sp-glass-x/y`），不进 React state，移动不触发重渲染；只有"高光是否显现"用 state（进出各一次）。系统开启 `prefers-reduced-motion` 时不挂监听、退化为静态玻璃。`TopBar` 的 `GlassPanel` 换为 `LiquidGlass`（其余 className 不变）作首个落地点，验证通过再推广；不一次铺满所有玻璃面板，控制风险面。
+- **③ 水滴软弹**：`lib/motion.ts` 新增 `waterDropSpring`（spring，阻尼比 ζ≈0.69，落在 0.5~1 的"有轻微过冲弹性但快速收敛"区间，不干扰连点）与 `waterDropPulse`（[1,1.3,1] 关键帧）单一真源；`PostCard` 收藏按钮的 `whileTap` 与图标脉冲改用它，与液态玻璃同一套动效参数。
+- **全量质量门**：`npm run verify` → 退出码 0；前端 118 测试（原 112 + LiquidGlass 4 + motion 参数 2）、后端 380 测试；覆盖率达标；lint 硬规则 0 违规、scan:secrets 通过；改动文件全部在行数预算内（CSS 222/163 ≤ 400，TS 均 ≤ 300）。
+- **实机验证**：`vite preview` + 浏览器打开首页，顶栏确认挂载 `sp-glass sp-liquid`、派发 pointermove 后 `--sp-glass-x/y` 正确写入 50%、控制台无运行时错误；切换路由（→/discover）无动效 / 玻璃异常；截图确认三栏布局与顶栏玻璃质感正常、无白屏。离线预览无后端，信息流显示骨架属预期。
+- **未新增依赖**：本轮未改 `package.json` / lock，故 `THIRD-PARTY-NOTICES.md`、README 技术栈无需变更；`CHANGELOG.md` 已登记。报告与验证截图保留本地 / 临时区，不入仓库。
+
 **M7 交付物**：自动化测试、加固成果、部署与配置文档、README / CHANGELOG、全量验证记录、交付物清单。
 
 **M7 完成判据**：`AC-01`—`AC-18` 全部有验证记录且结论为「通过」（未执行项须显式标注并保持里程碑为未完成）；`DoD-01`—`DoD-10` 全部满足；干净环境可按文档完整启动。

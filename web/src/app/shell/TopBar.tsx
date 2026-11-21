@@ -4,7 +4,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { StarpalMark } from '../../components/brand/StarpalLogo'
 import { buttonClass } from '../../components/ui/Button'
 import { Avatar } from '../../components/ui/Primitives'
-import { GlassPanel } from '../../components/layout/GlassPanel'
+import { LiquidGlass } from '../../components/layout/LiquidGlass'
 import { useTheme } from '../../hooks/useTheme'
 import { useAuth } from '../../features/auth/AuthProvider'
 import { useUnreadQuery } from '../../features/notifications/notifications.queries'
@@ -25,7 +25,7 @@ export function TopBar({ onOpenMenu }: TopBarProps) {
 
   return (
     <header className="sticky top-0 z-30">
-    <GlassPanel className="flex h-14 items-center gap-3 rounded-none border-x-0 border-t-0 px-4 md:px-6">
+    <LiquidGlass className="flex h-14 items-center gap-3 rounded-none border-x-0 border-t-0 px-4 md:px-6">
       <button
         type="button"
         onClick={onOpenMenu}
@@ -117,7 +117,7 @@ export function TopBar({ onOpenMenu }: TopBarProps) {
           </>
         )}
       </div>
-    </GlassPanel>
+    </LiquidGlass>
     </header>
   )
 }

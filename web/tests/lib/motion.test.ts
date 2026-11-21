@@ -5,7 +5,14 @@
  * 库的编排动画就会和原生 CSS 过渡节奏脱节，所以要钉住。
  */
 import { describe, expect, it } from 'vitest'
-import { riseVariants, SP_DURATION, SP_EASE, staggerDelay } from '../../src/lib/motion'
+import {
+  riseVariants,
+  SP_DURATION,
+  SP_EASE,
+  staggerDelay,
+  waterDropPulse,
+  waterDropSpring,
+} from '../../src/lib/motion'
 
 describe('动效令牌对齐', () => {
   it('缓动控制点与 --sp-ease 一致', () => {
@@ -21,6 +28,23 @@ describe('动效令牌对齐', () => {
     expect(riseVariants.visible.opacity).toBe(1)
     expect(riseVariants.visible.y).toBe(0)
     expect(riseVariants.visible.transition.duration).toBe(SP_DURATION)
+  })
+})
+
+describe('水滴软弹参数', () => {
+  it('回弹用 spring 且阻尼比在「有弹性但收敛」区间', () => {
+    expect(waterDropSpring.type).toBe('spring')
+    expect(waterDropSpring.stiffness).toBeGreaterThan(0)
+    expect(waterDropSpring.damping).toBeGreaterThan(0)
+    // 阻尼比 ζ<1 才有轻微过冲的水滴弹性；但不宜过低（<0.5 会来回晃），
+    // 取 0.5~1：既回弹又快速收敛，不干扰连点。
+    const ratio = waterDropSpring.damping / (2 * Math.sqrt(waterDropSpring.stiffness * waterDropSpring.mass))
+    expect(ratio).toBeGreaterThan(0.5)
+    expect(ratio).toBeLessThan(1)
+  })
+
+  it('脉冲是放大一回位的三段关键帧', () => {
+    expect([...waterDropPulse]).toEqual([1, 1.3, 1])
   })
 })
 
